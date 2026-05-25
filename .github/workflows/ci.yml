@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r adaptive-portfolio-risk-analytics/requirements.txt
+          pip install pre-commit
+
+      - name: Lint (flake8 + mypy)
+        run: |
+          cd adaptive-portfolio-risk-analytics
+          make lint
+
+      - name: Format check (black)
+        run: |
+          pre-commit run --all-files
+
+      - name: Tests
+        run: |
+          cd adaptive-portfolio-risk-analytics
+          make test
+

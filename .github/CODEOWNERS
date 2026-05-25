@@ -1,0 +1,8 @@
+# Default owners
+* @team
+
+# Portfolio analytics core
+adaptive-portfolio-risk-analytics/src @team
+adaptive-portfolio-risk-analytics/tests @team
+adaptive-portfolio-risk-analytics/README.md @team
+
