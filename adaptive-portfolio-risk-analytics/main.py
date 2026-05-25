@@ -1,11 +1,5 @@
 """Main entry point for portfolio optimization pipeline."""
 
-import sys
-from pathlib import Path
-
-# Add src to path
-sys.path.insert(0, str(Path(__file__).parent / "src"))
-
 from src.logging_config import get_logger
 from src.config import get_config
 

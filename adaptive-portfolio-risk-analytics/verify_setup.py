@@ -7,6 +7,10 @@ Run this to verify the project structure was created correctly.
 import os
 from pathlib import Path
 
+from src.logging_config import get_logger
+
+logger = get_logger(__name__)
+
 
 def verify_project_structure():
     """Verify all required directories and files exist."""
@@ -53,20 +57,20 @@ def verify_project_structure():
         "docs/methodology/METHODOLOGY.md", "docs/ROADMAP.md",
     ]
     
-    print("=" * 70)
-    print("PROJECT STRUCTURE VERIFICATION")
-    print("=" * 70)
-    print()
+    logger.info("%s", "=" * 70)
+    logger.info("%s", "PROJECT STRUCTURE VERIFICATION")
+    logger.info("%s", "=" * 70)
+    logger.info("")
     
     # Check directories
-    print("📂 Checking directories...")
+    logger.info("📂 Checking directories...")
     missing_dirs = []
     for dir_path in required_dirs:
         full_path = project_root / dir_path
         if full_path.exists():
-            print(f"  ✓ {dir_path}")
+            logger.info("  ✓ %s", dir_path)
         else:
-            print(f"  ✗ {dir_path} - MISSING")
+            logger.warning("  ✗ %s - MISSING", dir_path)
             missing_dirs.append(dir_path)
     
     print()

@@ -50,7 +50,9 @@ class ConfigManager:
                     file_config = yaml.safe_load(f) or {}
                     self.config.update(file_config)
             except Exception as e:
-                print(f"Warning: Failed to load {config_file}: {e}")
+                from src.logging_config import get_logger
+
+                get_logger(__name__).warning("Failed to load config file %s: %s", config_file, e, exc_info=True)
 
     def get(self, key: str, default: Any = None) -> Any:
         """

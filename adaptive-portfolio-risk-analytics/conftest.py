@@ -6,8 +6,7 @@ import pandas as pd
 from pathlib import Path
 import sys
 
-# Add src to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+# Tests should run via package/module resolution from project root (no sys.path hacks).
 
 
 @pytest.fixture
