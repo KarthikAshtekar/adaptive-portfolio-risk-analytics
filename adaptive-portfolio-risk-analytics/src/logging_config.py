@@ -9,16 +9,21 @@ import logging.handlers
 import sys
 from pathlib import Path
 from typing import Optional
-from loguru import logger as loguru_logger
 
-# Remove default handler
-loguru_logger.remove()
+try:
+    from loguru import logger as loguru_logger
+except ImportError:  # pragma: no cover - optional dependency fallback
+    loguru_logger = None
+else:
+    # Remove default handler
+    loguru_logger.remove()
 
 
 class LoggerSetup:
     """Configure and manage logging for the platform."""
 
     _initialized = False
+    _configured_level = logging.INFO
 
     @classmethod
     def setup(
@@ -48,7 +53,9 @@ class LoggerSetup:
             Configured logger instance
         """
         if cls._initialized:
-            return logging.getLogger(name)
+            logger = logging.getLogger(name)
+            logger.setLevel(cls._configured_level)
+            return logger
 
         # Create logs directory
         log_dir = Path(log_dir or "./logs")
@@ -62,14 +69,16 @@ class LoggerSetup:
             )
 
         # Configure standard logging
-        logger = logging.getLogger(name)
-        logger.setLevel(getattr(logging, level.upper()))
+        resolved_level = getattr(logging, level.upper(), logging.INFO)
+        logger = logging.getLogger()
+        logger.setLevel(resolved_level)
 
         # Console handler
         console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setLevel(getattr(logging, level.upper()))
+        console_handler.setLevel(resolved_level)
         console_formatter = logging.Formatter(format_str)
         console_handler.setFormatter(console_formatter)
+        logger.handlers.clear()
         logger.addHandler(console_handler)
 
         # File handler (rotating)
@@ -77,27 +86,35 @@ class LoggerSetup:
         file_handler = logging.handlers.RotatingFileHandler(
             log_file, maxBytes=10485760, backupCount=5  # 10MB, keep 5 files
         )
-        file_handler.setLevel(getattr(logging, level.upper()))
+        file_handler.setLevel(resolved_level)
         file_formatter = logging.Formatter(format_str)
         file_handler.setFormatter(file_formatter)
         logger.addHandler(file_handler)
 
-        # Configure loguru with same settings
-        loguru_logger.add(
-            sys.stderr,
-            level=level.upper(),
-            format=format_str,
-        )
-        loguru_logger.add(
-            str(log_file),
-            rotation="500 MB",
-            retention="7 days",
-            level=level.upper(),
-            format=format_str,
-        )
+        # Configure loguru when available.
+        if loguru_logger is not None:
+            loguru_format = (
+                "{time:YYYY-MM-DD HH:mm:ss} - {name} - {level} - "
+                "{file}:{line} - {message}"
+            )
+            loguru_logger.add(
+                sys.stderr,
+                level=level.upper(),
+                format=loguru_format,
+            )
+            loguru_logger.add(
+                str(log_file),
+                rotation="500 MB",
+                retention="7 days",
+                level=level.upper(),
+                format=loguru_format,
+            )
 
+        cls._configured_level = resolved_level
         cls._initialized = True
-        return logger
+        configured_logger = logging.getLogger(name)
+        configured_logger.setLevel(resolved_level)
+        return configured_logger
 
 
 def get_logger(name: str) -> logging.Logger:
@@ -114,7 +131,11 @@ def get_logger(name: str) -> logging.Logger:
     logging.Logger
         Logger instance
     """
-    return logging.getLogger(name)
+    if not LoggerSetup._initialized:
+        LoggerSetup.setup()
+    logger = logging.getLogger(name)
+    logger.setLevel(LoggerSetup._configured_level)
+    return logger
 
 
 # Initialize default logger

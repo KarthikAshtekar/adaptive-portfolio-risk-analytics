@@ -5,14 +5,19 @@ This module provides centralized configuration loading from YAML files,
 environment variables, and Python dictionaries.
 """
 
-import os
 from pathlib import Path
 from typing import Any, Dict, Optional
-import yaml
-from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
+import yaml
+
+try:
+    from dotenv import load_dotenv
+except ImportError:  # pragma: no cover - optional dependency fallback
+    load_dotenv = None
+
+# Load environment variables when python-dotenv is available.
+if load_dotenv is not None:
+    load_dotenv()
 
 
 class ConfigManager:
@@ -46,7 +51,7 @@ class ConfigManager:
 
         for config_file in sorted(self.config_dir.glob("*.yaml")):
             try:
-                with open(config_file, "r") as f:
+                with open(config_file, "r", encoding="utf-8") as f:
                     file_config = yaml.safe_load(f) or {}
                     self.config.update(file_config)
             except Exception as e:
@@ -120,11 +125,14 @@ class ConfigManager:
         self._deep_update(self.config, other)
 
     @staticmethod
-    def _deep_update(d: Dict, u: Dict) -> None:
+    def _deep_update(d: Dict[str, Any], u: Dict[str, Any]) -> Dict[str, Any]:
         """Recursively update nested dictionary."""
         for k, v in u.items():
             if isinstance(v, dict):
-                d[k] = ConfigManager._deep_update(d.get(k, {}), v)
+                existing = d.get(k, {})
+                if not isinstance(existing, dict):
+                    existing = {}
+                d[k] = ConfigManager._deep_update(existing, v)
             else:
                 d[k] = v
         return d
