@@ -1,0 +1,59 @@
+# This file specifies code owners and their modules
+# GitHub will automatically request reviews from these owners
+
+# Root level files
+*.md @KarthikAshtekar
+*.txt @KarthikAshtekar
+Makefile @KarthikAshtekar
+setup.py @KarthikAshtekar
+pytest.ini @KarthikAshtekar
+
+# Configuration
+config/ @KarthikAshtekar
+.env.template @KarthikAshtekar
+
+# Core infrastructure
+src/config.py @KarthikAshtekar
+src/logging_config.py @KarthikAshtekar
+src/types.py @KarthikAshtekar
+src/utils.py @KarthikAshtekar
+
+# Data pipeline (multiple owners possible)
+src/data_pipeline/ @KarthikAshtekar
+
+# Covariance estimation
+src/covariance/ @KarthikAshtekar
+
+# Clustering methods
+src/clustering/ @KarthikAshtekar
+
+# Regime detection
+src/regime_detection/ @KarthikAshtekar
+
+# NLP and sentiment analysis
+src/nlp/ @KarthikAshtekar
+
+# Optimization
+src/optimization/ @KarthikAshtekar
+
+# Backtesting framework
+src/backtesting/ @KarthikAshtekar
+
+# Analytics and risk metrics
+src/analytics/ @KarthikAshtekar
+
+# Dashboard
+src/dashboard/ @KarthikAshtekar
+
+# Tests
+tests/ @KarthikAshtekar
+conftest.py @KarthikAshtekar
+
+# Documentation
+docs/ @KarthikAshtekar
+
+# GitHub configurations
+.github/ @KarthikAshtekar
+
+# Note: Add team members as they join
+# Example: src/optimization/ @user1 @user2
