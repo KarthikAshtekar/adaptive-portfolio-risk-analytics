@@ -1,0 +1,107 @@
+# Portfolio Configuration File
+
+portfolio:
+  rebalance_frequency: "M"  # D: Daily, W: Weekly, M: Monthly, Q: Quarterly, Y: Yearly
+  lookback_window: 252  # Trading days for covariance estimation
+  min_weight: 0.0
+  max_weight: 1.0
+  target_volatility: 0.15  # 15% annual volatility target
+  transaction_cost: 0.001  # 10 basis points
+  tax_rate: 0.0
+
+# Covariance Estimation Configuration
+covariance:
+  method: "ledoit_wolf"  # ledoit_wolf, gerber, rolling
+  ledoit_wolf:
+    shrinkage: null  # null = auto-optimize
+    target: "identity"
+  gerber:
+    correlation_type: "RS"  # Rank-Sign
+  rolling:
+    window: 252
+    method: "standard"  # standard, exponential_weighted
+
+# Hierarchical Clustering Configuration
+clustering:
+  linkage_method: "ward"  # ward, complete, average, single
+  distance_metric: "euclidean"  # euclidean, correlation
+  n_clusters: auto  # auto or integer
+
+# Regime Detection Configuration
+regime_detection:
+  method: "markov_switching"  # markov_switching, volatility_based
+  markov_switching:
+    n_regimes: 2  # Number of regimes to detect
+    ar_order: 1  # AR order
+  volatility_targeting:
+    target_volatility: 0.15
+    scale_factor: 0.5  # For defensive scaling
+
+# Optimization Configuration
+optimization:
+  methods:
+    - equal_weight
+    - mean_variance
+    - hrp
+    - herc
+    - inverse_volatility
+  mean_variance:
+    target_return: null  # null = auto-optimize for Sharpe
+    risk_free_rate: 0.02
+  constraints:
+    min_weight: 0.0
+    max_weight: 1.0
+    max_leverage: 1.0
+
+# Backtesting Configuration
+backtesting:
+  start_date: "2015-01-01"
+  end_date: "2024-01-01"
+  initial_capital: 1000000.0
+  rebalance_frequency: "M"
+  cpcv:
+    n_splits: 5
+    embargo_pct: 0.01
+    test_size_pct: 0.15
+  transaction_costs:
+    bid_ask_spread: 0.001  # 10 bps
+    commission: 0.0
+    slippage_factor: 0.1
+
+# Risk Metrics Configuration
+risk:
+  var_confidence_level: 0.95
+  cvar_confidence_level: 0.95
+  metrics:
+    - volatility
+    - sharpe
+    - sortino
+    - calmar
+    - max_drawdown
+    - var
+    - cvar
+
+# Data Configuration
+data:
+  sources:
+    - yfinance
+    - alpha_vantage
+  yfinance:
+    auto_adjust: true
+  alpha_vantage:
+    api_key: ${ALPHA_VANTAGE_KEY}  # Environment variable
+  missing_data_handling: "forward_fill"  # forward_fill, interpolate, drop
+
+# Logging Configuration
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  log_dir: "./logs"
+
+# Output Configuration
+outputs:
+  base_dir: "./outputs"
+  weights_dir: "./outputs/weights"
+  reports_dir: "./outputs/reports"
+  metrics_dir: "./outputs/metrics"
+  figures_dir: "./outputs/figures"
