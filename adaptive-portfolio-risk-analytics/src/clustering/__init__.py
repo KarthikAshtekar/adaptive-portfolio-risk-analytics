@@ -1,11 +1,10 @@
 """Hierarchical clustering and dendrogram analysis module."""
 
-from typing import Optional, Tuple, Dict
+from typing import Optional
 import pandas as pd
 import numpy as np
 from scipy.cluster.hierarchy import dendrogram, linkage, fcluster
 from scipy.spatial.distance import pdist, squareform
-from abc import ABC, abstractmethod
 
 
 __all__ = [

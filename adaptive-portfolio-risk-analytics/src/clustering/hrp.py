@@ -7,11 +7,10 @@ References
 - Raffinot, T. (2018). "Hierarchical Clustering Based Asset Allocation"
 """
 
-from typing import Optional, Tuple
 import pandas as pd
 import numpy as np
-from scipy.cluster.hierarchy import linkage, dendrogram, leaves_list
-from scipy.spatial.distance import pdist, squareform
+from scipy.cluster.hierarchy import linkage, leaves_list
+from scipy.spatial.distance import squareform
 
 
 class HierarchicalRiskParity:

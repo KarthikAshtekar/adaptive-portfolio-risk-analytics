@@ -1,10 +1,9 @@
 """Backtesting and validation framework."""
 
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional
 import pandas as pd
 import numpy as np
 from abc import ABC, abstractmethod
-from datetime import datetime, timedelta
 
 
 __all__ = [

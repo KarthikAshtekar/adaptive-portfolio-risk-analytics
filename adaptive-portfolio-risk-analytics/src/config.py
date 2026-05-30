@@ -57,7 +57,9 @@ class ConfigManager:
             except Exception as e:
                 from src.logging_config import get_logger
 
-                get_logger(__name__).warning("Failed to load config file %s: %s", config_file, e, exc_info=True)
+                logger = get_logger(__name__)
+                logger.warning("Failed to load config file %s: %s", config_file, e,
+                               exc_info=True)
 
     def get(self, key: str, default: Any = None) -> Any:
         """

@@ -1,9 +1,8 @@
 """Core types and constants for the platform."""
 
 from enum import Enum
-from typing import Dict, Any
+from typing import Optional
 from dataclasses import dataclass
-import numpy as np
 
 
 class AllocationMethod(Enum):
@@ -77,6 +76,3 @@ GERBER_CORRELATION_TYPE = "RS"  # Rank-Sign
 # Machine learning parameters
 HIERARCHICAL_LINKAGE = "ward"
 HIERARCHICAL_DISTANCE = "euclidean"
-
-# Optional type for type hints
-from typing import Optional

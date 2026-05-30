@@ -2,7 +2,7 @@
 
 import numpy as np
 import pandas as pd
-from typing import Tuple, Union, Optional
+from typing import Union
 from pathlib import Path
 import json
 from datetime import datetime
@@ -47,7 +47,7 @@ def calculate_rolling_covariance(
     """
     rolling_cov = {}
     for i in range(window, len(returns)):
-        subset = returns.iloc[i - window : i]
+        subset = returns.iloc[i - window:i]
         rolling_cov[returns.index[i]] = subset.cov()
     return rolling_cov
 

@@ -1,9 +1,8 @@
 """Risk metrics and performance analytics."""
 
-from typing import Dict, Optional
+from typing import Dict
 import pandas as pd
 import numpy as np
-from scipy import stats
 
 
 __all__ = [
@@ -131,12 +130,8 @@ class RiskAnalytics:
 
         TODO: Implement marginal CVaR
         """
-        portfolio_returns = (asset_returns @ portfolio_weights).squeeze()
-        portfolio_cvar = RiskAnalytics.conditional_value_at_risk(
-            portfolio_returns, confidence_level
-        )
-
-        # TODO: Calculate component CVaR
+        # Calculate component CVaR
+        # TODO: Implement component CVaR calculation
         return np.zeros(len(portfolio_weights))
 
 

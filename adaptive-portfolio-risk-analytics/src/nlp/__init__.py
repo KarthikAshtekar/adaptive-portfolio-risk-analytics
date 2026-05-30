@@ -1,8 +1,7 @@
 """NLP and sentiment analysis module for macro-financial intelligence."""
 
-from typing import Dict, List, Optional
+from typing import Dict, List
 import pandas as pd
-import numpy as np
 from abc import ABC, abstractmethod
 
 

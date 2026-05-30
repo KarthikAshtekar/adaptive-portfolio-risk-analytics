@@ -1,6 +1,5 @@
 """Regime detection and volatility targeting module."""
 
-from typing import Optional, Dict, List, Tuple
 import pandas as pd
 import numpy as np
 from abc import ABC, abstractmethod

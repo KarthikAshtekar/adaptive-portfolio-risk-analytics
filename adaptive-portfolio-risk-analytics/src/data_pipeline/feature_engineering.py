@@ -4,7 +4,7 @@ Feature engineering for advanced portfolio analytics.
 Generates technical indicators, macro features, sentiment scores.
 """
 
-from typing import Dict, List, Optional
+from typing import List
 import pandas as pd
 import numpy as np
 

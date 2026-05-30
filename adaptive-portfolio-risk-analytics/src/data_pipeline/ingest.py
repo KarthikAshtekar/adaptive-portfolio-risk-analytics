@@ -4,11 +4,9 @@ Data ingestion module for fetching market data from various sources.
 Supports: yfinance, Alpha Vantage, pandas-datareader
 """
 
-from typing import List, Optional, Tuple
+from typing import List
 from abc import ABC, abstractmethod
 import pandas as pd
-import numpy as np
-from datetime import datetime
 
 
 class DataIngester(ABC):

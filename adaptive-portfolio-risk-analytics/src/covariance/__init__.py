@@ -1,6 +1,6 @@
 """Covariance estimation module with shrinkage methods."""
 
-from typing import Optional, Tuple
+from typing import Optional
 import pandas as pd
 import numpy as np
 from abc import ABC, abstractmethod
@@ -170,7 +170,7 @@ class RollingCovarianceEstimator(CovarianceEstimator):
         TODO: Implement full time series of covariance matrices
         """
         if self.method == "standard":
-            recent = returns.iloc[-self.window :]
+            recent = returns.iloc[-self.window:]
             return recent.cov().values
         elif self.method == "exponential_weighted":
             # TODO: Implement EWM covariance
@@ -194,7 +194,7 @@ class RollingCovarianceEstimator(CovarianceEstimator):
         """
         cov_series = {}
         for i in range(self.window, len(returns)):
-            subset = returns.iloc[i - self.window : i]
+            subset = returns.iloc[i - self.window:i]
             cov_series[returns.index[i]] = subset.cov().values
 
         return cov_series

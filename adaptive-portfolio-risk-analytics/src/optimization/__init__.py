@@ -1,6 +1,6 @@
 """Portfolio optimization and allocation methods."""
 
-from typing import Optional, Tuple
+from typing import Optional
 import pandas as pd
 import numpy as np
 from abc import ABC, abstractmethod

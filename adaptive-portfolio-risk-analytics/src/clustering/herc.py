@@ -7,7 +7,6 @@ References
 - Nystrup, P., et al. (2018). "Multi-period Portfolio Optimization"
 """
 
-from typing import Optional
 import pandas as pd
 import numpy as np
 

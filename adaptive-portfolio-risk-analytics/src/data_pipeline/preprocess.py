@@ -4,7 +4,7 @@ Data preprocessing module for cleaning and normalizing market data.
 Handles: missing values, outliers, price adjustments, returns calculation
 """
 
-from typing import Optional, Tuple
+from typing import Tuple
 import pandas as pd
 import numpy as np
 from scipy import stats

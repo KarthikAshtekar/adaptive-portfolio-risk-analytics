@@ -58,8 +58,8 @@ class LoggerSetup:
             return logger
 
         # Create logs directory
-        log_dir = Path(log_dir or "./logs")
-        log_dir.mkdir(parents=True, exist_ok=True)
+        log_dir_path = Path(log_dir or "./logs")
+        log_dir_path.mkdir(parents=True, exist_ok=True)
 
         # Default format
         if format_str is None:
@@ -82,7 +82,7 @@ class LoggerSetup:
         logger.addHandler(console_handler)
 
         # File handler (rotating)
-        log_file = log_dir / f"{name}.log"
+        log_file = log_dir_path / f"{name}.log"
         file_handler = logging.handlers.RotatingFileHandler(
             log_file, maxBytes=10485760, backupCount=5  # 10MB, keep 5 files
         )
