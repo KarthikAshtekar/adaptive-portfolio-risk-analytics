@@ -1,148 +1,97 @@
-"""
-Hierarchical Risk Parity (HRP) portfolio construction.
+"""Hierarchical Risk Parity (HRP) portfolio construction."""
 
-References
-----------
-- López de Prado, M. (2016). "Building Diversified Portfolios that Outperform"
-- Raffinot, T. (2018). "Hierarchical Clustering Based Asset Allocation"
-"""
+from __future__ import annotations
 
-import pandas as pd
 import numpy as np
-from scipy.cluster.hierarchy import linkage, leaves_list
-from scipy.spatial.distance import squareform
+import pandas as pd
+from scipy.cluster.hierarchy import leaves_list, linkage
+
+from .distance_metrics import DistanceMetrics
 
 
 class HierarchicalRiskParity:
-    """
-    Hierarchical Risk Parity portfolio optimizer.
+    """HRP portfolio optimizer using recursive bisection."""
 
-    Constructs portfolios by:
-    1. Clustering assets based on correlation
-    2. Recursively allocating risk through the hierarchy
-    3. Optimizing weights within each cluster
-    """
-
-    def __init__(self, linkage_method: str = "ward"):
-        """
-        Initialize HRP optimizer.
-
-        Parameters
-        ----------
-        linkage_method : str
-            Hierarchical linkage method
-
-        TODO: Add divergence-based distance metrics
-        """
+    def __init__(self, linkage_method: str = "single"):
         self.linkage_method = linkage_method
         self.linkage_matrix: np.ndarray | None = None
-        self.weights: np.ndarray | None = None
+        self.asset_order: list[str] | None = None
+        self.weights: pd.Series | None = None
 
     def fit(self, returns: pd.DataFrame) -> "HierarchicalRiskParity":
-        """
-        Fit HRP model.
+        if returns.empty:
+            raise ValueError("returns must not be empty")
 
-        Parameters
-        ----------
-        returns : pd.DataFrame
-            Asset returns
+        returns = returns.dropna(how="any")
+        if returns.empty:
+            raise ValueError("returns has no valid rows after dropping NaNs")
 
-        Returns
-        -------
-        HierarchicalRiskParity
-            Fitted model
-
-        TODO: Implement full HRP algorithm
-        TODO: Add variance-minimization refinement
-        """
-        # Calculate correlation matrix
+        cov = returns.cov()
         corr = returns.corr()
+        dist = DistanceMetrics.correlation_distance(corr.values)
+        condensed = DistanceMetrics.to_condensed(dist)
 
-        # Calculate distance matrix
-        dist = 1 - corr
-        dist_condensed = squareform(dist)
+        self.linkage_matrix = linkage(condensed, method=self.linkage_method)
+        order_idx = leaves_list(self.linkage_matrix).tolist()
+        self.asset_order = [returns.columns[i] for i in order_idx]
 
-        # Perform hierarchical clustering
-        self.linkage_matrix = linkage(dist_condensed, method=self.linkage_method)
+        ordered_cov = cov.loc[self.asset_order, self.asset_order]
+        self.weights = self._recursive_bisection(ordered_cov, self.asset_order)
 
-        # Get optimal ordering
-        order = leaves_list(self.linkage_matrix)
-
-        # Calculate weights using HRP algorithm
-        self.weights = self._calculate_hrp_weights(
-            cov=returns.cov(),
-            order=order,
-        )
-
+        # Return in original column order.
+        self.weights = self.weights.reindex(returns.columns).fillna(0.0)
+        self.weights = self.weights / self.weights.sum()
         return self
 
-    def _calculate_hrp_weights(
-        self, cov: pd.DataFrame, order: np.ndarray
-    ) -> np.ndarray:
-        """
-        Calculate HRP weights recursively.
+    def _cluster_variance(self, cov: pd.DataFrame, cluster: list[str]) -> float:
+        sub_cov = cov.loc[cluster, cluster]
+        diag = np.diag(sub_cov.values)
+        inv_diag = 1.0 / np.clip(diag, 1e-12, None)
+        ivp = inv_diag / inv_diag.sum()
+        return float(ivp.T @ sub_cov.values @ ivp)
 
-        Parameters
-        ----------
-        cov : pd.DataFrame
-            Covariance matrix
-        order : np.ndarray
-            Asset ordering from dendrogram
+    def _recursive_bisection(self, cov: pd.DataFrame, ordered_assets: list[str]) -> pd.Series:
+        weights = pd.Series(1.0, index=ordered_assets)
+        clusters: list[list[str]] = [ordered_assets]
 
-        Returns
-        -------
-        np.ndarray
-            Portfolio weights
+        while clusters:
+            cluster = clusters.pop(0)
+            if len(cluster) <= 1:
+                continue
 
-        TODO: Implement recursive weight calculation
-        TODO: Implement inverse volatility refinement
-        """
-        # TODO: Implement full recursive algorithm
-        n_assets = len(order)
-        return np.ones(n_assets) / n_assets
+            split = len(cluster) // 2
+            left = cluster[:split]
+            right = cluster[split:]
+
+            left_var = self._cluster_variance(cov, left)
+            right_var = self._cluster_variance(cov, right)
+
+            alpha = 1.0 - left_var / (left_var + right_var)
+            weights[left] *= alpha
+            weights[right] *= 1.0 - alpha
+
+            if len(left) > 1:
+                clusters.append(left)
+            if len(right) > 1:
+                clusters.append(right)
+
+        return weights / weights.sum()
 
     def get_weights(self) -> np.ndarray:
-        """
-        Get HRP portfolio weights.
-
-        Returns
-        -------
-        np.ndarray
-            Portfolio weights
-        """
         if self.weights is None:
-            raise ValueError("Model not fitted. Call fit() first.")
-        return self.weights
+            raise ValueError("model not fitted")
+        return self.weights.values
 
 
 class ConstrainedHRP(HierarchicalRiskParity):
-    """
-    HRP with position constraints.
-
-    TODO: Implement min/max weight constraints
-    TODO: Implement sector constraints
-    """
+    """Phase 2 extension point for constrained HRP."""
 
     def __init__(
         self,
-        linkage_method: str = "ward",
+        linkage_method: str = "single",
         min_weight: float = 0.0,
         max_weight: float = 1.0,
     ):
-        """
-        Initialize constrained HRP.
-
-        Parameters
-        ----------
-        linkage_method : str
-            Hierarchical linkage method
-        min_weight : float
-            Minimum asset weight
-        max_weight : float
-            Maximum asset weight
-
-        TODO: Add sector-level constraints
-        """
-        super().__init__(linkage_method)
+        super().__init__(linkage_method=linkage_method)
         self.min_weight = min_weight
         self.max_weight = max_weight

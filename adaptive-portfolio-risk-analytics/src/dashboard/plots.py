@@ -1,42 +1,62 @@
-"""Plotting utilities for Streamlit dashboard."""
+"""Plotting utilities for the Streamlit dashboard."""
+
+from __future__ import annotations
 
 from typing import Any
-import plotly.graph_objects as go
-import plotly.express as px
-import pandas as pd
+
 import numpy as np
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+
+from src.clustering.dendrograms import DendrogramAnalyzer
 
 
-def plot_efficient_frontier(
-    returns: pd.DataFrame,
-    weights_history: pd.DataFrame = None,
-    title: str = "Efficient Frontier",
-) -> go.Figure:
-    """
-    Plot efficient frontier.
-
-    Parameters
-    ----------
-    returns : pd.DataFrame
-        Asset returns
-    weights_history : pd.DataFrame, optional
-        Historical portfolio weights
-    title : str
-        Plot title
-
-    Returns
-    -------
-    go.Figure
-        Plotly figure
-
-    TODO: Implement efficient frontier calculation
-    """
+def plot_performance_curves(curves: dict[str, pd.Series]) -> go.Figure:
+    """Plot portfolio value curves for one or more strategies."""
     fig = go.Figure()
+    for name, series in curves.items():
+        fig.add_trace(go.Scatter(x=series.index, y=series.values, mode="lines", name=name))
 
-    # TODO: Calculate efficient frontier portfolios
-    # TODO: Plot frontier
-    # TODO: Add portfolio history
+    fig.update_layout(
+        title="Portfolio Growth Curve",
+        xaxis_title="Date",
+        yaxis_title="Portfolio Value",
+        template="plotly_white",
+        hovermode="x unified",
+    )
+    return fig
 
+
+def plot_drawdown_curves(curves: dict[str, pd.Series]) -> go.Figure:
+    """Plot drawdown curves for one or more strategies."""
+    fig = go.Figure()
+    for name, series in curves.items():
+        fig.add_trace(go.Scatter(x=series.index, y=series.values, mode="lines", name=name))
+
+    fig.update_layout(
+        title="Drawdown Curve",
+        xaxis_title="Date",
+        yaxis_title="Drawdown",
+        template="plotly_white",
+        hovermode="x unified",
+    )
+    return fig
+
+
+def plot_correlation_heatmap(corr: pd.DataFrame) -> go.Figure:
+    """Plot correlation heatmap."""
+    fig = px.imshow(
+        corr.values,
+        x=corr.columns,
+        y=corr.index,
+        color_continuous_scale="RdBu",
+        zmin=-1,
+        zmax=1,
+        title="Correlation Heatmap",
+        aspect="auto",
+    )
+    fig.update_layout(template="plotly_white")
     return fig
 
 
@@ -45,131 +65,19 @@ def plot_dendrogram(
     labels: list[Any] | None = None,
     title: str = "Hierarchical Clustering Dendrogram",
 ) -> go.Figure:
-    """
-    Plot hierarchical clustering dendrogram.
-
-    Parameters
-    ----------
-    linkage_matrix : np.ndarray
-        Linkage matrix
-    labels : list, optional
-        Asset labels
-    title : str
-        Plot title
-
-    Returns
-    -------
-    go.Figure
-        Plotly figure
-
-    TODO: Implement Plotly dendrogram
-    """
-    fig = go.Figure()
-
-    # TODO: Create Plotly dendrogram
-
-    return fig
+    """Render dendrogram from linkage matrix."""
+    return DendrogramAnalyzer.to_plotly_figure(linkage_matrix, labels=labels, title=title)
 
 
-def plot_risk_decomposition(
-    risk_contrib: np.ndarray,
-    asset_names: list,
-    title: str = "Risk Decomposition",
-) -> go.Figure:
-    """
-    Plot portfolio risk decomposition.
-
-    Parameters
-    ----------
-    risk_contrib : np.ndarray
-        Risk contributions by asset
-    asset_names : list
-        Asset names
-    title : str
-        Plot title
-
-    Returns
-    -------
-    go.Figure
-        Plotly figure
-    """
-    fig = px.pie(
-        values=risk_contrib,
-        names=asset_names,
-        title=title,
+def plot_weight_bar(weights: pd.Series, title: str = "Latest Portfolio Weights") -> go.Figure:
+    """Plot strategy weights as bar chart."""
+    fig = go.Figure(
+        go.Bar(x=weights.index.tolist(), y=weights.values.tolist(), marker_color="#1f77b4")
     )
-
-    return fig
-
-
-def plot_portfolio_returns(
-    returns: pd.Series,
-    title: str = "Portfolio Returns",
-) -> go.Figure:
-    """
-    Plot cumulative portfolio returns.
-
-    Parameters
-    ----------
-    returns : pd.Series
-        Portfolio returns
-    title : str
-        Plot title
-
-    Returns
-    -------
-    go.Figure
-        Plotly figure
-    """
-    cumulative = (1 + returns).cumprod()
-
-    fig = go.Figure()
-    fig.add_trace(
-        go.Scatter(
-            x=returns.index,
-            y=cumulative,
-            mode="lines",
-            name="Portfolio Value",
-        )
-    )
-
     fig.update_layout(
         title=title,
-        xaxis_title="Date",
-        yaxis_title="Cumulative Return",
-        hovermode="x unified",
+        xaxis_title="Asset",
+        yaxis_title="Weight",
+        template="plotly_white",
     )
-
-    return fig
-
-
-def plot_rolling_metrics(
-    returns: pd.Series,
-    metric: str = "sharpe",
-    window: int = 252,
-) -> go.Figure:
-    """
-    Plot rolling performance metric.
-
-    Parameters
-    ----------
-    returns : pd.Series
-        Portfolio returns
-    metric : str
-        Metric: 'sharpe', 'volatility', 'correlation'
-    window : int
-        Rolling window size
-
-    Returns
-    -------
-    go.Figure
-        Plotly figure
-
-    TODO: Implement metric calculation
-    """
-    fig = go.Figure()
-
-    # TODO: Calculate rolling metrics
-    # TODO: Plot time series
-
     return fig

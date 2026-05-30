@@ -6,18 +6,21 @@ environment variables, and Python dictionaries.
 """
 
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional
 
 import yaml
 
+_load_dotenv: Callable[[], bool] | None
 try:
-    from dotenv import load_dotenv
+    from dotenv import load_dotenv as _imported_load_dotenv
 except ImportError:  # pragma: no cover - optional dependency fallback
-    load_dotenv = None
+    _load_dotenv = None
+else:
+    _load_dotenv = _imported_load_dotenv
 
 # Load environment variables when python-dotenv is available.
-if load_dotenv is not None:
-    load_dotenv()
+if _load_dotenv is not None:
+    _load_dotenv()
 
 
 class ConfigManager:

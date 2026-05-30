@@ -8,13 +8,15 @@ import logging
 import logging.handlers
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
+loguru_logger: Any | None
 try:
-    from loguru import logger as loguru_logger
+    from loguru import logger as _imported_loguru_logger
 except ImportError:  # pragma: no cover - optional dependency fallback
     loguru_logger = None
 else:
+    loguru_logger = _imported_loguru_logger
     # Remove default handler
     loguru_logger.remove()
 
