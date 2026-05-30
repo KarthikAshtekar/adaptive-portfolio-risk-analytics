@@ -4,7 +4,6 @@ from typing import Dict, List
 import pandas as pd
 from abc import ABC, abstractmethod
 
-
 __all__ = [
     "SentimentAnalyzer",
     "RBISentimentAnalyzer",

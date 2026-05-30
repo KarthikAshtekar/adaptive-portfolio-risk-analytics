@@ -27,9 +27,7 @@ def ensure_returns(prices: pd.DataFrame) -> pd.DataFrame:
     return prices.dropna()
 
 
-def calculate_rolling_covariance(
-    returns: pd.DataFrame, window: int = 252
-) -> dict:
+def calculate_rolling_covariance(returns: pd.DataFrame, window: int = 252) -> dict:
     """
     Calculate rolling covariance matrix.
 
@@ -47,7 +45,7 @@ def calculate_rolling_covariance(
     """
     rolling_cov = {}
     for i in range(window, len(returns)):
-        subset = returns.iloc[i - window:i]
+        subset = returns.iloc[i - window : i]
         rolling_cov[returns.index[i]] = subset.cov()
     return rolling_cov
 

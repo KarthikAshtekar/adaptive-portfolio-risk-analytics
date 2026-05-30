@@ -44,7 +44,9 @@ def run_phase1_pipeline(
     returns = DataPreprocessor.calculate_returns(prices, method="simple")
 
     covariance_estimator = SampleCovarianceEstimator().fit(returns)
-    covariance = pd.DataFrame(covariance_estimator.get_covariance(), index=returns.columns, columns=returns.columns)
+    covariance = pd.DataFrame(
+        covariance_estimator.get_covariance(), index=returns.columns, columns=returns.columns
+    )
     correlation = returns.corr()
 
     clusterer = HierarchicalClusterer(linkage_method="single").fit(returns)

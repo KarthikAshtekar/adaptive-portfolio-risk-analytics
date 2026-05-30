@@ -65,7 +65,7 @@ class RollingCovarianceEstimator(BaseCovarianceEstimator):
         if len(returns) < self.window:
             raise ValueError("returns length must be >= window")
 
-        recent = returns.iloc[-self.window:].dropna(how="any")
+        recent = returns.iloc[-self.window :].dropna(how="any")
         if recent.empty:
             raise ValueError("no valid rows in rolling window")
 
@@ -92,7 +92,7 @@ class RollingCovarianceEstimator(BaseCovarianceEstimator):
 
         cov_series: dict[pd.Timestamp, np.ndarray] = {}
         for i in range(self.window, len(returns) + 1):
-            window_slice = returns.iloc[i - self.window: i].dropna(how="any")
+            window_slice = returns.iloc[i - self.window : i].dropna(how="any")
             if window_slice.empty:
                 continue
             cov_series[returns.index[i - 1]] = window_slice.cov().values

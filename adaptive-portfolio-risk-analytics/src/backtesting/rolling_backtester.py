@@ -72,7 +72,7 @@ class RollingBacktester(BaseBacktester):
 
         for t in range(self.train_window - 1, len(clean) - 1):
             if t == self.train_window - 1 or rebalance_flags[t]:
-                train_slice = clean.iloc[t - self.train_window + 1: t + 1]
+                train_slice = clean.iloc[t - self.train_window + 1 : t + 1]
                 target_weights = self.allocator.optimize(train_slice)
                 target_weights = np.asarray(target_weights, dtype=float)
                 target_weights = np.clip(target_weights, 0.0, None)

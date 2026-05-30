@@ -72,9 +72,7 @@ class FeatureEngineer:
         return features
 
     @staticmethod
-    def calculate_correlation_features(
-        returns: pd.DataFrame, window: int = 252
-    ) -> pd.DataFrame:
+    def calculate_correlation_features(returns: pd.DataFrame, window: int = 252) -> pd.DataFrame:
         """
         Calculate correlation-based features.
 

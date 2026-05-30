@@ -199,9 +199,7 @@ def main() -> None:
                     use_container_width=True,
                 )
 
-        st.caption(
-            f"Covariance matrix shape: {cov_matrix.shape} | Returns rows: {len(returns)}"
-        )
+        st.caption(f"Covariance matrix shape: {cov_matrix.shape} | Returns rows: {len(returns)}")
 
     except Exception as exc:
         st.error(f"Analysis failed: {exc}")

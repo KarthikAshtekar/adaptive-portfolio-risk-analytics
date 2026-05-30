@@ -19,9 +19,7 @@ class LedoitWolfEstimator(BaseCovarianceEstimator):
 
     def fit(self, returns: pd.DataFrame) -> "LedoitWolfEstimator":
         _ = returns
-        raise NotImplementedError(
-            "Ledoit-Wolf is reserved for Phase 2 and is not implemented."
-        )
+        raise NotImplementedError("Ledoit-Wolf is reserved for Phase 2 and is not implemented.")
 
     def get_covariance(self) -> np.ndarray:
         raise NotImplementedError("Ledoit-Wolf is reserved for Phase 2 and is not implemented.")

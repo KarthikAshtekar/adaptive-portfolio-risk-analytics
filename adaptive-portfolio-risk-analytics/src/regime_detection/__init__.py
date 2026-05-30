@@ -4,7 +4,6 @@ import pandas as pd
 import numpy as np
 from abc import ABC, abstractmethod
 
-
 __all__ = [
     "RegimeDetector",
     "MarkovSwitchingRegimeDetector",
@@ -123,9 +122,7 @@ class VolatilityTargeting:
         """
         self.target_volatility = target_volatility
 
-    def scale_weights(
-        self, weights: np.ndarray, realized_volatility: float
-    ) -> np.ndarray:
+    def scale_weights(self, weights: np.ndarray, realized_volatility: float) -> np.ndarray:
         """
         Scale portfolio weights to achieve target volatility.
 
@@ -171,9 +168,7 @@ class DefensiveRiskScaling:
         """
         self.scaling_factor = scaling_factor
 
-    def scale_positions(
-        self, weights: np.ndarray, regime: int, n_regimes: int = 2
-    ) -> np.ndarray:
+    def scale_positions(self, weights: np.ndarray, regime: int, n_regimes: int = 2) -> np.ndarray:
         """
         Scale portfolio positions based on regime.
 
