@@ -1,5 +1,6 @@
 """Plotting utilities for Streamlit dashboard."""
 
+from typing import Any
 import plotly.graph_objects as go
 import plotly.express as px
 import pandas as pd
@@ -41,7 +42,7 @@ def plot_efficient_frontier(
 
 def plot_dendrogram(
     linkage_matrix: np.ndarray,
-    labels: list = None,
+    labels: list[Any] | None = None,
     title: str = "Hierarchical Clustering Dendrogram",
 ) -> go.Figure:
     """

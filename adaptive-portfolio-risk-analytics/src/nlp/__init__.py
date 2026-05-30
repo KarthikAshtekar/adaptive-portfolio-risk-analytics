@@ -33,7 +33,8 @@ class SentimentAnalyzer(ABC):
 
         TODO: Implement in concrete classes
         """
-        pass
+        _ = text
+        raise NotImplementedError
 
 
 class RBISentimentAnalyzer(SentimentAnalyzer):
@@ -93,7 +94,7 @@ class RBISentimentAnalyzer(SentimentAnalyzer):
 
         TODO: Implement RBI document scraping
         """
-        pass
+        return pd.DataFrame(columns=["date", "text"])
 
 
 class EarningsCallAnalyzer(SentimentAnalyzer):
@@ -138,7 +139,9 @@ class EarningsCallAnalyzer(SentimentAnalyzer):
 
         TODO: Implement financial sentiment analysis
         """
-        pass
+        # Placeholder score until model inference is implemented.
+        _ = text
+        return 0.0
 
     def extract_guidance(self, text: str) -> Dict[str, str]:
         """
@@ -156,7 +159,9 @@ class EarningsCallAnalyzer(SentimentAnalyzer):
 
         TODO: Implement NER for guidance extraction
         """
-        pass
+        # Placeholder extractor until NER/pattern pipeline is implemented.
+        _ = text
+        return {}
 
 
 class UncertaintyScorer:
@@ -196,7 +201,11 @@ class UncertaintyScorer:
 
         TODO: Implement uncertainty scoring algorithm
         """
-        pass
+        text_lower = text.lower()
+        hits = sum(1 for kw in self.uncertainty_keywords if kw in text_lower)
+        if not self.uncertainty_keywords:
+            return 0.0
+        return min(1.0, hits / len(self.uncertainty_keywords))
 
     def _load_uncertainty_keywords(self) -> List[str]:
         """
@@ -261,4 +270,15 @@ class SentimentPipeline:
         TODO: Implement sentiment aggregation logic
         TODO: Add time-decay weighting
         """
-        pass
+        _ = (date, lookback_days)
+        rbi_score = 0.0
+        earnings_score = 0.0
+        uncertainty_score = 0.0
+        aggregate = (rbi_score + earnings_score - uncertainty_score) / 3
+
+        return {
+            "rbi_sentiment": rbi_score,
+            "earnings_sentiment": earnings_score,
+            "uncertainty_score": uncertainty_score,
+            "aggregate_sentiment": aggregate,
+        }

@@ -318,7 +318,20 @@ class StressTestingFramework:
 
         TODO: Implement reverse stress testing
         """
-        pass
+        n_assets = len(portfolio_weights)
+        if n_assets == 0:
+            return {"required_uniform_move": 0.0, "asset_moves": np.array([])}
+
+        avg_corr = float(np.nanmean(asset_correlations))
+        scaling = 1.0 + max(0.0, avg_corr)
+        required_move = target_loss / (np.sum(np.abs(portfolio_weights)) * scaling)
+        asset_moves = np.full(n_assets, required_move)
+
+        return {
+            "required_uniform_move": required_move,
+            "asset_moves": asset_moves,
+            "assumed_average_correlation": avg_corr,
+        }
 
     @staticmethod
     def correlation_stress_test(
@@ -345,4 +358,9 @@ class StressTestingFramework:
 
         TODO: Implement full correlation shock
         """
-        pass
+        n_assets = len(portfolio_weights)
+        stressed_corr = np.full((n_assets, n_assets), correlation_change)
+        np.fill_diagonal(stressed_corr, 1.0)
+        stressed_cov = np.outer(volatilities, volatilities) * stressed_corr
+        stressed_var = float(portfolio_weights.T @ stressed_cov @ portfolio_weights)
+        return float(np.sqrt(max(stressed_var, 0.0)))

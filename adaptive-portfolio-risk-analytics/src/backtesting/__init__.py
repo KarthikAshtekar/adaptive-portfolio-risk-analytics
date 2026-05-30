@@ -187,7 +187,8 @@ class CPCVValidator:
 
         TODO: Implement CPCV validation loop
         """
-        pass
+        _ = (model, X, y)
+        raise NotImplementedError("CPCV model validation is not implemented yet.")
 
 
 class TransactionCostCalculator:
@@ -261,4 +262,7 @@ class TransactionCostCalculator:
 
         TODO: Implement realistic slippage model
         """
-        pass
+        if daily_volume <= 0:
+            return 0.0
+        participation = trade_size / daily_volume
+        return abs(participation) * volatility * 0.1

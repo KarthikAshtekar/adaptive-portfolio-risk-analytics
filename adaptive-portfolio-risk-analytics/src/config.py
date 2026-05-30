@@ -78,7 +78,7 @@ class ConfigManager:
             Configuration value or default
         """
         keys = key.split(".")
-        value = self.config
+        value: Any = self.config
 
         for k in keys:
             if isinstance(value, dict):

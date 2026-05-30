@@ -34,7 +34,8 @@ class CovarianceEstimator(ABC):
 
         TODO: Implement in concrete classes
         """
-        pass
+        _ = returns
+        raise NotImplementedError
 
 
 class LedoitWolfEstimator(CovarianceEstimator):
@@ -131,7 +132,9 @@ class GerberCovarianceEstimator(CovarianceEstimator):
         TODO: Implement Gerber statistic calculation
         TODO: Implement rank-sign correlation
         """
-        pass
+        # Fallback to sample covariance until Gerber statistic is implemented.
+        _ = self.correlation_type
+        return returns.cov().values
 
 
 class RollingCovarianceEstimator(CovarianceEstimator):
@@ -172,9 +175,12 @@ class RollingCovarianceEstimator(CovarianceEstimator):
         if self.method == "standard":
             recent = returns.iloc[-self.window:]
             return recent.cov().values
-        elif self.method == "exponential_weighted":
-            # TODO: Implement EWM covariance
-            pass
+        if self.method == "exponential_weighted":
+            ewm_cov = returns.ewm(span=self.window, adjust=False).cov()
+            latest_cov = ewm_cov.xs(returns.index[-1], level=0)
+            return latest_cov.values
+
+        raise ValueError(f"Unsupported covariance method: {self.method}")
 
     def estimate_series(self, returns: pd.DataFrame) -> dict:
         """

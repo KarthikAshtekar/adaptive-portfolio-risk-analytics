@@ -35,8 +35,8 @@ class HierarchicalRiskParity:
         TODO: Add divergence-based distance metrics
         """
         self.linkage_method = linkage_method
-        self.linkage_matrix = None
-        self.weights = None
+        self.linkage_matrix: np.ndarray | None = None
+        self.weights: np.ndarray | None = None
 
     def fit(self, returns: pd.DataFrame) -> "HierarchicalRiskParity":
         """

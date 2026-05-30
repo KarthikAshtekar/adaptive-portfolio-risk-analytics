@@ -70,7 +70,8 @@ class DistanceMetrics:
 
         TODO: Implement KL divergence calculation
         """
-        pass
+        _ = cov_matrix
+        raise NotImplementedError("KL-based distance is not implemented yet.")
 
 
 class HierarchicalClusterer:
@@ -205,5 +206,18 @@ class DendrogramAnalyzer:
         TODO: Implement elbow method
         TODO: Implement silhouette analysis
         """
-        # TODO: Implement optimal cluster detection
-        pass
+        if linkage_matrix.size == 0:
+            return 1
+
+        if criterion != "distance":
+            raise NotImplementedError(
+                f"Criterion '{criterion}' is not implemented yet."
+            )
+
+        merge_distances = linkage_matrix[:, 2]
+        if len(merge_distances) == 1:
+            return 2
+
+        distance_gaps = np.diff(merge_distances)
+        split_idx = int(np.argmax(distance_gaps))
+        return len(merge_distances) - split_idx
