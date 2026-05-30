@@ -63,67 +63,67 @@ def verify_project_structure():
     logger.info("")
     
     # Check directories
-    logger.info("📂 Checking directories...")
+    logger.info("[*] Checking directories...")
     missing_dirs = []
     for dir_path in required_dirs:
         full_path = project_root / dir_path
         if full_path.exists():
-            logger.info("  ✓ %s", dir_path)
+            logger.info("[+] %s", dir_path)
         else:
-            logger.warning("  ✗ %s - MISSING", dir_path)
+            logger.warning("[-] %s - MISSING", dir_path)
             missing_dirs.append(dir_path)
     
-    print()
+    logger.info("")
     
     # Check files
-    print("📄 Checking files...")
+    logger.info("[*] Checking files...")
     missing_files = []
     for file_path in required_files:
         full_path = project_root / file_path
         if full_path.exists():
             size = full_path.stat().st_size
-            print(f"  ✓ {file_path:50} ({size:,} bytes)")
+            logger.info("[+] %s (%d bytes)", file_path, size)
         else:
-            print(f"  ✗ {file_path} - MISSING")
+            logger.warning("[-] %s - MISSING", file_path)
             missing_files.append(file_path)
     
-    print()
+    logger.info("")
     
     # Summary
-    print("=" * 70)
-    print("SUMMARY")
-    print("=" * 70)
-    print(f"Total Directories: {len(required_dirs)}")
-    print(f"Directories Created: {len(required_dirs) - len(missing_dirs)}")
-    print(f"Directories Missing: {len(missing_dirs)}")
-    print()
-    print(f"Total Files: {len(required_files)}")
-    print(f"Files Created: {len(required_files) - len(missing_files)}")
-    print(f"Files Missing: {len(missing_files)}")
-    print()
+    logger.info("%s", "=" * 70)
+    logger.info("SUMMARY")
+    logger.info("%s", "=" * 70)
+    logger.info("Total Directories: %d", len(required_dirs))
+    logger.info("Directories Created: %d", len(required_dirs) - len(missing_dirs))
+    logger.info("Directories Missing: %d", len(missing_dirs))
+    logger.info("")
+    logger.info("Total Files: %d", len(required_files))
+    logger.info("Files Created: %d", len(required_files) - len(missing_files))
+    logger.info("Files Missing: %d", len(missing_files))
+    logger.info("")
     
     if not missing_dirs and not missing_files:
-        print("✅ PROJECT STRUCTURE COMPLETE!")
+        logger.info("PROJECT STRUCTURE COMPLETE!")
         return True
     else:
-        print("⚠️  SOME FILES/DIRECTORIES ARE MISSING")
+        logger.warning("SOME FILES/DIRECTORIES ARE MISSING")
         if missing_dirs:
-            print("\nMissing directories:")
+            logger.warning("Missing directories:")
             for d in missing_dirs:
-                print(f"  - {d}")
+                logger.warning("  - %s", d)
         if missing_files:
-            print("\nMissing files:")
+            logger.warning("Missing files:")
             for f in missing_files:
-                print(f"  - {f}")
+                logger.warning("  - %s", f)
         return False
 
 
 def verify_dependencies():
     """Check if key dependencies are listed in requirements.txt."""
-    print()
-    print("=" * 70)
-    print("DEPENDENCIES VERIFICATION")
-    print("=" * 70)
+    logger.info("")
+    logger.info("%s", "=" * 70)
+    logger.info("DEPENDENCIES VERIFICATION")
+    logger.info("%s", "=" * 70)
     
     requirements_file = Path(__file__).parent / "requirements.txt"
     
@@ -139,55 +139,54 @@ def verify_dependencies():
         with open(requirements_file, 'r') as f:
             requirements = f.read().lower()
         
-        print("\n📦 Checking required packages...")
+        logger.info("[*] Checking required packages...")
         found = 0
         for pkg in required_packages:
             if pkg.lower() in requirements:
-                print(f"  ✓ {pkg}")
+                logger.info("[+] %s", pkg)
                 found += 1
             else:
-                print(f"  ✗ {pkg} - NOT FOUND")
+                logger.warning("[-] %s - NOT FOUND", pkg)
         
-        print(f"\nFound: {found}/{len(required_packages)} packages")
+        logger.info("Found: %d/%d packages", found, len(required_packages))
         
         # Count total packages
         total_packages = len([line for line in requirements.split('\n') 
                             if line.strip() and not line.strip().startswith('#')])
-        print(f"Total packages in requirements.txt: {total_packages}")
+        logger.info("Total packages in requirements.txt: %d", total_packages)
     else:
-        print("✗ requirements.txt not found")
+        logger.warning("[-] requirements.txt not found")
 
 
 def print_quick_start():
     """Print quick start guide."""
-    print()
-    print("=" * 70)
-    print("QUICK START")
-    print("=" * 70)
-    print("""
-1. INSTALL DEPENDENCIES:
-   make install
-   
-2. CONFIGURE ENVIRONMENT:
-   cp .env.template .env
-   # Edit .env with your API keys
-   
-3. RUN TESTS:
-   make test
-   
-4. START DASHBOARD:
-   make run-dashboard
-   
-5. BUILD DOCUMENTATION:
-   make docs
-
-For more information, see:
-  - README.md
-  - GETTING_STARTED.md
-  - PROJECT_STATUS.md
-  - docs/architecture/ARCHITECTURE.md
-  - docs/methodology/METHODOLOGY.md
-""")
+    logger.info("")
+    logger.info("%s", "=" * 70)
+    logger.info("QUICK START")
+    logger.info("%s", "=" * 70)
+    logger.info("")
+    logger.info("1. INSTALL DEPENDENCIES:")
+    logger.info("   make install")
+    logger.info("")
+    logger.info("2. CONFIGURE ENVIRONMENT:")
+    logger.info("   cp .env.template .env")
+    logger.info("   # Edit .env with your API keys")
+    logger.info("")
+    logger.info("3. RUN TESTS:")
+    logger.info("   make test")
+    logger.info("")
+    logger.info("4. START DASHBOARD:")
+    logger.info("   make run-dashboard")
+    logger.info("")
+    logger.info("5. BUILD DOCUMENTATION:")
+    logger.info("   make docs")
+    logger.info("")
+    logger.info("For more information, see:")
+    logger.info("  - README.md")
+    logger.info("  - GETTING_STARTED.md")
+    logger.info("  - PROJECT_STATUS.md")
+    logger.info("  - docs/architecture/ARCHITECTURE.md")
+    logger.info("  - docs/methodology/METHODOLOGY.md")
 
 
 def main():
@@ -196,18 +195,19 @@ def main():
     verify_dependencies()
     print_quick_start()
     
-    print("=" * 70)
+    logger.info("")
+    logger.info("%s", "=" * 70)
     if success:
-        print("✅ PROJECT INITIALIZATION SUCCESSFUL!")
-        print()
-        print("Next steps:")
-        print("1. Run: make install")
-        print("2. Configure: cp .env.template .env")
-        print("3. Test: make test")
+        logger.info("PROJECT INITIALIZATION SUCCESSFUL!")
+        logger.info("")
+        logger.info("Next steps:")
+        logger.info("1. Run: make install")
+        logger.info("2. Configure: cp .env.template .env")
+        logger.info("3. Test: make test")
     else:
-        print("⚠️  PROJECT INITIALIZATION HAS ISSUES")
-        print("Please check the files listed above")
-    print("=" * 70)
+        logger.warning("PROJECT INITIALIZATION HAS ISSUES")
+        logger.warning("Please check the files listed above")
+    logger.info("%s", "=" * 70)
 
 
 if __name__ == "__main__":
