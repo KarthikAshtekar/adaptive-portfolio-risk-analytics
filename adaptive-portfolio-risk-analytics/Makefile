@@ -31,7 +31,7 @@ test-cov:
 	pytest tests/ -v --cov=src --cov-report=html --cov-report=term-missing
 
 lint:
-	flake8 src tests --max-line-length=100
+	flake8 src tests --max-line-length=100 --extend-ignore=E203
 	mypy src --ignore-missing-imports
 
 format:
