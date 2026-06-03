@@ -82,6 +82,7 @@ logs/
 # Jupyter Notebook
 .ipynb_checkpoints
 *.ipynb
+!notebooks/**/*.ipynb
 
 # PyCharm
 .ropeproject/

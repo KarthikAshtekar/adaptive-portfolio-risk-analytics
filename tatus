@@ -1,0 +1,8 @@
+warning: in the working copy of 'adaptive-portfolio-risk-analytics/.gitignore', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'adaptive-portfolio-risk-analytics/src/data_pipeline/__init__.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'adaptive-portfolio-risk-analytics/src/data_pipeline/ingest.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'adaptive-portfolio-risk-analytics/tests/test_data_pipeline.py', LF will be replaced by CRLF the next time Git touches it
+adaptive-portfolio-risk-analytics/.gitignore
+adaptive-portfolio-risk-analytics/src/data_pipeline/__init__.py
+adaptive-portfolio-risk-analytics/src/data_pipeline/ingest.py
+adaptive-portfolio-risk-analytics/tests/test_data_pipeline.py
