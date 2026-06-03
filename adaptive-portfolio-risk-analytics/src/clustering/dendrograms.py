@@ -2,49 +2,31 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Iterable
 
-import numpy as np
-import plotly.graph_objects as go
+import matplotlib.pyplot as plt
 from scipy.cluster.hierarchy import dendrogram
 
 
-class DendrogramAnalyzer:
-    """Generate dendrogram diagnostics and figures."""
+def plot_dendrogram(linkage_matrix, labels: Iterable[str] | None = None):
+    """Generate a publication-quality dendrogram figure."""
+    if labels is not None:
+        labels = list(labels)
 
-    @staticmethod
-    def to_plotly_figure(
-        linkage_matrix: np.ndarray,
-        labels: list[Any] | None = None,
-        title: str = "Hierarchical Clustering Dendrogram",
-    ) -> go.Figure:
-        """Convert scipy dendrogram output to a Plotly figure."""
-        dendro = dendrogram(linkage_matrix, labels=labels, no_plot=True)
+    fig, ax = plt.subplots(figsize=(12, 6))
+    dendrogram(
+        linkage_matrix,
+        labels=labels,
+        orientation="top",
+        leaf_rotation=45,
+        leaf_font_size=10,
+        color_threshold=None,
+        ax=ax,
+    )
 
-        fig = go.Figure()
-        for xs, ys in zip(dendro["icoord"], dendro["dcoord"]):
-            fig.add_trace(
-                go.Scatter(
-                    x=xs,
-                    y=ys,
-                    mode="lines",
-                    line=dict(color="#1f77b4", width=2),
-                    hoverinfo="skip",
-                    showlegend=False,
-                )
-            )
-
-        tick_vals = [5 + 10 * i for i in range(len(dendro.get("ivl", [])))]
-        fig.update_layout(
-            title=title,
-            xaxis=dict(
-                title="Assets",
-                tickmode="array",
-                tickvals=tick_vals,
-                ticktext=dendro.get("ivl", []),
-            ),
-            yaxis=dict(title="Distance"),
-            template="plotly_white",
-            margin=dict(l=40, r=20, t=50, b=40),
-        )
-        return fig
+    ax.set_title("Hierarchical Clustering Dendrogram")
+    ax.set_xlabel("Asset")
+    ax.set_ylabel("Distance")
+    ax.grid(True, linestyle="--", alpha=0.4)
+    fig.tight_layout()
+    return fig
