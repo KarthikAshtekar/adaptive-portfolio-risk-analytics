@@ -11,7 +11,12 @@ from .ingest import (
     YFinanceIngester,
     build_data_inspection_table,
 )
-from .preprocess import DataPreprocessor, DataValidator
+from .preprocess import (
+    TRADING_DAYS_PER_YEAR,
+    DataPreprocessor,
+    DataValidator,
+    ReturnsRiskOutputs,
+)
 from .feature_engineering import FeatureEngineer
 
 __all__ = [
@@ -24,6 +29,8 @@ __all__ = [
     "AlphaVantageProvider",
     "AlphaVantageIngester",
     "build_data_inspection_table",
+    "TRADING_DAYS_PER_YEAR",
+    "ReturnsRiskOutputs",
     "DataPreprocessor",
     "DataValidator",
     "FeatureEngineer",
