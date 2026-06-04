@@ -14,7 +14,9 @@ from .ingest import (
 from .preprocess import (
     TRADING_DAYS_PER_YEAR,
     DataPreprocessor,
+    DataQualityProcessor,
     DataValidator,
+    MissingDataSummary,
     ReturnsRiskOutputs,
 )
 from .feature_engineering import FeatureEngineer
@@ -31,6 +33,8 @@ __all__ = [
     "build_data_inspection_table",
     "TRADING_DAYS_PER_YEAR",
     "ReturnsRiskOutputs",
+    "MissingDataSummary",
+    "DataQualityProcessor",
     "DataPreprocessor",
     "DataValidator",
     "FeatureEngineer",

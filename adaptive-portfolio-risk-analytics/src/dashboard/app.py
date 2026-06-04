@@ -142,9 +142,46 @@ if run_button:
             end_date=str(end_date),
         )
 
-        prices_df = DataPreprocessor.handle_missing_values(
+        prices_df, data_quality_summary = DataPreprocessor.handle_missing_values(
             market_data.prices_df
         )
+
+        with st.expander("Data Quality Report"):
+            quality_col1, quality_col2, quality_col3 = st.columns(3)
+
+            quality_col1.metric(
+                "Assets requested",
+                data_quality_summary.total_assets_requested,
+            )
+            quality_col2.metric(
+                "Assets retained",
+                data_quality_summary.assets_retained,
+            )
+            quality_col3.metric(
+                "Assets dropped",
+                data_quality_summary.assets_dropped,
+            )
+
+            missing_col1, missing_col2 = st.columns(2)
+            missing_col1.metric(
+                "Missing observations before cleaning",
+                data_quality_summary.missing_before,
+            )
+            missing_col2.metric(
+                "Missing observations after cleaning",
+                data_quality_summary.missing_after,
+            )
+
+            st.write(
+                "Cleaning method:",
+                data_quality_summary.cleaning_method,
+            )
+
+            if data_quality_summary.dropped_asset_names:
+                st.write(
+                    "Dropped assets:",
+                    ", ".join(data_quality_summary.dropped_asset_names),
+                )
 
         returns_df = (
             DataPreprocessor

@@ -40,7 +40,7 @@ def run_phase1_pipeline(
 ) -> PipelineResult:
     ingester = YFinanceIngester()
     prices = ingester.fetch(symbols, start_date, end_date)
-    prices = DataPreprocessor.handle_missing_values(prices)
+    prices, _data_quality_summary = DataPreprocessor.handle_missing_values(prices)
     returns = DataPreprocessor.calculate_returns(prices, method="simple")
 
     covariance_estimator = SampleCovarianceEstimator().fit(returns)

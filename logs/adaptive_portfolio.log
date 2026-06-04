@@ -1,0 +1,8 @@
+2026-06-04 17:47:12,026 - src.data_pipeline.preprocess - WARNING - preprocess.py:538 - Dropped assets with more than 5% missing observations: A (10.00%)
+2026-06-04 17:47:12,034 - src.data_pipeline.preprocess - WARNING - preprocess.py:538 - Dropped assets with more than 5% missing observations: A (10.00%)
+2026-06-04 17:47:39,581 - src.data_pipeline.preprocess - WARNING - preprocess.py:538 - Dropped assets with more than 5% missing observations: A (10.00%)
+2026-06-04 17:47:39,589 - src.data_pipeline.preprocess - WARNING - preprocess.py:538 - Dropped assets with more than 5% missing observations: A (10.00%)
+2026-06-04 17:48:12,707 - src.data_pipeline.preprocess - WARNING - preprocess.py:538 - Dropped assets with more than 5% missing observations: A (10.00%)
+2026-06-04 17:48:12,716 - src.data_pipeline.preprocess - WARNING - preprocess.py:538 - Dropped assets with more than 5% missing observations: A (10.00%)
+2026-06-04 17:48:52,257 - src.data_pipeline.preprocess - WARNING - preprocess.py:538 - Dropped assets with more than 5% missing observations: A (10.00%)
+2026-06-04 17:48:52,265 - src.data_pipeline.preprocess - WARNING - preprocess.py:538 - Dropped assets with more than 5% missing observations: A (10.00%)
