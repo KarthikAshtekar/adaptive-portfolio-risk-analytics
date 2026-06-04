@@ -45,3 +45,41 @@ class RiskAnalytics:
         cumulative = (1.0 + returns).cumprod()
         running_max = cumulative.cummax()
         return cumulative / running_max - 1.0
+
+    @staticmethod
+    def rolling_volatility(returns: pd.Series, window: int = 30, periods_per_year: int = 252) -> pd.Series:
+        """Calculate rolling volatility."""
+        if returns.empty or len(returns) < window:
+            return pd.Series(dtype=float)
+        return returns.rolling(window=window).std(ddof=1) * np.sqrt(periods_per_year)
+
+    @staticmethod
+    def rolling_sharpe(
+        returns: pd.Series,
+        window: int = 30,
+        risk_free_rate: float = 0.02,
+        periods_per_year: int = 252,
+    ) -> pd.Series:
+        """Calculate rolling Sharpe ratio."""
+        if returns.empty or len(returns) < window:
+            return pd.Series(dtype=float)
+        excess_returns = returns - risk_free_rate / periods_per_year
+        mean_excess = excess_returns.rolling(window=window).mean()
+        std_excess = excess_returns.rolling(window=window).std(ddof=1)
+        return (mean_excess / std_excess) * np.sqrt(periods_per_year)
+
+    @staticmethod
+    def downside_deviation(returns: pd.Series, target_return: float = 0.0, periods_per_year: int = 252) -> float:
+        """Calculate annualized downside deviation (for Sortino ratio calculation)."""
+        if returns.empty:
+            return 0.0
+        excess = returns - target_return / periods_per_year
+        downside = excess[excess < 0]
+        if downside.empty:
+            return 0.0
+        return float(np.sqrt((downside**2).mean()) * np.sqrt(periods_per_year))
+
+    @staticmethod
+    def max_drawdown(returns: pd.Series) -> float:
+        """Alias for maximum_drawdown."""
+        return RiskAnalytics.maximum_drawdown(returns)

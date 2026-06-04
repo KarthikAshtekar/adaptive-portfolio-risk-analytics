@@ -3,8 +3,14 @@
 import numpy as np
 import pandas as pd
 
-from src.clustering import DistanceMetrics, HierarchicalClusterer
+from src.clustering import DistanceMetrics, compute_linkage_matrix
 from src.clustering.hrp import HierarchicalRiskParity
+from src.optimization.hrp_allocator import (
+    allocate_hrp_weights,
+    compute_cluster_variance,
+    get_quasi_diagonal_order,
+    recursive_bisection,
+)
 
 
 def _sample_returns() -> pd.DataFrame:
@@ -24,12 +30,14 @@ def test_correlation_distance_matrix_properties() -> None:
     assert np.allclose(dist, dist.T, atol=1e-12)
 
 
-def test_hierarchical_clusterer_produces_linkage() -> None:
+def test_compute_linkage_matrix_produces_valid_tree() -> None:
     returns = _sample_returns()
-    clusterer = HierarchicalClusterer(linkage_method="single").fit(returns)
+    distance = DistanceMetrics.correlation_distance(returns.corr().values)
+    distance_df = pd.DataFrame(distance, index=returns.columns, columns=returns.columns)
+    linkage_matrix = compute_linkage_matrix(distance_df, method="single")
 
-    assert clusterer.linkage_matrix is not None
-    assert clusterer.linkage_matrix.shape[0] == returns.shape[1] - 1
+    assert linkage_matrix is not None
+    assert linkage_matrix.shape[0] == returns.shape[1] - 1
 
 
 def test_hrp_weights_sum_to_one() -> None:
@@ -60,3 +68,56 @@ def test_hrp_different_from_equal_weight_when_covariance_varies() -> None:
     equal = np.array([1 / 3, 1 / 3, 1 / 3])
 
     assert not np.allclose(weights, equal)
+
+
+def test_get_quasi_diagonal_order_returns_all_assets() -> None:
+    returns = _sample_returns()
+    covariance_df = returns.cov()
+    linkage_matrix = DistanceMetrics.to_condensed(DistanceMetrics.correlation_distance(returns.corr().values))
+    linkage_matrix = np.asarray(linkage_matrix)
+    # Use hierarchical linkage from scipy if needed for correct shape
+    from scipy.cluster.hierarchy import linkage as scipy_linkage
+
+    linkage_matrix = scipy_linkage(linkage_matrix, method="single")
+    asset_order = get_quasi_diagonal_order(linkage_matrix)
+
+    assert set(asset_order) == set(range(returns.shape[1]))
+    assert len(asset_order) == returns.shape[1]
+
+
+def test_compute_cluster_variance_positive() -> None:
+    returns = _sample_returns()
+    covariance_df = returns.cov()
+    cluster_assets = ["A", "B", "C"]
+    variance = compute_cluster_variance(covariance_df, cluster_assets)
+
+    assert variance > 0.0
+
+
+def test_recursive_bisection_completes_successfully() -> None:
+    returns = _sample_returns()
+    covariance_df = returns.cov()
+    linkage_matrix = DistanceMetrics.to_condensed(DistanceMetrics.correlation_distance(returns.corr().values))
+    from scipy.cluster.hierarchy import linkage as scipy_linkage
+
+    linkage_matrix = scipy_linkage(linkage_matrix, method="single")
+    order = [returns.columns[i] for i in get_quasi_diagonal_order(linkage_matrix)]
+    weights = recursive_bisection(covariance_df, order)
+
+    assert weights.shape[0] == returns.shape[1]
+    assert np.isclose(weights.sum(), 1.0)
+    assert np.all(weights >= 0.0)
+
+
+def test_allocate_hrp_weights_reproducible() -> None:
+    returns = _sample_returns()
+    covariance_df = returns.cov()
+    condensed = DistanceMetrics.to_condensed(DistanceMetrics.correlation_distance(returns.corr().values))
+    from scipy.cluster.hierarchy import linkage as scipy_linkage
+
+    linkage_matrix = scipy_linkage(condensed, method="single")
+    first = allocate_hrp_weights(covariance_df, linkage_matrix)
+    second = allocate_hrp_weights(covariance_df, linkage_matrix)
+
+    assert np.allclose(first.values, second.values)
+    assert set(first.index) == set(returns.columns)

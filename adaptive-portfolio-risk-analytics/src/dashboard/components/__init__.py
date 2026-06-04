@@ -1,96 +1,62 @@
-"""Streamlit dashboard components."""
+"""Reusable Streamlit dashboard components."""
 
-import streamlit as st
-import plotly.graph_objects as go
+from __future__ import annotations
+
 import pandas as pd
+import streamlit as st
 
 
-def render_metric_card(title: str, value: str, change: str, color: str = "green"):
+def render_metric_card(
+    title: str,
+    value: str,
+    delta: str | None = None,
+) -> None:
     """
-    Render a metric card.
-
-    Parameters
-    ----------
-    title : str
-        Metric title
-    value : str
-        Current value
-    change : str
-        Change indicator
-    color : str
-        Color indicator
-
-    TODO: Implement custom styling
+    Render a Streamlit metric card.
     """
-    st.metric(title, value, change)
+    st.metric(
+        label=title,
+        value=value,
+        delta=delta,
+    )
 
 
-def render_portfolio_summary(portfolio_data: dict):
+def render_portfolio_summary(
+    metrics: dict[str, str],
+) -> None:
     """
-    Render portfolio summary section.
-
-    Parameters
-    ----------
-    portfolio_data : dict
-        Portfolio metrics
-
-    TODO: Implement full summary display
+    Render KPI metrics in a row.
     """
-    col1, col2, col3, col4 = st.columns(4)
 
-    with col1:
-        st.metric("Portfolio Value", "1.00M", "+5.2%")
-    with col2:
-        st.metric("Sharpe Ratio", "1.45", "+0.15")
-    with col3:
-        st.metric("Max Drawdown", "-8.3%", "+1.2%")
-    with col4:
-        st.metric("Volatility", "12.5%", "-0.5%")
+    columns = st.columns(len(metrics))
+
+    for col, (metric, value) in zip(
+        columns,
+        metrics.items(),
+    ):
+        with col:
+            st.metric(
+                metric.replace("_", " ").title(),
+                value,
+            )
 
 
-def render_allocation_table(weights: dict):
+def render_allocation_table(
+    weights: pd.Series,
+) -> None:
     """
     Render portfolio allocation table.
-
-    Parameters
-    ----------
-    weights : dict
-        Asset weights
-
-    TODO: Implement interactive allocation table
     """
-    data = {"Asset": list(weights.keys()), "Weight %": list(weights.values())}
-    df = pd.DataFrame(data)
-    st.dataframe(df)
 
-
-def render_performance_chart(returns: pd.Series):
-    """
-    Render cumulative return chart.
-
-    Parameters
-    ----------
-    returns : pd.Series
-        Portfolio returns
-
-    TODO: Implement Plotly chart
-    """
-    cumulative = (1 + returns).cumprod()
-
-    fig = go.Figure()
-    fig.add_trace(
-        go.Scatter(
-            x=returns.index,
-            y=cumulative,
-            mode="lines",
-            name="Portfolio",
-        )
+    df = (
+        weights.rename("Weight")
+        .reset_index()
+        .rename(columns={"index": "Asset"})
     )
 
-    fig.update_layout(
-        title="Cumulative Returns",
-        xaxis_title="Date",
-        yaxis_title="Value",
-    )
+    df["Weight (%)"] = df["Weight"] * 100
 
-    st.plotly_chart(fig)
+    st.dataframe(
+        df[["Asset", "Weight (%)"]],
+        use_container_width=True,
+    )

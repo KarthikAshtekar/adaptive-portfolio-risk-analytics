@@ -12,6 +12,75 @@ from .base import BaseBacktester
 from .transaction_costs import TransactionCostCalculator
 
 
+def generate_rebalance_dates(
+    start_date: pd.Timestamp,
+    end_date: pd.Timestamp,
+    frequency: str = "M",
+) -> list[pd.Timestamp]:
+    """Generate rebalancing dates at specified frequency (default: monthly)."""
+    if start_date >= end_date:
+        raise ValueError("start_date must be before end_date")
+    date_range = pd.date_range(start=start_date, end=end_date, freq=frequency)
+    return date_range.tolist()
+
+
+def compare_strategies(
+    prices_df: pd.DataFrame,
+    strategies: dict[str, BaseAllocator],
+    lookback_window: int = 252,
+    rebalance_frequency: str = "M",
+) -> dict:
+    """Run backtest for multiple strategies and compare results.
+
+    Parameters
+    ----------
+    prices_df : pd.DataFrame
+        Asset price history.
+    strategies : dict[str, BaseAllocator]
+        Dictionary of strategy name -> allocator instance.
+    lookback_window : int
+        Training window length in trading days.
+    rebalance_frequency : str
+        Rebalancing frequency.
+
+    Returns
+    -------
+    dict
+        Combined results with strategy_returns_df and performance_summary_df.
+    """
+    if not strategies:
+        raise ValueError("strategies must not be empty")
+
+    all_results = {}
+    for strategy_name, allocator in strategies.items():
+        backtester = RollingBacktester(
+            allocator=allocator,
+            train_window=lookback_window,
+            rebalance_frequency=rebalance_frequency,
+        )
+        returns_df = prices_df.pct_change().dropna(how="all")
+        results = backtester.run(returns_df)
+        all_results[strategy_name] = results
+
+    strategy_returns_dict = {}
+    for strategy_name, results in all_results.items():
+        strategy_returns_dict[strategy_name] = results["portfolio_returns"]
+
+    strategy_returns_df = pd.DataFrame(strategy_returns_dict).dropna(how="all")
+
+    performance_summary = {}
+    for strategy_name, results in all_results.items():
+        performance_summary[strategy_name] = results["performance_metrics"]
+
+    performance_summary_df = pd.DataFrame(performance_summary).T
+
+    return {
+        "strategy_returns_df": strategy_returns_df,
+        "performance_summary_df": performance_summary_df,
+        "all_results": all_results,
+    }
+
+
 class RollingBacktester(BaseBacktester):
     """Run rolling rebalanced backtests for a single allocator."""
 

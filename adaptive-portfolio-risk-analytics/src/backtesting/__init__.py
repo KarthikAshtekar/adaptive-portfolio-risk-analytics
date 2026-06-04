@@ -1,7 +1,7 @@
 """Backtesting exports."""
 
 from .base import BaseBacktester
-from .rolling_backtester import RollingBacktester
+from .rolling_backtester import RollingBacktester, generate_rebalance_dates, compare_strategies
 from .transaction_costs import TransactionCostCalculator
 from .cpcv import CPCVBacktester
 
@@ -15,6 +15,8 @@ __all__ = [
     "RollingBacktester",
     "TransactionCostCalculator",
     "CPCVBacktester",
+    "generate_rebalance_dates",
+    "compare_strategies",
     "BacktestEngine",
     "RollingBacktest",
     "CPCVValidator",

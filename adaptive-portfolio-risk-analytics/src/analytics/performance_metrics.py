@@ -67,14 +67,42 @@ class PerformanceAnalytics:
         return float(annual_return / abs(max_dd))
 
     @staticmethod
+    def cagr(returns: pd.Series, periods_per_year: int = 252) -> float:
+        """Alias for annualized_return (CAGR = Compound Annual Growth Rate)."""
+        return PerformanceAnalytics.annualized_return(returns, periods_per_year)
+
+    @staticmethod
+    def annualized_volatility(returns: pd.Series, periods_per_year: int = 252) -> float:
+        """Annualized volatility (standard deviation)."""
+        return RiskAnalytics.volatility(returns, periods_per_year)
+
+    @staticmethod
     def summary_table(returns: pd.Series, risk_free_rate: float = 0.02) -> dict[str, float]:
         return {
             "cumulative_return": PerformanceAnalytics.cumulative_return(returns),
-            "cagr": PerformanceAnalytics.annualized_return(returns),
+            "cagr": PerformanceAnalytics.cagr(returns),
             "sharpe": PerformanceAnalytics.sharpe_ratio(returns, risk_free_rate=risk_free_rate),
             "sortino": PerformanceAnalytics.sortino_ratio(returns),
             "volatility": RiskAnalytics.volatility(returns),
             "max_drawdown": RiskAnalytics.maximum_drawdown(returns),
             "var_95": RiskAnalytics.value_at_risk(returns),
             "cvar_95": RiskAnalytics.conditional_value_at_risk(returns),
+            "calmar": PerformanceAnalytics.calmar_ratio(returns),
         }
+    @staticmethod
+    def summary_dataframe(
+    returns: pd.Series,
+    risk_free_rate: float = 0.02,
+    ) -> pd.DataFrame:
+
+        metrics = PerformanceAnalytics.summary_table(
+        returns,
+        risk_free_rate=risk_free_rate,
+        )
+
+        return pd.DataFrame(
+            {
+            "Metric": metrics.keys(),
+            "Value": metrics.values(),
+            }
+        )
