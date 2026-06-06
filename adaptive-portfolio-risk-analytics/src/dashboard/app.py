@@ -16,8 +16,17 @@ import streamlit as st
 from src.analytics import (
     PerformanceAnalytics,
     RiskAnalytics,
+    compare_risk_contributions,
+    risk_contribution_table,
 )
 from src.backtesting import RollingBacktester
+from src.backtesting.transaction_costs import TransactionCostModel
+from src.benchmarks import (
+    BenchmarkFactory,
+    build_performance_comparison_table,
+    compute_relative_performance,
+    run_strategy_comparison,
+)
 
 from src.clustering import (
     compute_linkage_matrix,
@@ -38,9 +47,21 @@ from src.dashboard.plots import (
     format_metric_cards,
     plot_correlation_heatmap,
     plot_dendrogram,
+    plot_drawdown_curves,
     plot_drawdowns,
+    plot_cost_adjusted_comparison,
     plot_equity_curve,
+    plot_final_value_comparison,
+    plot_metric_comparison,
+    plot_performance_curves,
+    plot_rebalance_events,
+    plot_hrp_herc_risk_comparison,
+    plot_relative_performance,
+    plot_risk_contribution_bar,
+    plot_transaction_costs,
+    plot_turnover_series,
     plot_weight_bar,
+    plot_weight_vs_risk_contribution,
     plot_weight_pie,
 )
 
@@ -63,15 +84,7 @@ from src.optimization import (
 
 
 def get_allocator(strategy_name: str):
-
-    allocators = {
-        "Equal Weight": EqualWeightAllocator(),
-        "Inverse Volatility": InverseVolatilityAllocator(),
-        "HRP": HRPAllocator(),
-        "HERC": HERCAllocator(),
-    }
-
-    return allocators[strategy_name]
+    return BenchmarkFactory.get_allocator(strategy_name)
 
 
 # ============================================================
@@ -116,6 +129,67 @@ strategy = st.sidebar.selectbox(
         "HRP",
         "HERC",
     ],
+)
+
+comparison_strategies = st.sidebar.multiselect(
+    "Benchmark Comparison Strategies",
+    [
+        "Equal Weight",
+        "Inverse Volatility",
+        "HRP",
+        "HERC",
+    ],
+    default=[
+        "Equal Weight",
+        "Inverse Volatility",
+        "HRP",
+        "HERC",
+    ],
+)
+
+benchmark_strategy = st.sidebar.selectbox(
+    "Benchmark Strategy",
+    [
+        "Equal Weight",
+        "Inverse Volatility",
+        "HRP",
+        "HERC",
+    ],
+    index=0,
+)
+
+rebalance_mode = st.sidebar.selectbox(
+    "Rebalance Mode",
+    [
+        "calendar",
+        "threshold",
+        "calendar_or_threshold",
+    ],
+    index=0,
+)
+
+threshold = st.sidebar.slider(
+    "Threshold",
+    min_value=0.01,
+    max_value=0.20,
+    value=0.05,
+    step=0.01,
+)
+
+base_bps = st.sidebar.number_input(
+    "Base Cost (bps)",
+    min_value=0.0,
+    max_value=100.0,
+    value=10.0,
+    step=1.0,
+)
+
+slippage_bps = st.sidebar.number_input(
+    "Slippage (bps)",
+    min_value=0.0,
+    max_value=100.0,
+    value=5.0,
+    step=1.0,
 )
 
 run_button = st.sidebar.button(
@@ -228,11 +302,18 @@ if run_button:
         allocator = get_allocator(
             strategy
         )
+        transaction_cost_model = TransactionCostModel(
+            base_bps=base_bps,
+            slippage_bps=slippage_bps,
+        )
 
         backtester = RollingBacktester(
             allocator=allocator,
             train_window=252,
             rebalance_frequency="M",
+            rebalance_mode=rebalance_mode,
+            threshold=threshold,
+            transaction_cost_model=transaction_cost_model,
         )
 
         backtest_results = backtester.run(
@@ -256,6 +337,85 @@ if run_button:
                 "portfolio_values"
             ]
         )
+        gross_portfolio_value = (
+            backtest_results[
+                "gross_portfolio_values"
+            ]
+        )
+        rebalance_log_df = backtest_results["rebalance_log"]
+        turnover_summary = backtest_results["turnover_summary"]
+        rebalance_summary = backtest_results["rebalance_summary"]
+        cost_drag_summary = backtest_results["cost_drag_summary"]
+        turnover_series = (
+            pd.Series(
+                rebalance_log_df["turnover"].values,
+                index=pd.to_datetime(rebalance_log_df["rebalance_date"]),
+                name="turnover",
+            )
+            if not rebalance_log_df.empty
+            else pd.Series(dtype=float, name="turnover")
+        )
+
+        risk_contribution_df = risk_contribution_table(
+            weights,
+            covariance_matrix_df,
+        )
+
+        hrp_herc_risk_comparison_df = None
+        if strategy in {"HRP", "HERC"}:
+            hrp_weights = (
+                HRPAllocator()
+                .fit(
+                    returns_df,
+                    cov_matrix=covariance_matrix_df,
+                    linkage_matrix=linkage_matrix,
+                )
+                .get_weights()
+            )
+            herc_weights = (
+                HERCAllocator()
+                .fit(
+                    returns_df,
+                    cov_matrix=covariance_matrix_df,
+                    linkage_matrix=linkage_matrix,
+                )
+                .get_weights()
+            )
+            hrp_herc_risk_comparison_df = compare_risk_contributions(
+                hrp_weights,
+                herc_weights,
+                covariance_matrix_df,
+            )
+
+        benchmark_strategy_names = list(
+            dict.fromkeys(
+                comparison_strategies + [benchmark_strategy]
+            )
+        )
+        strategy_results = run_strategy_comparison(
+            returns_df,
+            strategy_names=benchmark_strategy_names,
+            covariance_method="sample",
+            train_window=252,
+            rebalance_frequency="M",
+            initial_capital=1_000_000.0,
+            rebalance_mode=rebalance_mode,
+            threshold=threshold,
+            transaction_cost_model=transaction_cost_model,
+        )
+        performance_comparison_df = build_performance_comparison_table(strategy_results)
+        relative_performance_df = compute_relative_performance(
+            performance_comparison_df,
+            benchmark_name=benchmark_strategy,
+        )
+        growth_curves = {
+            strategy_name: result["portfolio_values"]
+            for strategy_name, result in strategy_results.items()
+        }
+        drawdown_curves = {
+            strategy_name: result["drawdown"]
+            for strategy_name, result in strategy_results.items()
+        }
         # ----------------------------------------------------
         # Analytics
         # ----------------------------------------------------
@@ -305,6 +465,196 @@ if run_button:
 
         render_allocation_table(
             weights
+        )
+
+        # ----------------------------------------------------
+        # RISK CONTRIBUTION
+        # ----------------------------------------------------
+
+        st.header("Risk Contribution Analysis")
+
+        risk_col1, risk_col2 = st.columns(2)
+
+        with risk_col1:
+            st.plotly_chart(
+                plot_risk_contribution_bar(risk_contribution_df),
+                use_container_width=True,
+            )
+
+        with risk_col2:
+            st.plotly_chart(
+                plot_weight_vs_risk_contribution(risk_contribution_df),
+                use_container_width=True,
+            )
+
+        st.dataframe(
+            risk_contribution_df,
+            use_container_width=True,
+        )
+
+        if hrp_herc_risk_comparison_df is not None:
+            st.subheader("HRP vs HERC Risk Contribution Comparison")
+
+            st.plotly_chart(
+                plot_hrp_herc_risk_comparison(hrp_herc_risk_comparison_df),
+                use_container_width=True,
+            )
+            st.dataframe(
+                hrp_herc_risk_comparison_df,
+                use_container_width=True,
+            )
+
+        # ----------------------------------------------------
+        # BENCHMARK COMPARISON
+        # ----------------------------------------------------
+
+        st.header("Benchmark Comparison")
+
+        comparison_metric = st.selectbox(
+            "Comparison Metric",
+            [
+                "cagr",
+                "sharpe",
+                "sortino",
+                "volatility",
+                "max_drawdown",
+                "calmar",
+            ],
+            index=1,
+        )
+        relative_metric = st.selectbox(
+            "Relative Metric",
+            [
+                "excess_cagr",
+                "excess_sharpe",
+                "drawdown_difference",
+                "volatility_difference",
+                "final_value_difference",
+            ],
+            index=0,
+        )
+
+        st.subheader("Performance Comparison Table")
+        st.dataframe(
+            performance_comparison_df,
+            use_container_width=True,
+        )
+
+        benchmark_col1, benchmark_col2 = st.columns(2)
+
+        with benchmark_col1:
+            st.plotly_chart(
+                plot_performance_curves(growth_curves),
+                use_container_width=True,
+            )
+
+        with benchmark_col2:
+            st.plotly_chart(
+                plot_drawdown_curves(drawdown_curves),
+                use_container_width=True,
+            )
+
+        metric_col1, metric_col2 = st.columns(2)
+
+        with metric_col1:
+            st.plotly_chart(
+                plot_metric_comparison(
+                    performance_comparison_df,
+                    comparison_metric,
+                ),
+                use_container_width=True,
+            )
+
+        with metric_col2:
+            st.plotly_chart(
+                plot_final_value_comparison(performance_comparison_df),
+                use_container_width=True,
+            )
+
+        st.subheader(f"Relative Performance vs {benchmark_strategy}")
+
+        st.plotly_chart(
+            plot_relative_performance(
+                relative_performance_df,
+                relative_metric,
+            ),
+            use_container_width=True,
+        )
+
+        st.dataframe(
+            relative_performance_df,
+            use_container_width=True,
+        )
+
+        # ----------------------------------------------------
+        # TRADING ACTIVITY & COSTS
+        # ----------------------------------------------------
+
+        st.header("Trading Activity & Costs")
+
+        summary_col1, summary_col2, summary_col3, summary_col4 = st.columns(4)
+        summary_col1.metric("Total Turnover", f"{turnover_summary['total_turnover']:.2f}")
+        summary_col2.metric("Average Turnover", f"{turnover_summary['average_turnover']:.2f}")
+        summary_col3.metric(
+            "Total Transaction Cost",
+            f"{rebalance_summary['total_transaction_cost']:.2f}",
+        )
+        summary_col4.metric(
+            "Number of Rebalances",
+            str(rebalance_summary["total_rebalances"]),
+        )
+
+        cost_col1, cost_col2 = st.columns(2)
+        cost_col1.metric(
+            "Gross Final Value",
+            f"{cost_drag_summary['gross_final_value']:.2f}",
+        )
+        cost_col2.metric(
+            "Cost Drag",
+            f"{cost_drag_summary['cost_drag']:.2f} ({cost_drag_summary['cost_drag_pct']:.2%})",
+        )
+
+        trade_chart_col1, trade_chart_col2 = st.columns(2)
+
+        with trade_chart_col1:
+            if not turnover_series.empty:
+                st.plotly_chart(
+                    plot_turnover_series(turnover_series),
+                    use_container_width=True,
+                )
+            else:
+                st.info("No turnover events recorded.")
+
+        with trade_chart_col2:
+            if not rebalance_log_df.empty:
+                st.plotly_chart(
+                    plot_transaction_costs(rebalance_log_df),
+                    use_container_width=True,
+                )
+            else:
+                st.info("No transaction costs recorded.")
+
+        trade_chart_col3, trade_chart_col4 = st.columns(2)
+
+        with trade_chart_col3:
+            st.plotly_chart(
+                plot_rebalance_events(portfolio_value, rebalance_log_df),
+                use_container_width=True,
+            )
+
+        with trade_chart_col4:
+            st.plotly_chart(
+                plot_cost_adjusted_comparison(
+                    gross_portfolio_value,
+                    portfolio_value,
+                ),
+                use_container_width=True,
+            )
+
+        st.subheader("Rebalance Log")
+        st.dataframe(
+            rebalance_log_df,
+            use_container_width=True,
         )
 
         # ----------------------------------------------------

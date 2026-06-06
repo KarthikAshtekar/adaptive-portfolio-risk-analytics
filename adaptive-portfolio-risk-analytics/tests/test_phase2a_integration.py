@@ -7,6 +7,7 @@ import pandas as pd
 import pytest
 
 from src.backtesting import RollingBacktester
+from src.analytics import compare_risk_contributions, risk_contribution_table
 from src.clustering import HERCAllocator as ClusteringHERCAllocator
 from src.covariance import CovarianceFactory
 from src.optimization import (
@@ -214,3 +215,40 @@ def test_import_api_consistency() -> None:
     assert ClusteringHERCAllocator is not None
     assert OptimizationHERCAllocator is not None
     assert OptimizationHERCAllocator is ClusteringHERCAllocator
+
+
+def test_risk_contribution_table_works_for_phase2a_strategies(
+    deterministic_returns: pd.DataFrame,
+) -> None:
+    covariance_matrix = CovarianceFactory.compute(deterministic_returns, method="sample")
+
+    for allocator in (
+        EqualWeightAllocator(),
+        InverseVolatilityAllocator(),
+        HRPAllocator(),
+        ClusteringHERCAllocator(),
+    ):
+        weights = allocator.optimize(deterministic_returns)
+        table = risk_contribution_table(weights, covariance_matrix)
+
+        assert not table.empty
+        assert np.isclose(float(table["Percentage Risk Contribution"].sum()), 1.0, atol=1e-8)
+
+
+def test_compare_risk_contributions_works_for_hrp_and_herc(
+    deterministic_returns: pd.DataFrame,
+) -> None:
+    covariance_matrix = CovarianceFactory.compute(deterministic_returns, method="sample")
+    hrp_weights = HRPAllocator().optimize(deterministic_returns)
+    herc_weights = ClusteringHERCAllocator().optimize(deterministic_returns)
+
+    comparison_df = compare_risk_contributions(hrp_weights, herc_weights, covariance_matrix)
+
+    assert list(comparison_df.columns) == [
+        "Asset",
+        "HRP Weight",
+        "HERC Weight",
+        "HRP % Risk Contribution",
+        "HERC % Risk Contribution",
+        "Risk Contribution Difference",
+    ]

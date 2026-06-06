@@ -6,3 +6,4 @@ adaptive-portfolio-risk-analytics/.gitignore
 adaptive-portfolio-risk-analytics/src/data_pipeline/__init__.py
 adaptive-portfolio-risk-analytics/src/data_pipeline/ingest.py
 adaptive-portfolio-risk-analytics/tests/test_data_pipeline.py
+HDFCBANK.NS,ICICIBANK.NS,SBIN.NS,KOTAKBANK.NS,AXISBANK.NS,TCS.NS,INFY.NS,WIPRO.NS,HCLTECH.NS,TECHM.NS,RELIANCE.NS,ONGC.NS,NTPC.NS,POWERGRID.NS,HINDUNILVR.NS,ITC.NS,NESTLEIND.NS,TATACONSUM.NS,SUNPHARMA.NS,DRREDDY.NS,CIPLA.NS,TATAMOTORS.NS,MARUTI.NS,M&M.NS,LT.NS,ULTRACEMCO.NS,ASIANPAINT.NS,BHARTIARTL.NS,GOLDBEES.NS,SILVERBEES.NS

@@ -330,6 +330,95 @@ def plot_weight_comparison(
     return fig
 
 
+def plot_risk_contribution_bar(
+    risk_contribution_df: pd.DataFrame,
+    title: str = "Percentage Risk Contribution",
+) -> go.Figure:
+    """Plot percentage risk contribution by asset."""
+    fig = go.Figure(
+        go.Bar(
+            x=risk_contribution_df["Asset"].tolist(),
+            y=risk_contribution_df["Percentage Risk Contribution"].tolist(),
+            name="Percentage Risk Contribution",
+        )
+    )
+
+    fig.update_layout(
+        title=title,
+        xaxis_title="Asset",
+        yaxis_title="Percentage Risk Contribution",
+        template="plotly_white",
+    )
+
+    return fig
+
+
+def plot_weight_vs_risk_contribution(
+    risk_contribution_df: pd.DataFrame,
+    title: str = "Weight vs Risk Contribution",
+) -> go.Figure:
+    """Plot grouped capital weights and risk contributions."""
+    fig = go.Figure()
+
+    fig.add_trace(
+        go.Bar(
+            x=risk_contribution_df["Asset"].tolist(),
+            y=risk_contribution_df["Weight"].tolist(),
+            name="Weight",
+        )
+    )
+    fig.add_trace(
+        go.Bar(
+            x=risk_contribution_df["Asset"].tolist(),
+            y=risk_contribution_df["Percentage Risk Contribution"].tolist(),
+            name="Percentage Risk Contribution",
+        )
+    )
+
+    fig.update_layout(
+        title=title,
+        xaxis_title="Asset",
+        yaxis_title="Value",
+        barmode="group",
+        template="plotly_white",
+    )
+
+    return fig
+
+
+def plot_hrp_herc_risk_comparison(
+    comparison_df: pd.DataFrame,
+    title: str = "HRP vs HERC Risk Contribution Comparison",
+) -> go.Figure:
+    """Plot grouped HRP and HERC percentage risk contributions."""
+    fig = go.Figure()
+
+    fig.add_trace(
+        go.Bar(
+            x=comparison_df["Asset"].tolist(),
+            y=comparison_df["HRP % Risk Contribution"].tolist(),
+            name="HRP % Risk Contribution",
+        )
+    )
+    fig.add_trace(
+        go.Bar(
+            x=comparison_df["Asset"].tolist(),
+            y=comparison_df["HERC % Risk Contribution"].tolist(),
+            name="HERC % Risk Contribution",
+        )
+    )
+
+    fig.update_layout(
+        title=title,
+        xaxis_title="Asset",
+        yaxis_title="Percentage Risk Contribution",
+        barmode="group",
+        template="plotly_white",
+    )
+
+    return fig
+
+
 # ============================================================
 # STRATEGY COMPARISON
 # ============================================================
@@ -365,6 +454,195 @@ def plot_strategy_comparison(
         template="plotly_white",
     )
 
+    return fig
+
+
+def plot_metric_comparison(
+    performance_comparison_df: pd.DataFrame,
+    metric_name: str,
+) -> go.Figure:
+    """Plot a selected performance metric across strategies."""
+    if metric_name not in performance_comparison_df.columns:
+        raise ValueError(f"metric_name '{metric_name}' not found in performance comparison table")
+
+    fig = go.Figure(
+        go.Bar(
+            x=performance_comparison_df.index.tolist(),
+            y=performance_comparison_df[metric_name].tolist(),
+        )
+    )
+
+    fig.update_layout(
+        title=f"{metric_name.replace('_', ' ').title()} Comparison",
+        xaxis_title="Strategy",
+        yaxis_title=metric_name.replace("_", " ").title(),
+        template="plotly_white",
+    )
+
+    return fig
+
+
+def plot_relative_performance(
+    relative_performance_df: pd.DataFrame,
+    metric_name: str,
+) -> go.Figure:
+    """Plot a selected relative performance metric versus the benchmark."""
+    if metric_name not in relative_performance_df.columns:
+        raise ValueError(f"metric_name '{metric_name}' not found in relative performance table")
+
+    fig = go.Figure(
+        go.Bar(
+            x=relative_performance_df["strategy"].tolist(),
+            y=relative_performance_df[metric_name].tolist(),
+        )
+    )
+
+    fig.update_layout(
+        title=f"{metric_name.replace('_', ' ').title()} vs Benchmark",
+        xaxis_title="Strategy",
+        yaxis_title=metric_name.replace("_", " ").title(),
+        template="plotly_white",
+    )
+
+    return fig
+
+
+def plot_final_value_comparison(
+    performance_comparison_df: pd.DataFrame,
+) -> go.Figure:
+    """Plot final portfolio values across strategies."""
+    if "final_value" not in performance_comparison_df.columns:
+        raise ValueError("performance comparison table must contain 'final_value'")
+
+    fig = go.Figure(
+        go.Bar(
+            x=performance_comparison_df.index.tolist(),
+            y=performance_comparison_df["final_value"].tolist(),
+        )
+    )
+
+    fig.update_layout(
+        title="Final Value Comparison",
+        xaxis_title="Strategy",
+        yaxis_title="Final Portfolio Value",
+        template="plotly_white",
+    )
+
+    return fig
+
+
+def plot_turnover_series(
+    turnover_series: pd.Series,
+) -> go.Figure:
+    """Plot turnover across rebalance dates."""
+    fig = go.Figure()
+    fig.add_trace(
+        go.Bar(
+            x=turnover_series.index,
+            y=turnover_series.values,
+            name="Turnover",
+        )
+    )
+    fig.update_layout(
+        title="Turnover by Rebalance Date",
+        xaxis_title="Rebalance Date",
+        yaxis_title="Turnover",
+        template="plotly_white",
+    )
+    return fig
+
+
+def plot_transaction_costs(
+    rebalance_log_df: pd.DataFrame,
+) -> go.Figure:
+    """Plot transaction costs across rebalance dates."""
+    fig = go.Figure()
+    fig.add_trace(
+        go.Bar(
+            x=rebalance_log_df["rebalance_date"],
+            y=rebalance_log_df["transaction_cost"],
+            name="Transaction Cost",
+        )
+    )
+    fig.update_layout(
+        title="Transaction Costs by Rebalance Date",
+        xaxis_title="Rebalance Date",
+        yaxis_title="Transaction Cost",
+        template="plotly_white",
+    )
+    return fig
+
+
+def plot_rebalance_events(
+    portfolio_values: pd.Series,
+    rebalance_log_df: pd.DataFrame,
+) -> go.Figure:
+    """Plot portfolio value with rebalance event markers."""
+    fig = go.Figure()
+    fig.add_trace(
+        go.Scatter(
+            x=portfolio_values.index,
+            y=portfolio_values.values,
+            mode="lines",
+            name="Portfolio Value",
+        )
+    )
+
+    if not rebalance_log_df.empty:
+        aligned_values = portfolio_values.reindex(
+            pd.to_datetime(rebalance_log_df["rebalance_date"]),
+            method="nearest",
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=rebalance_log_df["rebalance_date"],
+                y=aligned_values.values,
+                mode="markers",
+                marker=dict(size=9, color="crimson", symbol="diamond"),
+                name="Rebalance Event",
+                text=rebalance_log_df["rebalance_reason"],
+            )
+        )
+
+    fig.update_layout(
+        title="Portfolio Value with Rebalance Events",
+        xaxis_title="Date",
+        yaxis_title="Portfolio Value",
+        template="plotly_white",
+        hovermode="x unified",
+    )
+    return fig
+
+
+def plot_cost_adjusted_comparison(
+    gross_values: pd.Series,
+    net_values: pd.Series,
+) -> go.Figure:
+    """Plot gross and net portfolio values to show cost drag."""
+    fig = go.Figure()
+    fig.add_trace(
+        go.Scatter(
+            x=gross_values.index,
+            y=gross_values.values,
+            mode="lines",
+            name="Gross Portfolio Value",
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=net_values.index,
+            y=net_values.values,
+            mode="lines",
+            name="Net Portfolio Value",
+        )
+    )
+    fig.update_layout(
+        title="Gross vs Net Portfolio Value",
+        xaxis_title="Date",
+        yaxis_title="Portfolio Value",
+        template="plotly_white",
+        hovermode="x unified",
+    )
     return fig
 
 
