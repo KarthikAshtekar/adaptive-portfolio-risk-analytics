@@ -1,9 +1,16 @@
 """Unit tests for Phase 1 rolling backtester."""
 
+import warnings
+
 import numpy as np
 import pandas as pd
 
-from src.backtesting import RollingBacktester, compare_strategies, generate_rebalance_dates
+from src.backtesting import (
+    RollingBacktester,
+    compare_strategies,
+    generate_rebalance_dates,
+    normalize_rebalance_frequency,
+)
 from src.optimization import (
     EqualWeightAllocator,
     InverseVolatilityAllocator,
@@ -71,11 +78,30 @@ def test_generate_rebalance_dates_monthly() -> None:
     """Test monthly rebalance date generation."""
     start = pd.Timestamp("2020-01-01")
     end = pd.Timestamp("2020-12-31")
-    dates = generate_rebalance_dates(start, end, frequency="M")
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        dates = generate_rebalance_dates(start, end, frequency="M")
 
     assert len(dates) >= 11
     assert dates[0] == start or dates[0].month == 1
     assert dates[-1] <= end
+    assert not any("'M' is deprecated" in str(w.message) for w in caught)
+
+
+def test_generate_rebalance_dates_me_matches_m() -> None:
+    start = pd.Timestamp("2020-01-01")
+    end = pd.Timestamp("2020-12-31")
+
+    dates_m = generate_rebalance_dates(start, end, frequency="M")
+    dates_me = generate_rebalance_dates(start, end, frequency="ME")
+
+    assert dates_m == dates_me
+
+
+def test_normalize_rebalance_frequency_maps_month_end_alias() -> None:
+    assert normalize_rebalance_frequency("M") == "ME"
+    assert normalize_rebalance_frequency("ME") == "ME"
+    assert normalize_rebalance_frequency("W") == "W"
 
 
 def test_compare_strategies_multiple() -> None:

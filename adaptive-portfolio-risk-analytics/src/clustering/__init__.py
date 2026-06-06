@@ -8,6 +8,14 @@ from .hierarchical import (
     compute_linkage_matrix,
     get_cluster_members,
 )
+from .herc_allocator import (
+    HERCAllocator,
+    allocate_herc_weights,
+    compare_hrp_herc_weights,
+    compute_cluster_risk,
+    covariance_to_correlation,
+    validate_weights,
+)
 from .hrp import HierarchicalRiskParity, ConstrainedHRP
 
 __all__ = [
@@ -19,4 +27,10 @@ __all__ = [
     "plot_dendrogram",
     "HierarchicalRiskParity",
     "ConstrainedHRP",
+    "HERCAllocator",
+    "allocate_herc_weights",
+    "compare_hrp_herc_weights",
+    "compute_cluster_risk",
+    "covariance_to_correlation",
+    "validate_weights",
 ]

@@ -2,9 +2,11 @@
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from src.clustering import DistanceMetrics, compute_linkage_matrix
 from src.clustering.hrp import HierarchicalRiskParity
+from src.optimization import HRPAllocator
 from src.optimization.hrp_allocator import (
     allocate_hrp_weights,
     compute_cluster_variance,
@@ -121,3 +123,30 @@ def test_allocate_hrp_weights_reproducible() -> None:
 
     assert np.allclose(first.values, second.values)
     assert set(first.index) == set(returns.columns)
+
+
+@pytest.mark.parametrize(
+    ("covariance_method", "covariance_kwargs"),
+    [
+        ("sample", {}),
+        ("ledoit_wolf", {}),
+        ("ewma", {"span": 126}),
+        ("ewma_ledoit_wolf", {"span": 126}),
+    ],
+)
+def test_hrp_allocator_supports_covariance_methods(
+    covariance_method: str,
+    covariance_kwargs: dict,
+) -> None:
+    returns = _sample_returns()
+    weights = HRPAllocator(
+        covariance_method=covariance_method,
+        covariance_kwargs=covariance_kwargs,
+    ).optimize(returns)
+
+    assert isinstance(weights, pd.Series)
+    assert weights.index.tolist() == returns.columns.tolist()
+    assert weights.name == "weight"
+    assert np.isclose(weights.sum(), 1.0)
+    assert np.all(weights >= 0.0)
+    assert np.isfinite(weights.values).all()

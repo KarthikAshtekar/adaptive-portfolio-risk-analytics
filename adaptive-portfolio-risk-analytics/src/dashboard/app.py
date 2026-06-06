@@ -51,6 +51,7 @@ from src.data_pipeline import (
 
 from src.optimization import (
     EqualWeightAllocator,
+    HERCAllocator,
     HRPAllocator,
     InverseVolatilityAllocator,
 )
@@ -67,6 +68,7 @@ def get_allocator(strategy_name: str):
         "Equal Weight": EqualWeightAllocator(),
         "Inverse Volatility": InverseVolatilityAllocator(),
         "HRP": HRPAllocator(),
+        "HERC": HERCAllocator(),
     }
 
     return allocators[strategy_name]
@@ -112,6 +114,7 @@ strategy = st.sidebar.selectbox(
         "Equal Weight",
         "Inverse Volatility",
         "HRP",
+        "HERC",
     ],
 )
 

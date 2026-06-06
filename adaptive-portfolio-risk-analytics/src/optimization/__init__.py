@@ -1,5 +1,7 @@
 """Portfolio allocation exports."""
 
+from src.clustering.herc_allocator import HERCAllocator
+
 from .base import BaseAllocator
 from .equal_weight import EqualWeightAllocator
 from .mean_variance import MeanVarianceAllocator
@@ -20,6 +22,7 @@ MeanVarianceOptimizer = MeanVarianceAllocator
 InverseVolatilityOptimizer = InverseVolatilityAllocator
 DynamicAllocationOptimizer = DynamicAllocationAllocator
 HRPOptimizer = HRPAllocator
+HERCOptimizer = HERCAllocator
 
 __all__ = [
     "BaseAllocator",
@@ -27,6 +30,7 @@ __all__ = [
     "MeanVarianceAllocator",
     "InverseVolatilityAllocator",
     "HRPAllocator",
+    "HERCAllocator",
     "DynamicAllocationAllocator",
     "allocate_hrp_weights",
     "get_quasi_diagonal_order",
@@ -38,4 +42,5 @@ __all__ = [
     "InverseVolatilityOptimizer",
     "DynamicAllocationOptimizer",
     "HRPOptimizer",
+    "HERCOptimizer",
 ]

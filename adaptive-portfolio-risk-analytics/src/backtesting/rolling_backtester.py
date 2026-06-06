@@ -20,8 +20,31 @@ def generate_rebalance_dates(
     """Generate rebalancing dates at specified frequency (default: monthly)."""
     if start_date >= end_date:
         raise ValueError("start_date must be before end_date")
-    date_range = pd.date_range(start=start_date, end=end_date, freq=frequency)
+    date_range = pd.date_range(
+        start=start_date,
+        end=end_date,
+        freq=normalize_rebalance_frequency(frequency),
+    )
     return date_range.tolist()
+
+
+def normalize_rebalance_frequency(frequency: str) -> str:
+    """Normalize rebalance frequency for pandas date offsets."""
+    if not isinstance(frequency, str):
+        raise TypeError("frequency must be a string")
+
+    normalized = frequency.upper()
+    if normalized == "M":
+        return "ME"
+    return normalized
+
+
+def rebalance_period_frequency(frequency: str) -> str:
+    """Return a Period-compatible frequency for rebalance boundary checks."""
+    normalized = normalize_rebalance_frequency(frequency)
+    if normalized == "ME":
+        return "M"
+    return normalized
 
 
 def compare_strategies(
@@ -101,10 +124,10 @@ class RollingBacktester(BaseBacktester):
         )
 
     def _rebalance_flags(self, index: pd.DatetimeIndex) -> np.ndarray:
-        if self.rebalance_frequency.upper() == "D":
+        if normalize_rebalance_frequency(self.rebalance_frequency) == "D":
             return np.ones(len(index), dtype=bool)
 
-        periods = index.to_period(self.rebalance_frequency)
+        periods = index.to_period(rebalance_period_frequency(self.rebalance_frequency))
         flags = np.zeros(len(index), dtype=bool)
         flags[0] = True
         for i in range(1, len(index)):

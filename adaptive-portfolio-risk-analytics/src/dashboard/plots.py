@@ -295,6 +295,41 @@ def plot_weight_pie(
     return fig
 
 
+def plot_weight_comparison(
+    comparison_df: pd.DataFrame,
+    left_col: str = "HRP Weight",
+    right_col: str = "HERC Weight",
+    title: str = "HRP vs HERC Weight Comparison",
+) -> go.Figure:
+    """Plot grouped portfolio weights for two allocation schemes."""
+    fig = go.Figure()
+
+    fig.add_trace(
+        go.Bar(
+            x=comparison_df["Asset"].tolist(),
+            y=comparison_df[left_col].tolist(),
+            name=left_col,
+        )
+    )
+    fig.add_trace(
+        go.Bar(
+            x=comparison_df["Asset"].tolist(),
+            y=comparison_df[right_col].tolist(),
+            name=right_col,
+        )
+    )
+
+    fig.update_layout(
+        title=title,
+        xaxis_title="Asset",
+        yaxis_title="Weight",
+        barmode="group",
+        template="plotly_white",
+    )
+
+    return fig
+
+
 # ============================================================
 # STRATEGY COMPARISON
 # ============================================================

@@ -7,6 +7,7 @@ import pandas as pd
 from scipy.cluster.hierarchy import linkage
 
 from src.clustering.distance_metrics import DistanceMetrics
+from src.covariance import CovarianceFactory
 
 from .base import BaseAllocator
 
@@ -108,12 +109,46 @@ def allocate_hrp_weights(
     return hrp_weights.reindex(covariance_matrix_df.index).fillna(0.0).astype(float)
 
 
+def covariance_to_correlation(covariance_matrix: pd.DataFrame) -> pd.DataFrame:
+    """Convert a covariance matrix into a labeled correlation matrix."""
+    if not isinstance(covariance_matrix, pd.DataFrame):
+        raise TypeError("covariance_matrix must be a pandas DataFrame")
+    if covariance_matrix.empty:
+        raise ValueError("covariance_matrix must not be empty")
+    if covariance_matrix.shape[0] != covariance_matrix.shape[1]:
+        raise ValueError("covariance_matrix must be square")
+    if not covariance_matrix.index.equals(covariance_matrix.columns):
+        raise ValueError("covariance_matrix must have identical row and column labels")
+
+    vol = np.sqrt(np.clip(np.diag(covariance_matrix.values), 1e-12, None))
+    scale = np.outer(vol, vol)
+    correlation = covariance_matrix.values / scale
+    correlation = np.clip(correlation, -1.0, 1.0)
+    correlation = (correlation + correlation.T) / 2.0
+    np.fill_diagonal(correlation, 1.0)
+
+    return pd.DataFrame(
+        correlation,
+        index=covariance_matrix.index,
+        columns=covariance_matrix.columns,
+    )
+
+
 class HRPAllocator(BaseAllocator):
     """Allocate using Hierarchical Risk Parity."""
 
-    def __init__(self, linkage_method: str = "single"):
+    def __init__(
+        self,
+        linkage_method: str = "single",
+        covariance_method: str = "sample",
+        covariance_kwargs: dict | None = None,
+    ):
         self.linkage_method = linkage_method
-        self._weights: np.ndarray | None = None
+        self.covariance_method = covariance_method
+        self.covariance_kwargs = dict(covariance_kwargs or {})
+        self.covariance_matrix_: pd.DataFrame | None = None
+        self.correlation_matrix_: pd.DataFrame | None = None
+        self._weights: pd.Series | None = None
 
     def fit(
         self,
@@ -129,23 +164,36 @@ class HRPAllocator(BaseAllocator):
             raise ValueError("returns has no valid rows after dropping NaNs")
 
         if cov_matrix is None:
-            covariance_df = clean_returns.cov()
+            covariance_df = CovarianceFactory.compute(
+                clean_returns,
+                method=self.covariance_method,
+                **self.covariance_kwargs,
+            )
         elif isinstance(cov_matrix, np.ndarray):
-            covariance_df = pd.DataFrame(cov_matrix, index=returns.columns, columns=returns.columns)
+            covariance_df = pd.DataFrame(
+                cov_matrix,
+                index=clean_returns.columns,
+                columns=clean_returns.columns,
+            )
         else:
-            covariance_df = cov_matrix
+            covariance_df = cov_matrix.loc[clean_returns.columns, clean_returns.columns]
 
         if linkage_matrix is None:
-            corr = clean_returns.corr()
-            distance = DistanceMetrics.correlation_distance(corr.values)
+            correlation_df = covariance_to_correlation(covariance_df)
+            distance = DistanceMetrics.correlation_distance(correlation_df.values)
             condensed = DistanceMetrics.to_condensed(distance)
             linkage_matrix = linkage(condensed, method=self.linkage_method)
+        else:
+            correlation_df = covariance_to_correlation(covariance_df)
 
-        weights = allocate_hrp_weights(covariance_df, linkage_matrix).values
+        weights = allocate_hrp_weights(covariance_df, linkage_matrix).reindex(clean_returns.columns)
+        weights.name = "weight"
+        self.covariance_matrix_ = covariance_df
+        self.correlation_matrix_ = correlation_df
         self._weights = weights
         return self
 
-    def get_weights(self) -> np.ndarray:
+    def get_weights(self) -> pd.Series:
         if self._weights is None:
             raise ValueError("allocator not fitted")
-        return self._weights
+        return self._weights.copy()
