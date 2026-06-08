@@ -15,6 +15,14 @@ from .rolling_backtester import (
 from .transaction_costs import TransactionCostCalculator, TransactionCostModel
 from .turnover import calculate_turnover, calculate_turnover_series, summarize_turnover
 from .cpcv import CPCVBacktester
+from .volatility_targeting import (
+    VolatilityTargetingConfig,
+    apply_volatility_targeting,
+    classify_volatility_regime,
+    compute_adaptive_target_volatility,
+    compute_exposure_series,
+    compute_realized_volatility,
+)
 
 # Backward-compatible aliases.
 BacktestEngine = BaseBacktester
@@ -40,4 +48,10 @@ __all__ = [
     "BacktestEngine",
     "RollingBacktest",
     "CPCVValidator",
+    "VolatilityTargetingConfig",
+    "compute_realized_volatility",
+    "classify_volatility_regime",
+    "compute_adaptive_target_volatility",
+    "compute_exposure_series",
+    "apply_volatility_targeting",
 ]

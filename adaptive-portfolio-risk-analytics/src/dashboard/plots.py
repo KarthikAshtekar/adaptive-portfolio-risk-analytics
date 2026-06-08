@@ -646,6 +646,254 @@ def plot_cost_adjusted_comparison(
     return fig
 
 
+def plot_exposure_series(
+    exposure_series: pd.Series,
+) -> go.Figure:
+    """Plot risky-asset exposure through time."""
+    fig = go.Figure()
+    fig.add_trace(
+        go.Scatter(
+            x=exposure_series.index,
+            y=exposure_series.values,
+            mode="lines",
+            name="Risky Exposure",
+            fill="tozeroy",
+        )
+    )
+    fig.update_layout(
+        title="Risky Portfolio Exposure",
+        xaxis_title="Date",
+        yaxis_title="Exposure",
+        yaxis=dict(range=[0.0, 1.05]),
+        template="plotly_white",
+        hovermode="x unified",
+    )
+    return fig
+
+
+def plot_regime_series(
+    regime_series: pd.Series,
+) -> go.Figure:
+    """Plot volatility regimes over time."""
+    regime_order = ["calm", "normal", "stress", "crisis"]
+    encoded = regime_series.astype(str).map({name: idx for idx, name in enumerate(regime_order)})
+    fig = go.Figure()
+    fig.add_trace(
+        go.Scatter(
+            x=regime_series.index,
+            y=encoded.values,
+            mode="lines",
+            line=dict(shape="hv"),
+            name="Regime",
+            text=regime_series.values,
+        )
+    )
+    fig.update_layout(
+        title="Volatility Regime Timeline",
+        xaxis_title="Date",
+        yaxis_title="Regime",
+        yaxis=dict(
+            tickmode="array",
+            tickvals=list(range(len(regime_order))),
+            ticktext=[name.title() for name in regime_order],
+        ),
+        template="plotly_white",
+        hovermode="x unified",
+    )
+    return fig
+
+
+def plot_base_vs_vol_targeted_growth(
+    base_values: pd.Series,
+    targeted_values: pd.Series,
+) -> go.Figure:
+    """Plot base growth versus volatility-targeted growth."""
+    fig = go.Figure()
+    fig.add_trace(
+        go.Scatter(
+            x=base_values.index,
+            y=base_values.values,
+            mode="lines",
+            name="Base Strategy",
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=targeted_values.index,
+            y=targeted_values.values,
+            mode="lines",
+            name="Volatility Targeted",
+        )
+    )
+    fig.update_layout(
+        title="Base vs Volatility-Targeted Growth",
+        xaxis_title="Date",
+        yaxis_title="Growth",
+        template="plotly_white",
+        hovermode="x unified",
+    )
+    return fig
+
+
+def plot_realized_vs_target_vol(
+    realized_vol: pd.Series,
+    target_vol: pd.Series,
+) -> go.Figure:
+    """Plot realized volatility against target volatility."""
+    fig = go.Figure()
+    fig.add_trace(
+        go.Scatter(
+            x=realized_vol.index,
+            y=realized_vol.values,
+            mode="lines",
+            name="Realized Volatility",
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=target_vol.index,
+            y=target_vol.values,
+            mode="lines",
+            name="Target Volatility",
+        )
+    )
+    fig.update_layout(
+        title="Realized vs Target Volatility",
+        xaxis_title="Date",
+        yaxis_title="Annualized Volatility",
+        template="plotly_white",
+        hovermode="x unified",
+    )
+    return fig
+
+
+def plot_defensive_allocation(
+    exposure_series: pd.Series,
+) -> go.Figure:
+    """Plot defensive-sleeve allocation through time."""
+    defensive_allocation = 1.0 - exposure_series
+    fig = go.Figure()
+    fig.add_trace(
+        go.Scatter(
+            x=defensive_allocation.index,
+            y=defensive_allocation.values,
+            mode="lines",
+            fill="tozeroy",
+            name="Defensive Allocation",
+        )
+    )
+    fig.update_layout(
+        title="Defensive Sleeve Allocation",
+        xaxis_title="Date",
+        yaxis_title="Allocation",
+        yaxis=dict(range=[0.0, 1.05]),
+        template="plotly_white",
+        hovermode="x unified",
+    )
+    return fig
+
+
+def plot_experiment_metric_by_parameter(
+    experiment_results_df: pd.DataFrame,
+    parameter,
+    metric,
+) -> go.Figure:
+    """Plot average experiment metric by parameter value."""
+    successful = (
+        experiment_results_df[experiment_results_df["status"] == "success"]
+        if "status" in experiment_results_df.columns
+        else experiment_results_df
+    )
+    grouped = (
+        successful.groupby(parameter, dropna=False)[metric]
+        .mean()
+        .reset_index()
+    )
+    grouped[parameter] = grouped[parameter].astype(str)
+
+    fig = go.Figure(
+        go.Bar(
+            x=grouped[parameter].tolist(),
+            y=grouped[metric].tolist(),
+        )
+    )
+    fig.update_layout(
+        title=f"Average {metric.replace('_', ' ').title()} by {parameter.replace('_', ' ').title()}",
+        xaxis_title=parameter.replace("_", " ").title(),
+        yaxis_title=metric.replace("_", " ").title(),
+        template="plotly_white",
+    )
+    return fig
+
+
+def plot_top_experiments(
+    experiment_results_df: pd.DataFrame,
+    metric,
+) -> go.Figure:
+    """Plot the top experiment configurations by the chosen metric."""
+    successful = (
+        experiment_results_df[experiment_results_df["status"] == "success"]
+        if "status" in experiment_results_df.columns
+        else experiment_results_df
+    )
+    ranked = successful.sort_values(by=metric, ascending=False).head(10).copy()
+    ranked["label"] = (
+        ranked["strategy"].astype(str)
+        + " | "
+        + ranked["covariance_method"].astype(str)
+        + " | "
+        + ranked["rebalance_mode"].astype(str)
+    )
+
+    fig = go.Figure(
+        go.Bar(
+            x=ranked["label"].tolist(),
+            y=ranked[metric].tolist(),
+        )
+    )
+    fig.update_layout(
+        title=f"Top Experiment Configurations by {metric.replace('_', ' ').title()}",
+        xaxis_title="Configuration",
+        yaxis_title=metric.replace("_", " ").title(),
+        template="plotly_white",
+    )
+    return fig
+
+
+def plot_sensitivity_heatmap(
+    experiment_results_df: pd.DataFrame,
+    x_param,
+    y_param,
+    metric,
+) -> go.Figure:
+    """Plot a sensitivity heatmap for two experiment parameters."""
+    successful = (
+        experiment_results_df[experiment_results_df["status"] == "success"]
+        if "status" in experiment_results_df.columns
+        else experiment_results_df
+    )
+    pivot = pd.pivot_table(
+        successful,
+        index=y_param,
+        columns=x_param,
+        values=metric,
+        aggfunc="mean",
+    )
+
+    fig = px.imshow(
+        pivot,
+        color_continuous_scale="Blues",
+        aspect="auto",
+        title=f"{metric.replace('_', ' ').title()} Sensitivity",
+    )
+    fig.update_layout(
+        xaxis_title=x_param.replace("_", " ").title(),
+        yaxis_title=y_param.replace("_", " ").title(),
+        template="plotly_white",
+    )
+    return fig
+
+
 # ============================================================
 # STREAMLIT HELPERS
 # ============================================================

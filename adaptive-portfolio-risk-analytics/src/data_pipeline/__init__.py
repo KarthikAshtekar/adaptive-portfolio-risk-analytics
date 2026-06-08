@@ -20,6 +20,7 @@ from .preprocess import (
     ReturnsRiskOutputs,
 )
 from .feature_engineering import FeatureEngineer
+from .defensive_assets import get_defensive_asset_returns
 
 __all__ = [
     "SAMPLE_UNIVERSE",
@@ -38,4 +39,5 @@ __all__ = [
     "DataPreprocessor",
     "DataValidator",
     "FeatureEngineer",
+    "get_defensive_asset_returns",
 ]
