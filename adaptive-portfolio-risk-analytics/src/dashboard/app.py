@@ -153,7 +153,8 @@ SENSITIVITY_OBJECTIVE_MAP = {
 
 
 def ticker_label(ticker: str) -> str:
-    return f"{ticker} — {INDIAN_ASSET_UNIVERSE[ticker]}"
+    company_name = INDIAN_ASSET_UNIVERSE.get(ticker, "Custom ticker")
+    return f"{ticker} — {company_name}"
 
 
 def initialize_session_state() -> None:
@@ -164,7 +165,8 @@ def initialize_session_state() -> None:
         "ui_selected_assets": default_labels,
         "_last_preset": "Core Diversified",
         "_last_select_all": True,
-        "ui_manual_ticker_override": "",
+        "ui_ticker_to_add": "",
+        "ui_added_tickers": [],
         PORTFOLIO_RESULT_KEY: None,
         SENSITIVITY_RESULT_KEY: None,
         UI_MESSAGE_KEY: None,
@@ -178,9 +180,14 @@ def get_allocator(strategy_name: str, covariance_method: str = "sample"):
     return BenchmarkFactory.get_allocator(strategy_name, covariance_method=covariance_method)
 
 
-def parse_ticker_override(raw_value: str) -> list[str]:
-    tickers = [ticker.strip().upper() for ticker in raw_value.split(",") if ticker.strip()]
+def parse_ticker_entries(raw_value: str) -> list[str]:
+    normalized_value = raw_value.replace(";", ",").replace("\n", ",")
+    tickers = [ticker.strip().upper() for ticker in normalized_value.split(",") if ticker.strip()]
     return list(dict.fromkeys(tickers))
+
+
+def parse_ticker_override(raw_value: str) -> list[str]:
+    return parse_ticker_entries(raw_value)
 
 
 def parse_float_list(raw_values: str) -> list[float]:
@@ -223,6 +230,39 @@ def selected_tickers_from_labels(labels: list[str]) -> list[str]:
         if ticker in INDIAN_ASSET_UNIVERSE:
             tickers.append(ticker)
     return list(dict.fromkeys(tickers))
+
+
+def merge_portfolio_tickers(selected_labels: list[str], added_tickers: list[str]) -> list[str]:
+    selected_tickers = selected_tickers_from_labels(selected_labels)
+    cleaned_added_tickers = parse_ticker_entries(",".join(added_tickers))
+    return list(dict.fromkeys(selected_tickers + cleaned_added_tickers))
+
+
+def add_tickers_to_portfolio() -> None:
+    requested_tickers = parse_ticker_entries(st.session_state.get("ui_ticker_to_add", ""))
+    if not requested_tickers:
+        st.session_state[UI_MESSAGE_KEY] = ("warning", "Enter at least one ticker to add.")
+        return
+
+    selected_tickers = selected_tickers_from_labels(st.session_state.get("ui_selected_assets", []))
+    current_added_tickers = list(st.session_state.get("ui_added_tickers", []))
+    current_portfolio_tickers = set(selected_tickers + current_added_tickers)
+    new_tickers = [ticker for ticker in requested_tickers if ticker not in current_portfolio_tickers]
+
+    if not new_tickers:
+        st.session_state[UI_MESSAGE_KEY] = ("info", "Ticker is already in the portfolio.")
+        st.session_state["ui_ticker_to_add"] = ""
+        return
+
+    st.session_state["ui_added_tickers"] = list(dict.fromkeys(current_added_tickers + new_tickers))
+    st.session_state["ui_ticker_to_add"] = ""
+    st.session_state[UI_MESSAGE_KEY] = ("info", f"Added ticker(s): {', '.join(new_tickers)}.")
+
+
+def clear_added_tickers() -> None:
+    if st.session_state.get("ui_added_tickers"):
+        st.session_state["ui_added_tickers"] = []
+        st.session_state[UI_MESSAGE_KEY] = ("info", "Added tickers cleared.")
 
 
 def show_message(level: str, message: str) -> None:
@@ -969,15 +1009,32 @@ with st.sidebar.expander("Basic Portfolio Setup", expanded=True):
         "Selected Assets",
         options=asset_options,
         key="ui_selected_assets",
-        help="Search by ticker or company name. Manual override below can replace this selection.",
+        help="Search by ticker or company name. Use Add Ticker below for symbols outside this list.",
     )
 
-    with st.expander("Manual Ticker Override", expanded=False):
+    with st.expander("Add Ticker", expanded=False):
         st.text_input(
-            "Manual Ticker Override",
-            key="ui_manual_ticker_override",
-            help="Optional comma-separated tickers. If provided, these tickers replace the multiselect selection.",
+            "Ticker Symbol",
+            key="ui_ticker_to_add",
+            help="Enter a Yahoo Finance symbol such as AAPL, RELIANCE.NS, or BTC-USD.",
         )
+        add_ticker_col, clear_ticker_col = st.columns(2)
+        add_ticker_col.button(
+            "Add Ticker",
+            key="ui_add_ticker",
+            on_click=add_tickers_to_portfolio,
+        )
+        clear_ticker_col.button(
+            "Clear Added",
+            key="ui_clear_added_tickers",
+            on_click=clear_added_tickers,
+            disabled=not st.session_state.get("ui_added_tickers"),
+        )
+        added_tickers = st.session_state.get("ui_added_tickers", [])
+        if added_tickers:
+            st.caption(f"Added tickers: {', '.join(added_tickers)}")
+        else:
+            st.caption("No manually added tickers.")
 
     start_date = st.date_input("Start Date", date(2020, 1, 1), key="ui_start_date")
     end_date = st.date_input("End Date", date.today(), key="ui_end_date")
@@ -1186,11 +1243,9 @@ with st.sidebar.expander("Experiment Sensitivity", expanded=False):
     run_sensitivity_button = st.button("Run Sensitivity Study", key="ui_run_sensitivity")
 
 
-manual_override = st.session_state["ui_manual_ticker_override"]
-selected_tickers = (
-    parse_ticker_override(manual_override)
-    if manual_override.strip()
-    else selected_tickers_from_labels(st.session_state["ui_selected_assets"])
+selected_tickers = merge_portfolio_tickers(
+    st.session_state["ui_selected_assets"],
+    st.session_state.get("ui_added_tickers", []),
 )
 
 if run_portfolio_button:
