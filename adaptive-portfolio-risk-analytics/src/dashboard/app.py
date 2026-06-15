@@ -5,6 +5,7 @@ from datetime import date
 from pathlib import Path
 import sys
 
+import numpy as np
 import pandas as pd
 import streamlit as st
 
@@ -15,8 +16,19 @@ if str(project_root) not in sys.path:
 from src.analytics import (
     PerformanceAnalytics,
     RiskAnalytics,
+    calculate_correlation_stress,
+    calculate_active_risk_metrics,
+    calculate_historical_es,
+    calculate_historical_var,
+    calculate_historical_stress_performance,
+    calculate_hypothetical_stress_table,
+    calculate_liquidity_diagnostics,
+    calculate_stress_period_benchmark_comparison,
+    calculate_var_exceptions,
     compare_risk_contributions,
+    find_worst_periods,
     risk_contribution_table,
+    summarize_liquidity_diagnostics,
 )
 from src.backtesting import RollingBacktester, VolatilityTargetingConfig, apply_volatility_targeting
 from src.backtesting.transaction_costs import TransactionCostModel
@@ -150,6 +162,18 @@ SENSITIVITY_OBJECTIVE_MAP = {
     "Max Drawdown": "max_drawdown",
     "Final Value": "final_value",
 }
+
+TAKEAWAY_OBJECTIVE_OPTIONS = {
+    "Calmar": "calmar",
+    "Sharpe": "sharpe",
+    "Sortino": "sortino",
+    "CAGR": "cagr",
+    "Final Value": "final_value",
+    "Max Drawdown": "max_drawdown",
+    "Volatility": "volatility",
+}
+
+LOWER_IS_BETTER_METRICS = {"volatility"}
 
 
 def ticker_label(ticker: str) -> str:
@@ -304,6 +328,676 @@ def validate_sensitivity_inputs(
     return None
 
 
+def build_active_risk_metrics_table(
+    strategy_results: dict[str, dict],
+    performance_comparison_df: pd.DataFrame,
+    benchmark_name: str,
+) -> pd.DataFrame:
+    """Build active-risk metrics for every strategy against the selected benchmark."""
+    if not strategy_results or performance_comparison_df.empty:
+        return pd.DataFrame()
+
+    benchmark_display_name = BenchmarkFactory.normalize_strategy_name(benchmark_name)
+    if benchmark_display_name not in strategy_results:
+        return pd.DataFrame()
+
+    benchmark_result = strategy_results[benchmark_display_name]
+    benchmark_cagr = _lookup_strategy_metric(
+        performance_comparison_df,
+        benchmark_display_name,
+        "cagr",
+    )
+    rows = []
+
+    for strategy_name, result in strategy_results.items():
+        strategy_cagr = _lookup_strategy_metric(
+            performance_comparison_df,
+            strategy_name,
+            "cagr",
+        )
+        weights = result.get("weights_history")
+        if weights is None or getattr(weights, "empty", True):
+            weights = result.get("latest_weights")
+
+        metrics = calculate_active_risk_metrics(
+            strategy_returns=result["portfolio_returns"],
+            benchmark_returns=benchmark_result["portfolio_returns"],
+            strategy_values=result.get("portfolio_values"),
+            weights=weights,
+            strategy_cagr=strategy_cagr,
+            benchmark_cagr=benchmark_cagr,
+        )
+        rows.append(
+            {
+                "strategy": strategy_name,
+                "benchmark": benchmark_display_name,
+                **metrics,
+            }
+        )
+
+    return pd.DataFrame(rows)
+
+
+def _lookup_strategy_metric(
+    performance_comparison_df: pd.DataFrame,
+    strategy_name: str,
+    metric: str,
+) -> float | None:
+    if strategy_name not in performance_comparison_df.index or metric not in performance_comparison_df:
+        return None
+    value = performance_comparison_df.loc[strategy_name, metric]
+    return float(value) if pd.notna(value) else None
+
+
+def format_active_risk_metrics_table(active_risk_metrics_df: pd.DataFrame) -> pd.DataFrame:
+    """Return a readable presentation table for active-risk metrics."""
+    if active_risk_metrics_df.empty:
+        return pd.DataFrame()
+
+    display_df = pd.DataFrame(
+        {
+            "Strategy": active_risk_metrics_df["strategy"],
+            "Benchmark": active_risk_metrics_df["benchmark"],
+            "Simple Alpha": active_risk_metrics_df["simple_alpha"].map(format_percent),
+            "Jensen's Alpha": active_risk_metrics_df["jensen_alpha_annualized"].map(format_percent),
+            "Beta vs Benchmark": active_risk_metrics_df["beta"].map(format_decimal),
+            "Tracking Error": active_risk_metrics_df["tracking_error"].map(format_percent),
+            "Information Ratio": active_risk_metrics_df["information_ratio"].map(format_decimal),
+            "Hit Ratio": active_risk_metrics_df["hit_ratio"].map(format_percent),
+            "Max DD Duration": active_risk_metrics_df["max_drawdown_duration"].map(format_days),
+            "Current DD Duration": active_risk_metrics_df["current_drawdown_duration"].map(format_days),
+            "HHI": active_risk_metrics_df["hhi"].map(lambda value: format_decimal(value, digits=3)),
+            "Effective N": active_risk_metrics_df["effective_n"].map(
+                lambda value: format_decimal(value, digits=2)
+            ),
+        }
+    )
+    return display_df
+
+
+def render_key_takeaways(
+    performance_comparison_df: pd.DataFrame,
+    strategy_results: dict[str, dict],
+    active_risk_metrics_df: pd.DataFrame,
+    *,
+    selected_objective_label: str,
+    selected_objective_metric: str,
+    volatility_targeting_enabled: bool,
+) -> None:
+    """Render compact presentation cards for the most important results."""
+    st.subheader("Key Takeaways")
+    st.info(
+        "The experiment ranking is single-objective. The dashboard ranks strategies by the "
+        "selected objective only. Other metrics are diagnostics unless they affect the selected "
+        "objective through performance."
+    )
+
+    selected_strategy, selected_value = _best_strategy_by_metric(
+        performance_comparison_df,
+        selected_objective_metric,
+        lower_is_better=selected_objective_metric in LOWER_IS_BETTER_METRICS,
+    )
+    drawdown_strategy, drawdown_value = _best_strategy_by_metric(
+        performance_comparison_df,
+        "max_drawdown",
+    )
+    volatility_strategy, volatility_value = _best_strategy_by_metric(
+        performance_comparison_df,
+        "volatility",
+        lower_is_better=True,
+    )
+    sharpe_strategy, sharpe_value = _best_strategy_by_metric(performance_comparison_df, "sharpe")
+    calmar_strategy, calmar_value = _best_strategy_by_metric(performance_comparison_df, "calmar")
+    final_value_strategy, final_value = _best_strategy_by_metric(
+        performance_comparison_df,
+        "final_value",
+    )
+    turnover_strategy, turnover_value = _best_backtest_metric(strategy_results, "average_turnover")
+    cost_strategy, cost_value = _best_backtest_metric(strategy_results, "total_transaction_cost")
+
+    cards = [
+        (
+            "Best by selected objective",
+            f"{selected_strategy} ({selected_objective_label}: "
+            f"{format_metric_for_card(selected_objective_metric, selected_value)})",
+        ),
+        ("Best drawdown control", f"{drawdown_strategy} ({format_percent(drawdown_value)})"),
+        ("Lowest volatility", f"{volatility_strategy} ({format_percent(volatility_value)})"),
+        ("Highest Sharpe", f"{sharpe_strategy} ({format_decimal(sharpe_value)})"),
+        ("Highest Calmar", f"{calmar_strategy} ({format_decimal(calmar_value)})"),
+        ("Highest final value", f"{final_value_strategy} ({format_currency(final_value)})"),
+        ("Lowest turnover", f"{turnover_strategy} ({format_decimal(turnover_value)})"),
+        ("Lowest transaction cost", f"{cost_strategy} ({format_currency(cost_value)})"),
+        ("Volatility targeting", "Enabled" if volatility_targeting_enabled else "Disabled"),
+    ]
+    _render_metric_cards(cards)
+    render_interpretation_badges(
+        performance_comparison_df,
+        strategy_results,
+        active_risk_metrics_df,
+    )
+
+
+def render_risk_tracking_explainer() -> None:
+    with st.expander("What Risks Are We Tracking?"):
+        st.write(
+            "Systematic risk is market-wide risk that diversification cannot fully remove. "
+            "Unsystematic risk is asset-specific risk that diversification can reduce."
+        )
+        st.dataframe(
+            pd.DataFrame(
+                [
+                    ("Market risk", "Volatility, VaR, ES/CVaR, drawdown"),
+                    ("Systematic risk", "Beta versus benchmark, market drawdown sensitivity"),
+                    ("Unsystematic risk", "Diversification through covariance/correlation/clustering"),
+                    ("Correlation risk", "Correlation matrix, distance matrix, dendrogram"),
+                    ("Concentration risk", "HHI, Effective N, risk contribution"),
+                    ("Benchmark active risk", "Alpha, tracking error, information ratio"),
+                    (
+                        "Liquidity trading risk",
+                        "Turnover, transaction cost, slippage, ADTV, participation rate",
+                    ),
+                    ("Model risk", "Covariance estimator sensitivity, parameter sensitivity"),
+                    ("Regime / volatility-state risk", "Volatility targeting overlay"),
+                    ("Tail risk", "VaR, ES/CVaR, stress testing"),
+                ],
+                columns=["FRM Risk Concept", "Project Mapping"],
+            ),
+            use_container_width=True,
+        )
+
+
+def render_active_risk_metric_help() -> None:
+    with st.expander("Active Risk Metric Guide"):
+        st.markdown(
+            """
+- Simple Alpha: strategy CAGR minus benchmark CAGR.
+- Jensen's Alpha: CAPM-style annualized alpha after accounting for benchmark beta.
+- Beta vs Benchmark: sensitivity of strategy returns to benchmark returns.
+- Tracking Error: annualized volatility of daily active returns.
+- Information Ratio: annualized active return divided by tracking error.
+- Hit Ratio: share of days the strategy beats the benchmark.
+- Max DD Duration: longest time spent below a prior portfolio peak.
+- HHI and Effective N: allocation concentration and implied number of equally weighted assets.
+"""
+        )
+
+
+def render_interpretation_badges(
+    performance_comparison_df: pd.DataFrame,
+    strategy_results: dict[str, dict],
+    active_risk_metrics_df: pd.DataFrame,
+) -> None:
+    messages = []
+
+    if "max_drawdown" in performance_comparison_df:
+        high_drawdown = performance_comparison_df[
+            pd.to_numeric(performance_comparison_df["max_drawdown"], errors="coerce") < -0.25
+        ]
+        if not high_drawdown.empty:
+            messages.append(
+                "High drawdown risk: "
+                + ", ".join(map(str, high_drawdown.index))
+                + " breached -25% max drawdown."
+            )
+
+    turnover_series = _backtest_metric_series(strategy_results, "average_turnover")
+    high_turnover = _high_relative_values(turnover_series)
+    if not high_turnover.empty:
+        messages.append(
+            "High turnover: transaction costs may erode performance for "
+            + ", ".join(high_turnover.index.astype(str))
+            + "."
+        )
+
+    if not active_risk_metrics_df.empty:
+        concentration_rows = active_risk_metrics_df.dropna(subset=["effective_n"])
+        asset_count = _infer_asset_count_from_strategy_results(strategy_results)
+        concentrated = pd.DataFrame()
+        if asset_count > 0:
+            concentrated = concentration_rows[
+                concentration_rows["effective_n"] < 0.4 * asset_count
+            ]
+        if not concentrated.empty:
+            messages.append(
+                "Concentrated allocation: "
+                + ", ".join(concentrated["strategy"].astype(str))
+                + " has a low effective number of assets."
+            )
+
+        tracking_error = pd.Series(
+            pd.to_numeric(active_risk_metrics_df["tracking_error"], errors="coerce").values,
+            index=active_risk_metrics_df["strategy"].astype(str),
+            dtype=float,
+        ).dropna()
+        high_tracking_error = _high_relative_values(tracking_error)
+        if not high_tracking_error.empty:
+            messages.append(
+                "High active risk versus benchmark: "
+                + ", ".join(high_tracking_error.index.astype(str))
+                + " has elevated tracking error versus peers."
+            )
+
+    if messages:
+        st.subheader("Interpretation Badges")
+        for message in messages:
+            st.warning(message)
+
+
+def _best_strategy_by_metric(
+    performance_comparison_df: pd.DataFrame,
+    metric: str,
+    *,
+    lower_is_better: bool = False,
+) -> tuple[str, float]:
+    if metric not in performance_comparison_df:
+        return "n/a", float("nan")
+    series = pd.to_numeric(performance_comparison_df[metric], errors="coerce").dropna()
+    if series.empty:
+        return "n/a", float("nan")
+    index = series.idxmin() if lower_is_better else series.idxmax()
+    return str(index), float(series.loc[index])
+
+
+def _best_backtest_metric(strategy_results: dict[str, dict], metric: str) -> tuple[str, float]:
+    series = _backtest_metric_series(strategy_results, metric)
+    if series.empty:
+        return "n/a", float("nan")
+    index = series.idxmin()
+    return str(index), float(series.loc[index])
+
+
+def _backtest_metric_series(strategy_results: dict[str, dict], metric: str) -> pd.Series:
+    values = {}
+    for strategy_name, result in strategy_results.items():
+        metrics = result.get("performance_metrics", {})
+        value = metrics.get(metric)
+        if value is not None and pd.notna(value):
+            values[strategy_name] = float(value)
+    return pd.Series(values, dtype=float).dropna()
+
+
+def _high_relative_values(values: pd.Series) -> pd.Series:
+    values = pd.to_numeric(values, errors="coerce").dropna()
+    values = values[values > 0.0]
+    if len(values) < 2 or np.isclose(float(values.max()), float(values.min())):
+        return pd.Series(dtype=float)
+    threshold = float(values.quantile(0.75))
+    return values[values > threshold]
+
+
+def _infer_asset_count_from_strategy_results(strategy_results: dict[str, dict]) -> int:
+    for result in strategy_results.values():
+        weights = result.get("latest_weights")
+        if isinstance(weights, pd.Series) and not weights.empty:
+            return len(weights)
+        weights_history = result.get("weights_history")
+        if isinstance(weights_history, pd.DataFrame) and not weights_history.empty:
+            return weights_history.shape[1]
+    return 0
+
+
+def _render_metric_cards(cards: list[tuple[str, str]]) -> None:
+    for start in range(0, len(cards), 3):
+        row = cards[start : start + 3]
+        columns = st.columns(len(row))
+        for column, (label, value) in zip(columns, row):
+            column.metric(label, value)
+
+
+def format_metric_for_card(metric: str, value: float) -> str:
+    if metric in {"cagr", "volatility", "max_drawdown"}:
+        return format_percent(value)
+    if metric == "final_value":
+        return format_currency(value)
+    return format_decimal(value)
+
+
+def format_percent(value: float) -> str:
+    if not _is_finite(value):
+        return "n/a"
+    return f"{float(value):.2%}"
+
+
+def format_decimal(value: float, digits: int = 2) -> str:
+    if not _is_finite(value):
+        return "n/a"
+    return f"{float(value):.{digits}f}"
+
+
+def format_currency(value: float) -> str:
+    if not _is_finite(value):
+        return "n/a"
+    return f"{float(value):,.0f}"
+
+
+def format_days(value: float) -> str:
+    if not _is_finite(value):
+        return "n/a"
+    return f"{int(round(float(value)))} days"
+
+
+def build_var_es_metrics_table(
+    strategy_results: dict[str, dict],
+    *,
+    confidence_level: float,
+    holding_period_days: int,
+    value_basis: str,
+    initial_capital: float,
+) -> pd.DataFrame:
+    """Build VaR/ES and exception diagnostics for strategy return streams."""
+    rows = []
+    for strategy_name, result in strategy_results.items():
+        portfolio_value = (
+            float(initial_capital)
+            if value_basis == "Initial capital"
+            else float(result["portfolio_values"].iloc[-1])
+        )
+        returns = result["portfolio_returns"]
+        var_result = calculate_historical_var(
+            returns,
+            confidence_level=confidence_level,
+            holding_period_days=holding_period_days,
+            portfolio_value=portfolio_value,
+        )
+        es_result = calculate_historical_es(
+            returns,
+            confidence_level=confidence_level,
+            holding_period_days=holding_period_days,
+            portfolio_value=portfolio_value,
+        )
+        exception_result = calculate_var_exceptions(
+            returns,
+            confidence_level=confidence_level,
+            rolling_window=252 if len(returns) > 252 else None,
+        )
+        rows.append(
+            {
+                "strategy": strategy_name,
+                "confidence_level": confidence_level,
+                "holding_period_days": holding_period_days,
+                "historical_var": var_result["var_return"],
+                "historical_var_amount": var_result["var_amount"],
+                "historical_es": es_result["es_return"],
+                "historical_es_amount": es_result["es_amount"],
+                "actual_exceptions": exception_result["actual_exceptions"],
+                "expected_exceptions": exception_result["expected_exceptions"],
+                "exception_ratio": exception_result["exception_ratio"],
+                "exception_rate": exception_result["exception_rate"],
+                "expected_exception_rate": exception_result["expected_exception_rate"],
+                "n_observations": exception_result["n_observations"],
+                "exception_interpretation": interpret_exception_ratio(
+                    exception_result["exception_ratio"]
+                ),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def format_var_es_metrics_table(var_es_df: pd.DataFrame) -> pd.DataFrame:
+    if var_es_df.empty:
+        return pd.DataFrame()
+    return pd.DataFrame(
+        {
+            "Strategy": var_es_df["strategy"],
+            "Confidence": var_es_df["confidence_level"].map(format_percent),
+            "Holding Period": var_es_df["holding_period_days"].map(lambda value: f"{int(value)} days"),
+            "Historical VaR": var_es_df["historical_var"].map(format_percent),
+            "VaR Amount": var_es_df["historical_var_amount"].map(format_currency),
+            "Historical ES/CVaR": var_es_df["historical_es"].map(format_percent),
+            "ES/CVaR Amount": var_es_df["historical_es_amount"].map(format_currency),
+        }
+    )
+
+
+def format_var_exception_table(var_es_df: pd.DataFrame) -> pd.DataFrame:
+    if var_es_df.empty:
+        return pd.DataFrame()
+    return pd.DataFrame(
+        {
+            "Strategy": var_es_df["strategy"],
+            "Actual Exceptions": var_es_df["actual_exceptions"].map(
+                lambda value: "n/a" if pd.isna(value) else f"{int(value)}"
+            ),
+            "Expected Exceptions": var_es_df["expected_exceptions"].map(
+                lambda value: format_decimal(value, digits=1)
+            ),
+            "Exception Ratio": var_es_df["exception_ratio"].map(format_decimal),
+            "Exception Rate": var_es_df["exception_rate"].map(format_percent),
+            "Expected Rate": var_es_df["expected_exception_rate"].map(format_percent),
+            "Observations": var_es_df["n_observations"].map(
+                lambda value: "n/a" if pd.isna(value) else f"{int(value)}"
+            ),
+            "Interpretation": var_es_df["exception_interpretation"],
+        }
+    )
+
+
+def interpret_exception_ratio(exception_ratio: float) -> str:
+    if not _is_finite(exception_ratio):
+        return "Insufficient data"
+    ratio = float(exception_ratio)
+    if ratio > 1.5:
+        return "VaR may be underestimating risk"
+    if ratio < 0.5:
+        return "VaR may be conservative"
+    return "VaR exceptions broadly consistent"
+
+
+def build_stress_period_benchmark_table(
+    strategy_results: dict[str, dict],
+    benchmark_name: str,
+) -> pd.DataFrame:
+    """Build stress-period strategy-vs-benchmark comparison rows."""
+    benchmark_display_name = BenchmarkFactory.normalize_strategy_name(benchmark_name)
+    if benchmark_display_name not in strategy_results:
+        return pd.DataFrame()
+    benchmark_returns = strategy_results[benchmark_display_name]["portfolio_returns"]
+    rows = []
+    for strategy_name, result in strategy_results.items():
+        comparison_df = calculate_stress_period_benchmark_comparison(
+            result["portfolio_returns"],
+            benchmark_returns,
+        )
+        if comparison_df.empty:
+            continue
+        comparison_df.insert(0, "strategy", strategy_name)
+        comparison_df.insert(1, "benchmark", benchmark_display_name)
+        rows.append(comparison_df)
+    return pd.concat(rows, ignore_index=True) if rows else pd.DataFrame()
+
+
+def format_stress_period_benchmark_table(stress_df: pd.DataFrame) -> pd.DataFrame:
+    if stress_df.empty:
+        return pd.DataFrame()
+    return pd.DataFrame(
+        {
+            "Strategy": stress_df["strategy"],
+            "Benchmark": stress_df["benchmark"],
+            "Stress Period": stress_df["stress_period"],
+            "Strategy Return": stress_df["strategy_stress_return"].map(format_percent),
+            "Benchmark Return": stress_df["benchmark_stress_return"].map(format_percent),
+            "Excess Stress Return": stress_df["excess_stress_return"].map(format_percent),
+            "Strategy Max DD": stress_df["strategy_max_drawdown"].map(format_percent),
+            "Benchmark Max DD": stress_df["benchmark_max_drawdown"].map(format_percent),
+            "Drawdown Reduction": stress_df["drawdown_reduction"].map(format_percent),
+        }
+    )
+
+
+def build_historical_stress_table(strategy_results: dict[str, dict]) -> pd.DataFrame:
+    rows = []
+    for strategy_name, result in strategy_results.items():
+        stress_df = calculate_historical_stress_performance(
+            result["portfolio_returns"],
+            strategy_values=result.get("portfolio_values"),
+        )
+        if stress_df.empty:
+            continue
+        stress_df.insert(0, "strategy", strategy_name)
+        rows.append(stress_df)
+    return pd.concat(rows, ignore_index=True) if rows else pd.DataFrame()
+
+
+def format_historical_stress_table(stress_df: pd.DataFrame) -> pd.DataFrame:
+    if stress_df.empty:
+        return pd.DataFrame()
+    return pd.DataFrame(
+        {
+            "Strategy": stress_df["strategy"],
+            "Stress Period": stress_df["stress_period"],
+            "Period Return": stress_df["period_return"].map(format_percent),
+            "Max Drawdown": stress_df["max_drawdown"].map(format_percent),
+            "Volatility": stress_df["volatility"].map(format_percent),
+            "VaR 95": stress_df["var_95"].map(format_percent),
+            "ES/CVaR 95": stress_df["es_95"].map(format_percent),
+            "Max DD Duration": stress_df["max_drawdown_duration"].map(format_days),
+            "Observations": stress_df["n_observations"],
+            "Status": stress_df["status"],
+        }
+    )
+
+
+def build_hypothetical_stress_dashboard_table(
+    strategy_results: dict[str, dict],
+    benchmark_name: str,
+) -> pd.DataFrame:
+    weights_by_strategy = {
+        strategy_name: _latest_weights_from_result(result)
+        for strategy_name, result in strategy_results.items()
+    }
+    weights_by_strategy = {
+        strategy_name: weights
+        for strategy_name, weights in weights_by_strategy.items()
+        if isinstance(weights, pd.Series) and not weights.empty
+    }
+    benchmark_display_name = BenchmarkFactory.normalize_strategy_name(benchmark_name)
+    return calculate_hypothetical_stress_table(weights_by_strategy, benchmark_display_name)
+
+
+def format_hypothetical_stress_table(stress_df: pd.DataFrame) -> pd.DataFrame:
+    if stress_df.empty:
+        return pd.DataFrame()
+    return pd.DataFrame(
+        {
+            "Scenario": stress_df["scenario"],
+            "Strategy": stress_df["strategy"],
+            "Strategy Stress Return": stress_df["strategy_stress_return"].map(format_percent),
+            "Benchmark Stress Return": stress_df["benchmark_stress_return"].map(format_percent),
+            "Difference vs Benchmark": stress_df["difference_vs_benchmark"].map(format_percent),
+            "Worst Strategy": stress_df["worst_strategy_under_scenario"],
+            "Most Defensive Strategy": stress_df["most_defensive_strategy_under_scenario"],
+        }
+    )
+
+
+def build_correlation_stress_table(
+    strategy_results: dict[str, dict],
+    returns_df: pd.DataFrame,
+) -> pd.DataFrame:
+    rows = []
+    for strategy_name, result in strategy_results.items():
+        metrics = calculate_correlation_stress(_latest_weights_from_result(result), returns_df)
+        rows.append({"strategy": strategy_name, **metrics})
+    return pd.DataFrame(rows)
+
+
+def format_correlation_stress_table(correlation_stress_df: pd.DataFrame) -> pd.DataFrame:
+    if correlation_stress_df.empty:
+        return pd.DataFrame()
+    return pd.DataFrame(
+        {
+            "Strategy": correlation_stress_df["strategy"],
+            "Normal Volatility": correlation_stress_df["normal_volatility"].map(format_percent),
+            "Correlation-Stressed Volatility": correlation_stress_df[
+                "correlation_stressed_volatility"
+            ].map(format_percent),
+            "Volatility Increase": correlation_stress_df["volatility_increase"].map(format_percent),
+            "Assumed Correlation": correlation_stress_df["stressed_correlation"].map(
+                lambda value: format_decimal(value, digits=2)
+            ),
+        }
+    )
+
+
+def format_worst_period_table(worst_periods_df: pd.DataFrame) -> pd.DataFrame:
+    if worst_periods_df.empty:
+        return pd.DataFrame()
+    return pd.DataFrame(
+        {
+            "Window": worst_periods_df["window_days"].map(lambda value: f"{int(value)} days"),
+            "Start": worst_periods_df["start_date"],
+            "End": worst_periods_df["end_date"],
+            "Period Return": worst_periods_df["period_return"].map(format_percent),
+            "Max Drawdown": worst_periods_df["max_drawdown"].map(format_percent),
+            "Observations": worst_periods_df["n_observations"],
+        }
+    )
+
+
+def build_liquidity_dashboard_table(
+    prices_df: pd.DataFrame,
+    volume_df: pd.DataFrame,
+    weights_history: pd.DataFrame,
+    portfolio_value: float,
+) -> pd.DataFrame:
+    target_weights, current_weights = _latest_rebalance_weight_pair(weights_history)
+    return calculate_liquidity_diagnostics(
+        prices=prices_df,
+        volumes=volume_df,
+        target_weights=target_weights,
+        current_weights=current_weights,
+        portfolio_value=portfolio_value,
+        lookback_days=60,
+    )
+
+
+def format_liquidity_table(liquidity_df: pd.DataFrame) -> pd.DataFrame:
+    if liquidity_df.empty:
+        return pd.DataFrame()
+    return pd.DataFrame(
+        {
+            "Asset": liquidity_df["asset"],
+            "Latest Price": liquidity_df["latest_price"].map(lambda value: format_decimal(value, 2)),
+            "Avg Daily Volume": liquidity_df["average_daily_volume"].map(
+                lambda value: format_currency(value)
+            ),
+            "ADTV": liquidity_df["average_daily_traded_value"].map(format_currency),
+            "Trade Value": liquidity_df["estimated_trade_value"].map(format_currency),
+            "Participation Rate": liquidity_df["participation_rate"].map(format_percent),
+            "Warning": liquidity_df["liquidity_warning"],
+        }
+    )
+
+
+def _latest_weights_from_result(result: dict) -> pd.Series:
+    latest_weights = result.get("latest_weights")
+    if isinstance(latest_weights, pd.Series) and not latest_weights.empty:
+        return latest_weights.astype(float)
+    weights_history = result.get("weights_history")
+    if isinstance(weights_history, pd.DataFrame) and not weights_history.empty:
+        return weights_history.iloc[-1].astype(float)
+    return pd.Series(dtype=float)
+
+
+def _latest_rebalance_weight_pair(weights_history: pd.DataFrame) -> tuple[pd.Series, pd.Series]:
+    if not isinstance(weights_history, pd.DataFrame) or weights_history.empty:
+        return pd.Series(dtype=float), pd.Series(dtype=float)
+    target_weights = weights_history.iloc[-1].astype(float)
+    if len(weights_history) >= 2:
+        current_weights = weights_history.iloc[-2].astype(float)
+    else:
+        current_weights = pd.Series(0.0, index=target_weights.index, dtype=float)
+    return target_weights, current_weights
+
+
+def _is_finite(value: float) -> bool:
+    try:
+        return np.isfinite(float(value))
+    except (TypeError, ValueError):
+        return False
+
+
 def load_market_context(
     selected_tickers: list[str],
     start_dt: date,
@@ -317,8 +1011,10 @@ def load_market_context(
     )
     prices_df, data_quality_summary = DataPreprocessor.handle_missing_values(market_data.prices_df)
     returns_df = DataPreprocessor.build_returns_risk_outputs(prices_df).returns_df
+    volume_df = market_data.volume_df.reindex(columns=prices_df.columns).sort_index()
     return {
         "prices_df": prices_df,
+        "volume_df": volume_df,
         "returns_df": returns_df,
         "data_quality_summary": data_quality_summary,
     }
@@ -425,6 +1121,11 @@ def build_portfolio_results(
         performance_comparison_df,
         benchmark_name=benchmark_strategy,
     )
+    active_risk_metrics_df = build_active_risk_metrics_table(
+        strategy_results,
+        performance_comparison_df,
+        benchmark_strategy,
+    )
     growth_curves = {
         strategy_name: result["portfolio_values"] for strategy_name, result in strategy_results.items()
     }
@@ -480,6 +1181,8 @@ def build_portfolio_results(
 
     return {
         "selected_tickers": selected_tickers,
+        "initial_capital": initial_capital,
+        "benchmark_strategy": benchmark_strategy,
         "market_context": market_context,
         "covariance_method": covariance_method,
         "covariance_matrix_df": covariance_matrix_df,
@@ -499,6 +1202,8 @@ def build_portfolio_results(
         "hrp_herc_risk_comparison_df": hrp_herc_risk_comparison_df,
         "performance_comparison_df": performance_comparison_df,
         "relative_performance_df": relative_performance_df,
+        "active_risk_metrics_df": active_risk_metrics_df,
+        "strategy_results": strategy_results,
         "growth_curves": growth_curves,
         "drawdown_curves": drawdown_curves,
         "metrics": metrics,
@@ -650,11 +1355,18 @@ def render_dashboard_tabs(
         return
 
     data_quality_summary = portfolio_payload["market_context"]["data_quality_summary"]
+    prices_df = portfolio_payload["market_context"].get("prices_df", pd.DataFrame())
+    volume_df = portfolio_payload["market_context"].get("volume_df", pd.DataFrame())
+    returns_df = portfolio_payload["market_context"].get("returns_df", pd.DataFrame())
+    initial_capital = float(portfolio_payload.get("initial_capital", 1_000_000.0))
+    benchmark_strategy = portfolio_payload.get("benchmark_strategy", "Equal Weight")
     weights = portfolio_payload["weights"]
     portfolio_value = portfolio_payload["portfolio_value"]
     portfolio_returns = portfolio_payload["portfolio_returns"]
     performance_comparison_df = portfolio_payload["performance_comparison_df"]
     relative_performance_df = portfolio_payload["relative_performance_df"]
+    active_risk_metrics_df = portfolio_payload.get("active_risk_metrics_df", pd.DataFrame())
+    strategy_results = portfolio_payload.get("strategy_results", {})
     drawdown_curves = portfolio_payload["drawdown_curves"]
     growth_curves = portfolio_payload["growth_curves"]
     risk_contribution_df = portfolio_payload["risk_contribution_df"]
@@ -667,6 +1379,7 @@ def render_dashboard_tabs(
     turnover_series = portfolio_payload["turnover_series"]
     rebalance_log_df = portfolio_payload["rebalance_log_df"]
     gross_portfolio_value = portfolio_payload["gross_portfolio_value"]
+    backtest_results = portfolio_payload["backtest_results"]
     vol_target_results = portfolio_payload["vol_target_results"]
     defensive_metadata = portfolio_payload["defensive_metadata"]
 
@@ -674,6 +1387,23 @@ def render_dashboard_tabs(
         st.header("Portfolio Overview")
         render_data_quality_report(data_quality_summary)
         render_portfolio_summary(portfolio_payload["formatted_metrics"])
+        render_risk_tracking_explainer()
+
+        takeaway_objective_label = st.selectbox(
+            "Takeaway Objective",
+            list(TAKEAWAY_OBJECTIVE_OPTIONS.keys()),
+            index=0,
+            help="Key Takeaways are ranked by this single selected objective. Default is Calmar.",
+            key="tab_takeaway_objective",
+        )
+        render_key_takeaways(
+            performance_comparison_df,
+            strategy_results,
+            active_risk_metrics_df,
+            selected_objective_label=takeaway_objective_label,
+            selected_objective_metric=TAKEAWAY_OBJECTIVE_OPTIONS[takeaway_objective_label],
+            volatility_targeting_enabled=vol_target_results is not None,
+        )
 
         overview_col1, overview_col2 = st.columns(2)
         with overview_col1:
@@ -730,11 +1460,132 @@ def render_dashboard_tabs(
             plot_relative_performance(relative_performance_df, relative_metric),
             use_container_width=True,
         )
+
+        st.subheader("Benchmark & Active Risk Metrics")
+        st.caption(
+            "These metrics compare each strategy against the selected benchmark using aligned daily returns."
+        )
+        if active_risk_metrics_df.empty:
+            st.info("Active-risk metrics are unavailable for this run.")
+        else:
+            st.dataframe(
+                format_active_risk_metrics_table(active_risk_metrics_df),
+                use_container_width=True,
+            )
+            render_active_risk_metric_help()
+
+        st.subheader("Stress Period Benchmark Comparison")
+        stress_benchmark_df = build_stress_period_benchmark_table(
+            strategy_results,
+            benchmark_strategy,
+        )
+        if stress_benchmark_df.empty:
+            st.info("Stress-period benchmark comparison is unavailable for this date range.")
+        else:
+            st.caption(
+                "Positive drawdown reduction means the strategy had a smaller drawdown than the benchmark."
+            )
+            st.dataframe(
+                format_stress_period_benchmark_table(stress_benchmark_df),
+                use_container_width=True,
+            )
+
+        with st.expander("Stress Testing & Scenario Analysis", expanded=False):
+            st.caption(
+                "Stress tests are diagnostics only. They do not change the single-objective strategy ranking."
+            )
+            historical_stress_df = build_historical_stress_table(strategy_results)
+            st.subheader("Historical Stress Windows")
+            if historical_stress_df.empty:
+                st.info("No historical stress-window observations are available for this run.")
+            else:
+                st.dataframe(
+                    format_historical_stress_table(historical_stress_df),
+                    use_container_width=True,
+                )
+
+            st.subheader("Worst Rolling Periods")
+            worst_periods_df = find_worst_periods(portfolio_returns)
+            st.dataframe(format_worst_period_table(worst_periods_df), use_container_width=True)
+
+            st.subheader("Hypothetical Shock Scenarios")
+            hypothetical_stress_df = build_hypothetical_stress_dashboard_table(
+                strategy_results,
+                benchmark_strategy,
+            )
+            if hypothetical_stress_df.empty:
+                st.info("Hypothetical stress results are unavailable because strategy weights are missing.")
+            else:
+                st.dataframe(
+                    format_hypothetical_stress_table(hypothetical_stress_df),
+                    use_container_width=True,
+                )
+
+            st.subheader("Correlation Shock Scenario")
+            st.caption("Diagnostic scenario: all risky asset correlations rise to 0.8.")
+            correlation_stress_df = build_correlation_stress_table(strategy_results, returns_df)
+            st.dataframe(
+                format_correlation_stress_table(correlation_stress_df),
+                use_container_width=True,
+            )
+
         st.dataframe(performance_comparison_df, use_container_width=True)
         st.dataframe(relative_performance_df, use_container_width=True)
 
     with tabs[2]:
         st.header("Risk & Allocation")
+        st.subheader("VaR / Expected Shortfall")
+        st.caption(
+            "VaR answers: How bad can things get under normal historical conditions? "
+            "Expected Shortfall answers: If losses exceed VaR, what is the average loss in the tail?"
+        )
+        var_control_col1, var_control_col2, var_control_col3 = st.columns(3)
+        with var_control_col1:
+            var_confidence_label = st.selectbox(
+                "VaR / ES Confidence Level",
+                ["95%", "97.5%", "99%"],
+                index=0,
+                key="tab_var_confidence",
+                help="Confidence level used for left-tail historical VaR and ES/CVaR.",
+            )
+        with var_control_col2:
+            holding_period_days = st.selectbox(
+                "Holding Period",
+                [1, 5, 10, 21],
+                index=0,
+                format_func=lambda value: f"{value} day" if value == 1 else f"{value} days",
+                key="tab_var_holding_period",
+                help="Holding-period scaling uses square-root-of-time.",
+            )
+        with var_control_col3:
+            value_basis = st.selectbox(
+                "Portfolio Value Basis",
+                ["Latest portfolio value", "Initial capital"],
+                index=0,
+                key="tab_var_value_basis",
+                help="Basis used to convert VaR/ES percentages into currency amounts.",
+            )
+        confidence_level = {"95%": 0.95, "97.5%": 0.975, "99%": 0.99}[var_confidence_label]
+        var_es_df = build_var_es_metrics_table(
+            strategy_results,
+            confidence_level=confidence_level,
+            holding_period_days=int(holding_period_days),
+            value_basis=value_basis,
+            initial_capital=initial_capital,
+        )
+        st.dataframe(format_var_es_metrics_table(var_es_df), use_container_width=True)
+        st.caption(
+            "Historical VaR is based on observed past returns. It is not a guarantee and may "
+            "underestimate losses during unseen stress events."
+        )
+
+        st.subheader("VaR Backtesting / Exceptions")
+        st.caption(
+            "This is a practical diagnostic, not full regulatory VaR validation. Rolling VaR uses "
+            "lagged thresholds when enough observations are available."
+        )
+        st.dataframe(format_var_exception_table(var_es_df), use_container_width=True)
+
         risk_col1, risk_col2 = st.columns(2)
         with risk_col1:
             st.plotly_chart(
@@ -784,6 +1635,55 @@ def render_dashboard_tabs(
             "Cost Drag",
             f"{cost_drag_summary['cost_drag']:.2f} ({cost_drag_summary['cost_drag_pct']:.2%})",
         )
+
+        st.subheader("Liquidity Diagnostics")
+        st.caption(
+            "Turnover tells us how much we trade. Liquidity diagnostics tell us whether those "
+            "trades are large relative to the asset's normal market activity."
+        )
+        if volume_df.empty:
+            st.info("Volume data is unavailable for liquidity diagnostics in this run.")
+        else:
+            liquidity_df = build_liquidity_dashboard_table(
+                prices_df=prices_df,
+                volume_df=volume_df,
+                weights_history=backtest_results["weights_history"],
+                portfolio_value=float(portfolio_value.iloc[-1]),
+            )
+            if liquidity_df.empty:
+                st.info("Volume data is unavailable for liquidity diagnostics in this run.")
+            else:
+                liquidity_summary = summarize_liquidity_diagnostics(liquidity_df)
+                liq_col1, liq_col2, liq_col3 = st.columns(3)
+                liq_col1.metric(
+                    "Average Participation",
+                    format_percent(liquidity_summary["average_participation_rate"]),
+                )
+                liq_col2.metric(
+                    "Max Participation",
+                    format_percent(liquidity_summary["max_participation_rate"]),
+                )
+                liq_col3.metric("Minimum ADTV", format_currency(liquidity_summary["min_adtv"]))
+                if liquidity_summary["num_high_risk_assets"] > 0:
+                    st.warning("Large trades may create market impact for some assets.")
+                least_liquid = liquidity_df.sort_values(
+                    "average_daily_traded_value",
+                    ascending=True,
+                ).head(10)
+                highest_participation = liquidity_df.sort_values(
+                    "participation_rate",
+                    ascending=False,
+                ).head(10)
+                liq_table_col1, liq_table_col2 = st.columns(2)
+                with liq_table_col1:
+                    st.write("Least liquid assets by ADTV")
+                    st.dataframe(format_liquidity_table(least_liquid), use_container_width=True)
+                with liq_table_col2:
+                    st.write("Highest participation-rate assets")
+                    st.dataframe(
+                        format_liquidity_table(highest_participation),
+                        use_container_width=True,
+                    )
 
         trading_col1, trading_col2 = st.columns(2)
         with trading_col1:
@@ -928,6 +1828,21 @@ def render_sensitivity_content(sensitivity_payload: dict[str, object]) -> None:
     experiment_summary_df = sensitivity_payload["experiment_summary_df"]
     top_experiments_df = sensitivity_payload["top_experiments_df"]
     parameter_sensitivity_df = sensitivity_payload["parameter_sensitivity_df"]
+    objective_label = next(
+        (
+            label
+            for label, metric in SENSITIVITY_OBJECTIVE_MAP.items()
+            if metric == objective_metric
+        ),
+        objective_metric,
+    )
+
+    st.info(
+        "Sensitivity analysis is descriptive, not a weighted decision model. It shows how the "
+        "selected objective changes across strategy, covariance method, rebalance mode, "
+        "transaction cost, slippage, volatility targeting, and other parameters."
+    )
+    st.metric("Current ranking objective", objective_label)
 
     st.subheader("Experiment Results")
     st.dataframe(experiment_summary_df, use_container_width=True)

@@ -1,19 +1,20 @@
 # Adaptive Portfolio Allocation and Risk Analytics under Dynamic Correlation & Sentiment Regimes
 
-Institutional-grade quantitative portfolio optimization and risk analytics platform built for sophisticated portfolio management, research, and backtesting.
+Quantitative portfolio optimization and risk analytics platform built for portfolio construction, research, risk diagnostics, and backtesting.
 
 ## 📋 Overview
 
-This platform provides:
+This platform currently provides:
 
 - **Adaptive Portfolio Allocation**: Multiple allocation methods (Equal Weight, Mean-Variance, Hierarchical Risk Parity, Hierarchical Equal Risk Contribution)
-- **Robust Covariance Estimation**: Ledoit-Wolf shrinkage, Gerber covariance, rolling window estimation
-- **Dynamic Clustering**: Ward linkage, dendrogram analysis, hierarchical portfolio construction
-- **Regime Detection**: Markov-switching models, volatility targeting, dynamic risk scaling
-- **NLP Sentiment Analysis**: RBI communications, earnings call transcripts, macro sentiment extraction
-- **Backtesting Framework**: Rolling-window validation, Combinatorial Purged Cross-Validation (CPCV)
-- **Risk Analytics**: VaR, CVaR, Sharpe ratio, maximum drawdown, stress testing
+- **Robust Covariance Estimation**: Sample covariance, Ledoit-Wolf shrinkage, EWMA, and EWMA plus Ledoit-Wolf
+- **Dynamic Clustering**: Linkage-based clustering, dendrogram analysis, hierarchical portfolio construction
+- **Volatility Targeting**: Rule-based volatility-state overlay with a defensive sleeve
+- **Backtesting Framework**: Rolling-window validation, threshold rebalancing, transaction costs, and turnover diagnostics
+- **Risk Analytics**: VaR, ES/CVaR, VaR exceptions, stress testing, drawdown duration, concentration, and active-risk diagnostics
 - **Interactive Dashboard**: Streamlit-based visualization and analytics interface
+
+Future work includes full Markov-switching regime detection, NLP sentiment integration, CPCV robustness validation, production data governance, and liquidity-aware market-impact modeling.
 
 ## 🏗️ Architecture
 
@@ -114,15 +115,37 @@ pytest tests/ -v --cov=src
 
 ### Backtesting
 - Rolling-window in-sample validation
-- Combinatorial Purged Cross-Validation (CPCV)
+- Threshold and calendar rebalancing
 - Transaction cost modeling
 - Performance metrics and stress testing
 
 ## 📊 Key Metrics
 
-- **Risk Metrics**: VaR, CVaR, Volatility, Maximum Drawdown, Calmar Ratio
+- **Risk Metrics**: VaR, ES/CVaR, VaR exceptions, Volatility, Maximum Drawdown, Calmar Ratio
 - **Performance Metrics**: Sharpe Ratio, Sortino Ratio, Information Ratio, CAGR
-- **Portfolio Metrics**: Concentration, Turnover, Diversification Ratio
+- **Portfolio Metrics**: HHI, Effective N, Turnover, ADTV, Participation Rate
+
+## FRM Alignment
+
+The platform maps portfolio analytics to FRM concepts: market risk, systematic risk, unsystematic risk, tail risk, liquidity trading risk, model risk, concentration risk, and benchmark active risk.
+
+Core formulas:
+
+```text
+Historical VaR at confidence c = negative of the (1-c) quantile of returns
+
+Historical ES/CVaR = average loss conditional on loss exceeding VaR
+
+Expected exceptions = number of observations * (1 - confidence level)
+
+Exception ratio = actual exceptions / expected exceptions
+
+ADTV = average daily volume * latest price
+
+Participation Rate = trade value / ADTV
+
+Stress Return = sum(weight_i * scenario_return_i)
+```
 
 ## 🔧 Technologies
 
