@@ -1,4 +1,4 @@
-# Adaptive Portfolio Allocation and Risk Analytics under Dynamic Correlation & Sentiment Regimes
+# Adaptive Portfolio Allocation and Risk Analytics under Dynamic Correlation and Market Regimes
 
 Quantitative portfolio optimization and risk analytics platform built for portfolio construction, research, risk diagnostics, and backtesting.
 
@@ -11,10 +11,24 @@ This platform currently provides:
 - **Dynamic Clustering**: Linkage-based clustering, dendrogram analysis, hierarchical portfolio construction
 - **Volatility Targeting**: Rule-based volatility-state overlay with a defensive sleeve
 - **Backtesting Framework**: Rolling-window validation, threshold rebalancing, transaction costs, and turnover diagnostics
+- **Phase 3A — Robustness Validation / CPCV-Style Validation**: Time-series splits, purge and embargo controls, fold stability scoring, and robustness ranking
+- **Phase 3B — Market Regime Detection & Regime Analytics**: Explainable rule-based regimes and optional experimental Gaussian HMM regimes
+- **Phase 3C — Regime-Aware Adaptive Allocation**: Lagged regime policies dynamically select allocation, covariance, volatility targets, and defensive exposure
+- **Phase 3D — Adaptive Strategy Experimentation & Robustness Evaluation**: Adaptive sensitivity grids, fixed-strategy comparisons, attribution, stress analysis, and optional CPCV evaluation
 - **Risk Analytics**: VaR, ES/CVaR, VaR exceptions, stress testing, drawdown duration, concentration, and active-risk diagnostics
 - **Interactive Dashboard**: Streamlit-based visualization and analytics interface
 
-Future work includes full Markov-switching regime detection, NLP sentiment integration, CPCV robustness validation, production data governance, and liquidity-aware market-impact modeling.
+Future work includes broader Markov-switching models, NLP and macro-sentiment integration, production model governance, and liquidity-aware market-impact modeling.
+
+## Project Phases
+
+- **Phase 1:** Core portfolio construction, risk analytics, backtesting, and dashboard
+- **Phase 2:** FRM risk layer: active-risk metrics, VaR/ES, stress testing, and liquidity diagnostics
+- **Phase 3A:** Robustness Validation / CPCV-Style Validation
+- **Phase 3B.1:** Explainable Rule-Based Market Regime Detection
+- **Phase 3B.2:** HMM-Based Probabilistic Regime Detection
+- **Phase 3C:** Regime-Aware Adaptive Allocation Controller — implemented
+- **Phase 3D:** Adaptive Strategy Experimentation & Robustness Evaluation — implemented
 
 ## 🏗️ Architecture
 
@@ -24,10 +38,14 @@ adaptive-portfolio-risk-analytics/
 │   ├── data_pipeline/          # Data ingestion and preprocessing
 │   ├── covariance/             # Covariance estimation methods
 │   ├── clustering/             # Hierarchical clustering algorithms
-│   ├── regime_detection/       # Regime detection and volatility models
+│   ├── regime/                 # Phase 3B rule-based and optional HMM analytics
+│   ├── adaptive/               # Phase 3C adaptive controller and backtest
+│   ├── regime_detection/       # Legacy/future Markov-switching extension points
 │   ├── nlp/                    # NLP and sentiment analysis
 │   ├── optimization/           # Portfolio allocation methods
 │   ├── backtesting/            # Backtesting and validation frameworks
+│   ├── experiments/            # Sensitivity and Phase 3D adaptive evaluation
+│   ├── validation/             # Phase 3A CPCV-style robustness validation
 │   ├── analytics/              # Risk metrics and performance analysis
 │   ├── dashboard/              # Streamlit dashboard
 │   └── utils/                  # Common utilities and helpers
@@ -86,38 +104,159 @@ pytest tests/ -v --cov=src
 ## 📦 Core Components
 
 ### Data Pipeline
-- Market data ingestion from multiple sources (yfinance, Alpha Vantage)
+- Market data ingestion primarily through Yahoo Finance, with Alpha Vantage kept as an extension point
 - Preprocessing and feature engineering
 - Data validation and quality checks
 
 ### Covariance Estimation
 - **Ledoit-Wolf Shrinkage**: Regularized covariance with optimal shrinkage intensity
-- **Gerber Covariance**: Robust estimation using rank and sign correlation
-- **Rolling Window**: Time-series covariance updates
+- **EWMA Covariance**: Time-decayed covariance estimation
+- **EWMA + Ledoit-Wolf**: Time-decayed shrinkage covariance estimation
 
 ### Portfolio Optimization
 - **Equal Weight**: Naive equal-weighted allocation
 - **Mean-Variance**: Markowitz efficient frontier optimization
 - **HRP**: Hierarchical Risk Parity with optimal tree structure
 - **HERC**: Hierarchical Equal Risk Contribution
-- **Dynamic Allocation**: Regime-aware adaptive allocation
+- **Regime-Adaptive**: Phase 3C controller that changes portfolio behavior using lagged market regimes
 
-### Regime Detection
-- Markov-switching autoregression (MSAR) models
-- Volatility regimes and bull/bear classification
-- Macro-driven regime transitions
+### Phase 3B — Market Regime Detection & Regime Analytics
+
+Phase 3B.1 rule-based implementation:
+
+- Regime feature engineering
+- Rule-based regime classification
+- Lagged decision regimes to avoid look-ahead
+- Regime timeline
+- Strategy performance by regime
+- Regime transition matrix
+- Regime duration analytics
+
+#### Phase 3B.2 — HMM-Based Probabilistic Regime Detection
+
+Implemented as an experimental method:
+
+- Gaussian HMM regime detection
+- Full-sample HMM for historical visualization
+- Walk-forward HMM for time-series-safe regime inference
+- Mapping hidden states to Calm/Normal/Stress/Crisis
+- Two-state Risk-On/Risk-Off mapping
+- HMM transition matrix and duration analytics
+- Rule-based versus HMM regime comparison
+- Strategy performance by HMM regime
+
+HMM regime detection uses `hmmlearn`:
+
+```bash
+pip install hmmlearn
+```
+
+Important caveats:
+
+- Full-sample HMM uses the complete feature history and must not support trading-safe performance claims.
+- Walk-forward HMM refits on expanding historical windows and lags decision regimes to reduce look-ahead bias.
+- HMM regimes are probabilistic and experimental.
+- Hidden state numbers have no inherent meaning; readable labels are inferred from state-level volatility, drawdown, return, momentum, and correlation characteristics.
+- The rule-based method remains the explainable default.
+
+If `hmmlearn` is unavailable, the dashboard disables HMM controls gracefully.
+
+Regime features:
+
+- Realized volatility percentile
+- Drawdown
+- Trend
+- Momentum
+- Average correlation
+
+Regime states:
+
+- Calm
+- Normal
+- Stress
+- Crisis
+
+Not yet implemented:
+
+- Broader Markov-switching models and production HMM governance
+- NLP/macro sentiment integration
+
+### Phase 3C — Regime-Aware Adaptive Allocation Controller
+
+Implemented:
+
+- Regime-to-policy mapping
+- Policy presets: Conservative, Balanced default, and Aggressive
+- Dynamic allocator selection by regime
+- Dynamic covariance estimator selection by regime
+- Regime-dependent volatility targets
+- Risky exposure caps and defensive sleeve floors
+- Adaptive strategy diagnostics
+- Dashboard comparison against baseline strategies
+
+The default balanced policy uses HERC in Calm/Normal markets, HRP in
+Stress/Crisis markets, and an Equal Weight fallback when the regime is Unknown.
+Two-state HMM labels map safely from Risk-On to a Calm-style policy and from
+Risk-Off to a Stress-style policy.
+
+Important caveats:
+
+- Adaptive strategy decisions use lagged decision regimes to reduce look-ahead bias.
+- Full-sample HMM regimes are rejected for trading-safe adaptive backtests.
+- Phase 3C is a research controller, not a production execution system.
+- NLP and macro-sentiment signals remain future work.
+
+Phase 3C adaptive returns use the standard analytics interface and can be
+evaluated with the existing Phase 3A robustness tools through Phase 3D.
+
+### Phase 3D — Adaptive Strategy Experimentation & Robustness Evaluation
+
+Phase 3D evaluates whether lagged regime-aware allocation improves:
+
+- CAGR, volatility, Sharpe, Sortino, Calmar, and maximum drawdown
+- Historical VaR and ES/CVaR
+- Stress-period return and drawdown duration
+- Turnover, transaction costs, and number of rebalances
+- CPCV median selected objective, worst-fold selected objective, and stability score
+
+Implemented:
+
+- Adaptive strategy included as a first-class experiment type
+- Rule-based lagged and HMM walk-forward adaptive configurations
+- Conservative, Balanced, and Aggressive adaptive policy sensitivity
+- Adaptive versus fixed-strategy comparison
+- Exposure, regime, policy, allocator, and covariance diagnostics
+- Regime and policy attribution
+- Adaptive stress-period comparison
+- Optional, bounded adaptive CPCV robustness evaluation
+
+Important caveats:
+
+- Adaptive results are research backtests, not live trading advice.
+- Regime signals are lagged to reduce look-ahead bias.
+- Full-sample HMM is excluded from adaptive trading-safe experiments.
+- HMM walk-forward experiments can be computationally expensive.
+- CPCV uses the currently selected dashboard objective; Calmar is only the default fallback.
 
 ### NLP Sentiment Analysis
-- RBI monetary policy sentiment extraction
-- Earnings call transcript analysis
-- Uncertainty quantification
-- Macro sentiment aggregation
+
+NLP and macro-sentiment integration remain future work.
 
 ### Backtesting
 - Rolling-window in-sample validation
 - Threshold and calendar rebalancing
 - Transaction cost modeling
 - Performance metrics and stress testing
+
+### Phase 3A — Robustness Validation / CPCV-Style Validation
+
+- CPCV-style time-series splits
+- Purge and embargo logic
+- Fold-level performance comparison
+- Stability scoring
+- Robustness ranking
+
+The existing sensitivity analysis identifies strong configurations in one backtest setting. Robustness validation checks whether those configurations remain stable across multiple time partitions.
 
 ## 📊 Key Metrics
 
@@ -179,4 +318,4 @@ For questions or suggestions, contact: team@example.com
 
 ---
 
-**Built for institutional-grade quantitative finance research and portfolio management**
+**Built as a quantitative finance research platform for portfolio analytics, risk diagnostics, regime analysis, and adaptive allocation experiments.**

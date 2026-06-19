@@ -6,7 +6,7 @@ from itertools import product
 
 import pandas as pd
 
-from src.analytics import PerformanceAnalytics
+from src.analytics import PerformanceAnalytics, calculate_drawdown_durations
 from src.backtesting import (
     RollingBacktester,
     VolatilityTargetingConfig,
@@ -69,13 +69,21 @@ def run_single_experiment(
             config=VolatilityTargetingConfig(base_target_vol=target_vol),
         )
         effective_returns = overlay_results["targeted_returns"]
-        final_value = float((1.0 + effective_returns).cumprod().iloc[-1] * float(row["initial_capital"]))
+        final_value = float(
+            (1.0 + effective_returns).cumprod().iloc[-1] * float(row["initial_capital"])
+        )
 
     metrics = PerformanceAnalytics.summary_table(effective_returns)
+    duration_metrics = calculate_drawdown_durations(
+        (1.0 + effective_returns).cumprod() * float(row["initial_capital"])
+    )
 
     result = {
         "experiment_name": row.get("experiment_name"),
         "strategy": row["strategy"],
+        "strategy_type": "fixed",
+        "regime_source": None,
+        "policy_preset": None,
         "covariance_method": row["covariance_method"],
         "rebalance_mode": row["rebalance_mode"],
         "threshold": row.get("threshold"),
@@ -90,13 +98,18 @@ def run_single_experiment(
         "volatility": metrics["volatility"],
         "max_drawdown": metrics["max_drawdown"],
         "calmar": metrics["calmar"],
+        "var_95": metrics["var_95"],
+        "cvar_95": metrics["cvar_95"],
         "final_value": final_value,
+        "max_drawdown_duration": int(duration_metrics["max_drawdown_duration"]),
         "total_turnover": float(backtest_results["performance_metrics"]["total_turnover"]),
         "average_turnover": float(backtest_results["performance_metrics"]["average_turnover"]),
         "total_transaction_cost": float(
             backtest_results["performance_metrics"]["total_transaction_cost"]
         ),
-        "number_of_rebalances": int(backtest_results["performance_metrics"]["number_of_rebalances"]),
+        "number_of_rebalances": int(
+            backtest_results["performance_metrics"]["number_of_rebalances"]
+        ),
         "status": "success",
         "error": None,
     }
@@ -130,6 +143,9 @@ def generate_parameter_grid(
                 {
                     "experiment_name": config.experiment_name,
                     "strategy": strategy,
+                    "strategy_type": "fixed",
+                    "regime_source": None,
+                    "policy_preset": None,
                     "covariance_method": covariance_method,
                     "rebalance_mode": rebalance_mode,
                     "threshold": threshold,
@@ -184,6 +200,9 @@ def run_experiment_grid(
                     "max_drawdown": None,
                     "calmar": None,
                     "final_value": None,
+                    "var_95": None,
+                    "cvar_95": None,
+                    "max_drawdown_duration": None,
                     "total_turnover": None,
                     "average_turnover": None,
                     "total_transaction_cost": None,

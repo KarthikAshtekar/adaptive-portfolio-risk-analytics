@@ -1,4 +1,4 @@
-"""Phase 3 CPCV extension point."""
+"""Legacy compatibility extension point for Phase 3A CPCV-style validation."""
 
 from __future__ import annotations
 
@@ -6,8 +6,11 @@ import pandas as pd
 
 
 class CPCVBacktester:
-    """Reserved for Phase 3 (not implemented)."""
+    """Direct callers should use the implemented :mod:`src.validation` package."""
 
     def split(self, X: pd.DataFrame, y: pd.Series | None = None):
         _ = (X, y)
-        raise NotImplementedError("CPCV is reserved for Phase 3 and is not implemented.")
+        raise NotImplementedError(
+            "Use src.validation.generate_cpcv_splits or "
+            "src.validation.run_cpcv_validation for Phase 3A validation."
+        )

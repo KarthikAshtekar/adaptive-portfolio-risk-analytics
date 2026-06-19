@@ -1,6 +1,29 @@
-"""Experiment orchestration exports for Phase 2D."""
+"""Experiment orchestration exports for Phase 2D and Phase 3D."""
 
-from .config import ExperimentConfig, default_phase2d_config
+from .adaptive import (
+    AdaptiveExperimentSkipped,
+    adaptive_strategy_name,
+    build_adaptive_attribution,
+    build_adaptive_regime_input,
+    execute_adaptive_experiment,
+    generate_adaptive_parameter_grid,
+    run_adaptive_experiment_grid,
+    summarize_adaptive_diagnostics,
+)
+from .adaptive_evaluation import (
+    build_adaptive_stress_comparison,
+    compare_adaptive_vs_fixed,
+)
+from .config import (
+    ADAPTIVE_POLICY_PRESETS,
+    ADAPTIVE_REGIME_SOURCES,
+    FULL_SAMPLE_HMM_ERROR,
+    AdaptiveExperimentConfig,
+    ExperimentConfig,
+    default_phase2d_config,
+    normalize_adaptive_policy_preset,
+    normalize_adaptive_regime_source,
+)
 from .reporting import (
     build_experiment_summary_table,
     build_parameter_pivot,
@@ -17,6 +40,12 @@ from .sensitivity import (
 
 __all__ = [
     "ExperimentConfig",
+    "AdaptiveExperimentConfig",
+    "ADAPTIVE_REGIME_SOURCES",
+    "ADAPTIVE_POLICY_PRESETS",
+    "FULL_SAMPLE_HMM_ERROR",
+    "normalize_adaptive_regime_source",
+    "normalize_adaptive_policy_preset",
     "default_phase2d_config",
     "generate_parameter_grid",
     "run_single_experiment",
@@ -29,4 +58,14 @@ __all__ = [
     "build_parameter_pivot",
     "export_experiment_results",
     "log_experiment_to_mlflow",
+    "AdaptiveExperimentSkipped",
+    "adaptive_strategy_name",
+    "generate_adaptive_parameter_grid",
+    "build_adaptive_regime_input",
+    "execute_adaptive_experiment",
+    "run_adaptive_experiment_grid",
+    "summarize_adaptive_diagnostics",
+    "build_adaptive_attribution",
+    "compare_adaptive_vs_fixed",
+    "build_adaptive_stress_comparison",
 ]

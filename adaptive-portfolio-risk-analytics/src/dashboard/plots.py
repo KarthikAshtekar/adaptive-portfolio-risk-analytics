@@ -11,7 +11,6 @@ import plotly.express as px
 import plotly.graph_objects as go
 from scipy.cluster.hierarchy import dendrogram as scipy_dendrogram
 
-
 # ============================================================
 # PERFORMANCE CHARTS
 # ============================================================
@@ -213,9 +212,7 @@ def plot_dendrogram(
     st.pyplot(fig)
     """
 
-    fig, ax = plt.subplots(
-        figsize=(12, 6)
-    )
+    fig, ax = plt.subplots(figsize=(12, 6))
 
     scipy_dendrogram(
         linkage_matrix,
@@ -673,10 +670,23 @@ def plot_exposure_series(
 
 def plot_regime_series(
     regime_series: pd.Series,
+    title: str = "Volatility Regime Timeline",
 ) -> go.Figure:
-    """Plot volatility regimes over time."""
-    regime_order = ["calm", "normal", "stress", "crisis"]
-    encoded = regime_series.astype(str).map({name: idx for idx, name in enumerate(regime_order)})
+    """Plot categorical regime states over time with an explicit Unknown warm-up."""
+    normalized = regime_series.astype(str).str.lower()
+    observed = set(normalized.dropna().unique())
+    preferred_order = [
+        "unknown",
+        "risk-on",
+        "calm",
+        "normal",
+        "stress",
+        "risk-off",
+        "crisis",
+    ]
+    regime_order = [regime for regime in preferred_order if regime in observed]
+    regime_order += sorted(observed - set(regime_order))
+    encoded = normalized.map({name: idx for idx, name in enumerate(regime_order)})
     fig = go.Figure()
     fig.add_trace(
         go.Scatter(
@@ -685,11 +695,11 @@ def plot_regime_series(
             mode="lines",
             line=dict(shape="hv"),
             name="Regime",
-            text=regime_series.values,
+            text=regime_series.astype(str).values,
         )
     )
     fig.update_layout(
-        title="Volatility Regime Timeline",
+        title=title,
         xaxis_title="Date",
         yaxis_title="Regime",
         yaxis=dict(
@@ -697,6 +707,32 @@ def plot_regime_series(
             tickvals=list(range(len(regime_order))),
             ticktext=[name.title() for name in regime_order],
         ),
+        template="plotly_white",
+        hovermode="x unified",
+    )
+    return fig
+
+
+def plot_hmm_state_probabilities(
+    probabilities: pd.DataFrame,
+    title: str = "HMM State Probabilities",
+) -> go.Figure:
+    """Plot HMM state probabilities as a compact multiseries time chart."""
+    fig = go.Figure()
+    for column in probabilities.columns:
+        fig.add_trace(
+            go.Scatter(
+                x=probabilities.index,
+                y=probabilities[column],
+                mode="lines",
+                name=str(column).replace("_", " ").title(),
+            )
+        )
+    fig.update_layout(
+        title=title,
+        xaxis_title="Date",
+        yaxis_title="Probability",
+        yaxis=dict(range=[0.0, 1.0]),
         template="plotly_white",
         hovermode="x unified",
     )
@@ -804,11 +840,7 @@ def plot_experiment_metric_by_parameter(
         if "status" in experiment_results_df.columns
         else experiment_results_df
     )
-    grouped = (
-        successful.groupby(parameter, dropna=False)[metric]
-        .mean()
-        .reset_index()
-    )
+    grouped = successful.groupby(parameter, dropna=False)[metric].mean().reset_index()
     grouped[parameter] = grouped[parameter].astype(str)
 
     fig = go.Figure(
