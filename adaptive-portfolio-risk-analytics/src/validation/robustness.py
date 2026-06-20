@@ -7,6 +7,7 @@ from collections.abc import Mapping, Sequence
 import numpy as np
 import pandas as pd
 
+from src.adaptive import defensive_source_from_label, get_defensive_returns
 from src.analytics import PerformanceAnalytics
 from src.backtesting import (
     RollingBacktester,
@@ -53,6 +54,14 @@ CONFIG_COLUMNS = [
     "vol_targeting_enabled",
     "target_vol",
     "defensive_asset",
+    "defensive_source",
+    "defensive_annual_rate",
+    "defensive_ticker",
+    "defensive_fallback",
+    "defensive_source_requested",
+    "defensive_source_used",
+    "defensive_fallback_used",
+    "defensive_notes",
     "train_window",
     "training_window",
     "rebalance_frequency",
@@ -270,28 +279,18 @@ def _config_value(row: Mapping[str, object], key: str, default):
     return default if isinstance(missing, (bool, np.bool_)) and missing else value
 
 
-def _resolve_defensive_series(
-    defensive_returns,
+def _defensive_settings(
     row: Mapping[str, object],
-    index: pd.DatetimeIndex,
-) -> pd.Series:
-    if isinstance(defensive_returns, pd.Series):
-        return defensive_returns
-    if isinstance(defensive_returns, Mapping):
-        asset_name = row.get("defensive_asset")
-        if asset_name in defensive_returns:
-            return defensive_returns[asset_name]
-        if len(defensive_returns) == 1:
-            return next(iter(defensive_returns.values()))
-        raise ValueError(f"defensive returns are unavailable for '{asset_name}'")
-
-    daily_return = 1.04 ** (1.0 / 252.0) - 1.0
-    return pd.Series(
-        daily_return,
-        index=index,
-        name="synthetic_risk_free_return",
-        dtype=float,
+) -> tuple[str, float, str | None, str]:
+    label_source, label_ticker = defensive_source_from_label(
+        str(_config_value(row, "defensive_asset", "Synthetic Risk-Free"))
     )
+    source = str(_config_value(row, "defensive_source", label_source))
+    annual_rate = float(_config_value(row, "defensive_annual_rate", 0.04))
+    ticker_value = _config_value(row, "defensive_ticker", label_ticker)
+    ticker = str(ticker_value) if ticker_value not in (None, "") else None
+    fallback = str(_config_value(row, "defensive_fallback", "synthetic"))
+    return source, annual_rate, ticker, fallback
 
 
 def _run_test_block(
@@ -333,20 +332,19 @@ def _run_test_block(
     context_returns = returns.loc[returns.index.isin(context_index)].sort_index()
 
     if is_adaptive:
-        defensive_series = _resolve_defensive_series(
-            defensive_returns,
-            config_row,
-            context_returns.index,
-        )
         execution = execute_adaptive_experiment(
             context_returns,
             config_row,
-            defensive_returns=defensive_series,
+            defensive_returns=defensive_returns,
         )
         effective_returns = execution["backtest"]["portfolio_returns"]
         observed_test_returns = effective_returns.reindex(test_index).dropna()
         if observed_test_returns.empty:
             raise ValueError("adaptive backtest produced no returns for the test block")
+        observed_test_returns.attrs["defensive_metadata"] = execution["backtest"].get(
+            "defensive_metadata",
+            {},
+        )
         return observed_test_returns
 
     allocator = BenchmarkFactory.get_allocator(
@@ -369,14 +367,18 @@ def _run_test_block(
 
     effective_returns = backtest["portfolio_returns"]
     if bool(_config_value(config_row, "vol_targeting_enabled", False)):
-        defensive_series = _resolve_defensive_series(
-            defensive_returns,
-            config_row,
-            effective_returns.index,
+        source, annual_rate, ticker, fallback = _defensive_settings(config_row)
+        defensive_result = get_defensive_returns(
+            index=effective_returns.index,
+            source=source,
+            annual_rate=annual_rate,
+            defensive_ticker=ticker,
+            returns=defensive_returns,
+            fallback=fallback,
         )
         overlay = apply_volatility_targeting(
             risky_returns=effective_returns,
-            defensive_returns=defensive_series,
+            defensive_returns=defensive_result.returns,
             config=VolatilityTargetingConfig(
                 base_target_vol=float(_config_value(config_row, "target_vol", 0.10))
             ),
@@ -386,6 +388,8 @@ def _run_test_block(
     observed_test_returns = effective_returns.reindex(test_index).dropna()
     if observed_test_returns.empty:
         raise ValueError("backtest produced no returns for the test block")
+    if bool(_config_value(config_row, "vol_targeting_enabled", False)):
+        observed_test_returns.attrs["defensive_metadata"] = defensive_result.metadata
     return observed_test_returns
 
 
@@ -483,17 +487,20 @@ def run_cpcv_validation(
             }
             try:
                 block_returns: list[pd.Series] = []
+                block_defensive_metadata: list[dict[str, object]] = []
                 for block_id in split["test_block_ids"]:
                     test_index = blocks[int(block_id)]["dates"]
-                    block_returns.append(
-                        _run_test_block(
-                            returns=clean_returns,
-                            split=split,
-                            test_index=test_index,
-                            config_row=config_row,
-                            defensive_returns=defensive_returns,
-                        )
+                    block_result = _run_test_block(
+                        returns=clean_returns,
+                        split=split,
+                        test_index=test_index,
+                        config_row=config_row,
+                        defensive_returns=defensive_returns,
                     )
+                    block_returns.append(block_result)
+                    metadata = block_result.attrs.get("defensive_metadata")
+                    if isinstance(metadata, Mapping):
+                        block_defensive_metadata.append(dict(metadata))
 
                 fold_returns = pd.concat(block_returns).sort_index()
                 fold_returns = fold_returns[~fold_returns.index.duplicated(keep="last")]
@@ -513,6 +520,11 @@ def run_cpcv_validation(
                     {
                         **base_row,
                         **metrics,
+                        **(
+                            block_defensive_metadata[0]
+                            if block_defensive_metadata
+                            else {}
+                        ),
                         "n_test_observed": len(fold_returns),
                         "status": "success",
                         "error": None,

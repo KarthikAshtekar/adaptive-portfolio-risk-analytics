@@ -15,6 +15,8 @@ This platform currently provides:
 - **Phase 3B — Market Regime Detection & Regime Analytics**: Explainable rule-based regimes and optional experimental Gaussian HMM regimes
 - **Phase 3C — Regime-Aware Adaptive Allocation**: Lagged regime policies dynamically select allocation, covariance, volatility targets, and defensive exposure
 - **Phase 3D — Adaptive Strategy Experimentation & Robustness Evaluation**: Adaptive sensitivity grids, fixed-strategy comparisons, attribution, stress analysis, and optional CPCV evaluation
+- **Phase 3E.1 — Defensive Return Consistency + Robustness Replication Harness**: Central defensive-sleeve handling, controlled replication, policy tuning, and a decision-ready validation report
+- **Phase 3F — Scenario-Based Strategy Selection**: Evidence-gated profile recommendations, scenario playbooks, and a simplified manager workflow
 - **Risk Analytics**: VaR, ES/CVaR, VaR exceptions, stress testing, drawdown duration, concentration, and active-risk diagnostics
 - **Interactive Dashboard**: Streamlit-based visualization and analytics interface
 
@@ -29,6 +31,8 @@ Future work includes broader Markov-switching models, NLP and macro-sentiment in
 - **Phase 3B.2:** HMM-Based Probabilistic Regime Detection
 - **Phase 3C:** Regime-Aware Adaptive Allocation Controller — implemented
 - **Phase 3D:** Adaptive Strategy Experimentation & Robustness Evaluation — implemented
+- **Phase 3E.1:** Defensive Return Consistency + Robustness Replication Harness — implemented
+- **Phase 3F:** Scenario-Based Strategy Selection Engine + Simplified Manager Frontend — implemented
 
 ## 🏗️ Architecture
 
@@ -46,6 +50,7 @@ adaptive-portfolio-risk-analytics/
 │   ├── backtesting/            # Backtesting and validation frameworks
 │   ├── experiments/            # Sensitivity and Phase 3D adaptive evaluation
 │   ├── validation/             # Phase 3A CPCV-style robustness validation
+│   ├── selection/              # Phase 3F profiles, gates, scoring, selector, playbook
 │   ├── analytics/              # Risk metrics and performance analysis
 │   ├── dashboard/              # Streamlit dashboard
 │   └── utils/                  # Common utilities and helpers
@@ -94,6 +99,27 @@ LOG_LEVEL=INFO
 ```bash
 streamlit run src/dashboard/app.py
 ```
+
+The dashboard opens in **Manager View**. This surface exposes only Portfolio
+Universe, Investment Amount, Date Range, Investor Objective, Cost Assumption,
+and **Run Recommendation**. The default objective is **Balanced**, the default
+cost assumption is **Moderate**, and the default risk-control candidate is
+**Regime-Adaptive HMM Walk-Forward — Conservative**. Manager output contains
+the selected fixed core, optional overlay/reference, confidence, a net tradeoff
+table, explanation, warnings, and assumptions.
+
+Use **Research View** for covariance, rebalancing, volatility-targeting, regime,
+adaptive-policy, sensitivity, CPCV controls, selection gates, candidate scores,
+profile mapping, ranking, and the scenario playbook. Use **Developer / Debug
+View** for collapsed raw diagnostics, full weight and decision logs,
+reconciliation, raw recommendation payloads, artifact availability, and scoring
+traces.
+
+One global **Research Objective** drives dashboard takeaways, regime selection,
+sensitivity ranking, adaptive comparison, and CPCV ranking. It defaults to
+**Net Calmar**. Headline return and performance metrics are net of configured
+transaction costs; gross values appear only in the cost-drag reconciliation.
+Large diagnostic tables are available as CSV downloads.
 
 ### Running Tests
 
@@ -237,6 +263,60 @@ Important caveats:
 - Full-sample HMM is excluded from adaptive trading-safe experiments.
 - HMM walk-forward experiments can be computationally expensive.
 - CPCV uses the currently selected dashboard objective; Calmar is only the default fallback.
+
+### Phase 3E.1 — Defensive Return Consistency + Robustness Replication Harness
+
+Implemented:
+
+- Central defensive-return utility with synthetic, zero-cash, ticker, and
+  provided-series sources
+- Consistent defensive sleeve handling across dashboard, experiments, fixed
+  overlays, and CPCV
+- Defensive source, rate, ticker, fallback, and notes metadata in adaptive outputs
+- Controlled replication across universes, date windows, transaction costs,
+  defensive sleeves, policy presets, and trading-safe regime sources
+- Conservative policy-tuning mini-grid for faster re-risking
+- Decision-ready report under `outputs/reports/phase_3e_replication/`
+
+Important caveats:
+
+- Results remain historical backtests, not live trading claims.
+- Yahoo Finance data can change.
+- HMM walk-forward fitting can be computationally expensive.
+- The replication grid is bounded by runtime limits and records skipped or
+  failed combinations instead of stopping the full study.
+- Full-sample HMM remains historical visualization only.
+
+### Phase 3F — Scenario-Based Strategy Selection Engine
+
+Implemented:
+
+- Investor profiles: Growth, Balanced, Capital Preservation, Stress Protection,
+  and Robustness First
+- Scenario classification for calm/growth, normal, stress, crisis, high
+  volatility, high cost, unstable HMM, low CPCV confidence, and insufficient data
+- PASS/WARN/FAIL/NOT_AVAILABLE gates for net return basis, full-sample HMM
+  exclusion, CPCV coverage and worst fold, turnover/cost, stress evidence,
+  defensive metadata, sufficient history, and HMM walk-forward validity
+- Role separation between Main Growth Strategy, Risk-Control Overlay,
+  Robustness Reference, Experimental Candidate, Rejected, and benchmark
+- Phase 3E artifact loading with post-P0 fallback and explicit warnings
+- Scenario playbook and profile-aware recommendation explanations
+- Manager, Research, and Developer dashboard surfaces backed by the same
+  selection result
+- Decision artifacts under
+  `outputs/reports/phase_3f_strategy_selection/`
+
+Selection guardrails:
+
+- Return-derived evidence must be net of configured transaction costs.
+- Full-sample HMM may be used for historical diagnostics only.
+- Adaptive strategies are treated as overlays or robustness references unless
+  repeated net evidence supports a different role.
+- Low CPCV successful-fold coverage reduces confidence even when the
+  successful-fold objective is strong.
+- The selector does not infer a live-trading guarantee from historical
+  backtests.
 
 ### NLP Sentiment Analysis
 

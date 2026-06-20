@@ -2,6 +2,12 @@
 
 from .backtest import run_regime_adaptive_backtest
 from .controller import RegimeAdaptiveController
+from .defensive import (
+    DefensiveReturnResult,
+    defensive_source_from_label,
+    format_defensive_source,
+    get_defensive_returns,
+)
 from .policies import (
     DEFAULT_REGIME_POLICY,
     RegimePolicy,
@@ -20,4 +26,8 @@ __all__ = [
     "get_policy_preset",
     "RegimeAdaptiveController",
     "run_regime_adaptive_backtest",
+    "DefensiveReturnResult",
+    "get_defensive_returns",
+    "defensive_source_from_label",
+    "format_defensive_source",
 ]

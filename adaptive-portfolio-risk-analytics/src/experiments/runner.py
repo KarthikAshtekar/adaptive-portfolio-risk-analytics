@@ -6,6 +6,7 @@ from itertools import product
 
 import pandas as pd
 
+from src.adaptive import defensive_source_from_label, get_defensive_returns
 from src.analytics import PerformanceAnalytics, calculate_drawdown_durations
 from src.backtesting import (
     RollingBacktester,
@@ -14,7 +15,6 @@ from src.backtesting import (
 )
 from src.backtesting.transaction_costs import TransactionCostModel
 from src.benchmarks import BenchmarkFactory
-from src.data_pipeline import get_defensive_asset_returns
 
 from .config import ExperimentConfig
 from .reporting import log_experiment_to_mlflow
@@ -55,9 +55,17 @@ def run_single_experiment(
     effective_returns = backtest_results["portfolio_returns"]
     final_value = float(backtest_results["portfolio_values"].iloc[-1])
     vol_targeting_enabled = bool(row["vol_targeting_enabled"])
+    defensive_metadata: dict[str, object] = {
+        "defensive_source_requested": None,
+        "defensive_source_used": None,
+        "defensive_annual_rate": float(row.get("defensive_annual_rate", 0.04)),
+        "defensive_ticker": None,
+        "defensive_fallback_used": False,
+        "defensive_notes": "Defensive sleeve not used.",
+    }
 
     if vol_targeting_enabled:
-        defensive_series = _resolve_defensive_returns(
+        defensive_result = _resolve_defensive_returns(
             returns_df=returns_df,
             config_row=row,
             defensive_returns=defensive_returns,
@@ -65,9 +73,10 @@ def run_single_experiment(
         target_vol = float(row["target_vol"]) if pd.notna(row.get("target_vol")) else 0.10
         overlay_results = apply_volatility_targeting(
             risky_returns=effective_returns,
-            defensive_returns=defensive_series,
+            defensive_returns=defensive_result.returns,
             config=VolatilityTargetingConfig(base_target_vol=target_vol),
         )
+        defensive_metadata = defensive_result.metadata
         effective_returns = overlay_results["targeted_returns"]
         final_value = float(
             (1.0 + effective_returns).cumprod().iloc[-1] * float(row["initial_capital"])
@@ -110,6 +119,7 @@ def run_single_experiment(
         "number_of_rebalances": int(
             backtest_results["performance_metrics"]["number_of_rebalances"]
         ),
+        **defensive_metadata,
         "status": "success",
         "error": None,
     }
@@ -139,6 +149,9 @@ def generate_parameter_grid(
             target_vols,
             defensive_assets,
         ):
+            defensive_source, defensive_ticker = defensive_source_from_label(
+                str(defensive_asset or "Synthetic Risk-Free")
+            )
             rows.append(
                 {
                     "experiment_name": config.experiment_name,
@@ -154,6 +167,12 @@ def generate_parameter_grid(
                     "vol_targeting_enabled": bool(vol_target),
                     "target_vol": target_vol,
                     "defensive_asset": defensive_asset,
+                    "defensive_source": (
+                        defensive_source if defensive_asset is not None else None
+                    ),
+                    "defensive_annual_rate": float(config.defensive_annual_rate),
+                    "defensive_ticker": defensive_ticker,
+                    "defensive_fallback": config.defensive_fallback,
                     "start_date": config.start_date,
                     "end_date": config.end_date,
                     "train_window": int(config.train_window),
@@ -220,29 +239,18 @@ def _resolve_defensive_returns(
     returns_df: pd.DataFrame,
     config_row: dict[str, object],
     defensive_returns,
-) -> pd.Series:
-    if isinstance(defensive_returns, pd.Series):
-        return defensive_returns
-    if isinstance(defensive_returns, dict):
-        asset_name = config_row.get("defensive_asset")
-        if asset_name in defensive_returns:
-            return defensive_returns[asset_name]
-        raise ValueError(f"defensive_returns does not contain asset '{asset_name}'")
-
+) -> object:
     asset_name = config_row.get("defensive_asset")
-    if asset_name in (None, "", "Synthetic Risk-Free"):
-        defensive_series, _ = get_defensive_asset_returns(
-            start_date=returns_df.index.min(),
-            end_date=returns_df.index.max(),
-            preferred_ticker=None,
-            fallback_tickers=[],
-        )
-        return defensive_series
-
-    defensive_series, _ = get_defensive_asset_returns(
-        start_date=returns_df.index.min(),
-        end_date=returns_df.index.max(),
-        preferred_ticker=str(asset_name),
-        fallback_tickers=[],
+    source, ticker = defensive_source_from_label(str(asset_name or "Synthetic Risk-Free"))
+    return get_defensive_returns(
+        index=returns_df.index,
+        source=str(config_row.get("defensive_source") or source),
+        annual_rate=float(config_row.get("defensive_annual_rate", 0.04)),
+        defensive_ticker=(
+            str(config_row.get("defensive_ticker") or ticker)
+            if config_row.get("defensive_ticker") or ticker
+            else None
+        ),
+        returns=defensive_returns,
+        fallback=str(config_row.get("defensive_fallback", "synthetic")),
     )
-    return defensive_series

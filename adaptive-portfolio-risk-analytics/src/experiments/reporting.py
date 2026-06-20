@@ -41,6 +41,11 @@ def build_experiment_summary_table(
         "total_transaction_cost",
         "number_of_rebalances",
         "max_drawdown_duration",
+        "defensive_source_requested",
+        "defensive_source_used",
+        "defensive_annual_rate",
+        "defensive_ticker",
+        "defensive_fallback_used",
         "status",
     ]
     selected = [column for column in columns if column in experiment_results_df.columns]

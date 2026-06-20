@@ -62,6 +62,8 @@ class ExperimentConfig:
     end_date: str = "2025-01-01"
     train_window: int = 252
     initial_capital: float = 1_000_000.0
+    defensive_annual_rate: float = 0.04
+    defensive_fallback: str = "synthetic"
 
     def __post_init__(self) -> None:
         if not self.experiment_name.strip():
@@ -88,6 +90,13 @@ class ExperimentConfig:
             raise ValueError("train_window must be >= 20")
         if self.initial_capital <= 0:
             raise ValueError("initial_capital must be positive")
+        if float(self.defensive_annual_rate) <= -1.0:
+            raise ValueError("defensive_annual_rate must be greater than -1")
+        if str(self.defensive_fallback).strip().lower() not in {
+            "synthetic",
+            "cash_zero",
+        }:
+            raise ValueError("defensive_fallback must be synthetic or cash_zero")
 
 
 @dataclass(frozen=True)
@@ -108,6 +117,8 @@ class AdaptiveExperimentConfig:
     hmm_covariance_type: str = "diag"
     hmm_decision_lag: int = 1
     initial_capital: float = 1_000_000.0
+    defensive_annual_rate: float = 0.04
+    defensive_fallback: str = "synthetic"
 
     def __post_init__(self) -> None:
         if not self.experiment_name.strip():
@@ -145,6 +156,13 @@ class AdaptiveExperimentConfig:
             raise ValueError("hmm_decision_lag must be at least 1")
         if float(self.initial_capital) <= 0.0:
             raise ValueError("initial_capital must be positive")
+        if float(self.defensive_annual_rate) <= -1.0:
+            raise ValueError("defensive_annual_rate must be greater than -1")
+        if str(self.defensive_fallback).strip().lower() not in {
+            "synthetic",
+            "cash_zero",
+        }:
+            raise ValueError("defensive_fallback must be synthetic or cash_zero")
 
 
 def default_phase2d_config() -> ExperimentConfig:

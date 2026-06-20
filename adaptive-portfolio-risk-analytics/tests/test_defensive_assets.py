@@ -37,7 +37,10 @@ def test_synthetic_defensive_returns_are_generated_correctly() -> None:
 
     assert isinstance(defensive_returns, pd.Series)
     assert metadata["selected_mode"] == "synthetic"
-    assert np.isclose(defensive_returns.iloc[0], 0.04 / 252.0)
+    assert np.isclose(
+        defensive_returns.iloc[0],
+        (1.04 ** (1.0 / 252.0)) - 1.0,
+    )
     assert defensive_returns.notna().all()
 
 

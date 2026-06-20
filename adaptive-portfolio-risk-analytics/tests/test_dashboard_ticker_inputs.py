@@ -72,7 +72,7 @@ def test_robustness_uses_current_sensitivity_objective(monkeypatch) -> None:
 
     assert captured["objective"] == "sharpe"
     assert result["objective_metric"] == "sharpe"
-    assert result["objective_label"] == "Sharpe"
+    assert result["objective_label"] == "Net Sharpe"
 
 
 def test_adaptive_robustness_uses_selected_objective_and_limit(monkeypatch) -> None:

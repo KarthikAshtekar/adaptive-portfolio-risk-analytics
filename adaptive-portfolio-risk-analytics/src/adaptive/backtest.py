@@ -16,6 +16,7 @@ from src.benchmarks import BenchmarkFactory
 from src.covariance import CovarianceFactory
 
 from .controller import RegimeAdaptiveController
+from .defensive import DefensiveReturnResult, get_defensive_returns
 from .policies import (
     RegimePolicy,
     policy_map_to_dataframe,
@@ -33,37 +34,6 @@ def _normalize_weights(weights, columns: pd.Index) -> pd.Series:
     if total <= 0.0 or not np.isfinite(total):
         raise ValueError("allocator returned invalid weights")
     return series / total
-
-
-def _align_defensive_returns(
-    defensive_returns,
-    index: pd.DatetimeIndex,
-) -> pd.Series:
-    if defensive_returns is None:
-        return pd.Series(
-            0.0,
-            index=index,
-            name="defensive_return",
-            dtype=float,
-        )
-    if isinstance(defensive_returns, pd.DataFrame):
-        if defensive_returns.shape[1] != 1:
-            raise ValueError("defensive_returns must be a Series or single-column DataFrame")
-        series = defensive_returns.iloc[:, 0].copy()
-    elif isinstance(defensive_returns, pd.Series):
-        series = defensive_returns.copy()
-    else:
-        raise TypeError("defensive_returns must be a pandas Series or single-column DataFrame")
-    if not isinstance(series.index, pd.DatetimeIndex):
-        raise ValueError("defensive_returns index must be a DatetimeIndex")
-    return (
-        pd.to_numeric(series, errors="coerce")
-        .sort_index()
-        .reindex(index)
-        .ffill()
-        .fillna(0.0)
-        .rename("defensive_return")
-    )
 
 
 def _post_return_weights(
@@ -130,6 +100,10 @@ def run_regime_adaptive_backtest(
     regime_method_name: str = "rule_based",
     use_lagged_regimes: bool = True,
     periods_per_year: int = 252,
+    defensive_source: str | None = None,
+    defensive_annual_rate: float = 0.04,
+    defensive_ticker: str | None = None,
+    defensive_fallback: str = "synthetic",
 ) -> dict[str, object]:
     """Run a first-version expanding decision loop for the adaptive strategy.
 
@@ -137,7 +111,6 @@ def run_regime_adaptive_backtest(
     changes. Exposure is recalculated daily from rolling realized volatility.
     Weights selected at date ``t`` are applied to returns at ``t+1``.
     """
-    _ = prices
     method_name = str(regime_method_name).strip().lower()
     if "hmm" in method_name and ("full" in method_name or "historical" in method_name):
         raise ValueError(
@@ -171,7 +144,30 @@ def run_regime_adaptive_backtest(
         use_lagged_regimes=use_lagged_regimes,
     )
     regime_series = regimes.sort_index()
-    defensive = _align_defensive_returns(defensive_returns, clean.index)
+    if isinstance(defensive_returns, DefensiveReturnResult):
+        if not defensive_returns.returns.index.equals(clean.index):
+            raise ValueError(
+                "pre-resolved defensive returns must align exactly with returns"
+            )
+        defensive_result = defensive_returns
+    else:
+        resolved_source = (
+            defensive_source
+            if defensive_source is not None
+            else ("provided_series" if defensive_returns is not None else "synthetic")
+        )
+        defensive_result = get_defensive_returns(
+            index=clean.index,
+            source=resolved_source,
+            annual_rate=defensive_annual_rate,
+            defensive_ticker=defensive_ticker,
+            prices=prices,
+            returns=defensive_returns,
+            fallback=defensive_fallback,
+            periods_per_year=periods_per_year,
+        )
+    defensive = defensive_result.returns
+    defensive_metadata = defensive_result.metadata
     full_columns = list(clean.columns) + ["Defensive"]
     cost_model = TransactionCostModel(
         base_bps=float(transaction_cost_bps),
@@ -327,6 +323,7 @@ def run_regime_adaptive_backtest(
                 "rebalance_reason": rebalance_reason,
                 "max_weight_drift": max_drift,
                 "policy_notes": policy.notes,
+                **defensive_metadata,
             }
         )
 
@@ -382,6 +379,7 @@ def run_regime_adaptive_backtest(
             "average_turnover": float(turnover_summary["average_turnover"]),
             "total_transaction_cost": float(diagnostics_frame["transaction_cost"].sum()),
             "number_of_rebalances": int(diagnostics_frame["rebalanced"].sum()),
+            **defensive_metadata,
         }
     )
 
@@ -402,4 +400,6 @@ def run_regime_adaptive_backtest(
         "regime_method": regime_method_name,
         "uses_lagged_regimes": bool(use_lagged_regimes),
         "applied_regimes": applied_regime_series,
+        "defensive_returns": defensive,
+        "defensive_metadata": defensive_metadata,
     }

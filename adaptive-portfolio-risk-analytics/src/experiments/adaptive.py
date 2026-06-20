@@ -9,7 +9,11 @@ import json
 import numpy as np
 import pandas as pd
 
-from src.adaptive import get_policy_preset, run_regime_adaptive_backtest
+from src.adaptive import (
+    defensive_source_from_label,
+    get_policy_preset,
+    run_regime_adaptive_backtest,
+)
 from src.analytics import PerformanceAnalytics, calculate_drawdown_durations
 from src.regime import (
     HMM_AVAILABLE,
@@ -64,6 +68,9 @@ def generate_adaptive_parameter_grid(
     ) in enumerate(combinations):
         source = normalize_adaptive_regime_source(regime_source)
         preset = normalize_adaptive_policy_preset(policy_preset)
+        defensive_source, defensive_ticker = defensive_source_from_label(
+            str(defensive_asset)
+        )
         rows.append(
             {
                 "config_id": f"adaptive_{config_id}",
@@ -75,6 +82,10 @@ def generate_adaptive_parameter_grid(
                 "training_window": int(training_window),
                 "train_window": int(training_window),
                 "defensive_asset": defensive_asset,
+                "defensive_source": defensive_source,
+                "defensive_annual_rate": float(config.defensive_annual_rate),
+                "defensive_ticker": defensive_ticker,
+                "defensive_fallback": config.defensive_fallback,
                 "transaction_cost_bps": float(cost_bps),
                 "slippage_bps": float(slippage_bps),
                 "rebalance_frequency": str(rebalance_frequency).upper(),
@@ -212,15 +223,17 @@ def execute_adaptive_experiment(
     source = normalize_adaptive_regime_source(str(row.get("regime_source", "rule_based_lagged")))
     preset = normalize_adaptive_policy_preset(str(row.get("policy_preset", "balanced")))
     resolved_regime_input = dict(regime_input or build_adaptive_regime_input(returns_df, row))
-    defensive_series = _resolve_defensive_returns(
-        defensive_returns,
-        row.get("defensive_asset"),
-        returns_df.index,
+    configured_defensive_source, configured_ticker = defensive_source_from_label(
+        str(row.get("defensive_asset", "Synthetic Risk-Free"))
     )
+    defensive_source = str(
+        row.get("defensive_source") or configured_defensive_source
+    )
+    defensive_ticker = row.get("defensive_ticker") or configured_ticker
     backtest = run_regime_adaptive_backtest(
         returns=returns_df,
         regimes=resolved_regime_input["regimes"],
-        defensive_returns=defensive_series,
+        defensive_returns=defensive_returns,
         initial_value=float(row.get("initial_capital", 1_000_000.0)),
         training_window=int(row.get("training_window", row.get("train_window", 252))),
         rebalance_frequency=str(row.get("rebalance_frequency", "M")),
@@ -229,6 +242,12 @@ def execute_adaptive_experiment(
         policy_map=get_policy_preset(preset),
         regime_method_name=str(resolved_regime_input["regime_method_name"]),
         use_lagged_regimes=bool(resolved_regime_input["use_lagged_regimes"]),
+        defensive_source=defensive_source,
+        defensive_annual_rate=float(row.get("defensive_annual_rate", 0.04)),
+        defensive_ticker=(
+            str(defensive_ticker) if defensive_ticker is not None else None
+        ),
+        defensive_fallback=str(row.get("defensive_fallback", "synthetic")),
     )
     metrics = PerformanceAnalytics.summary_table(backtest["portfolio_returns"])
     durations = calculate_drawdown_durations(backtest["portfolio_values"])
@@ -253,6 +272,7 @@ def execute_adaptive_experiment(
         "var_95": metrics["var_95"],
         "cvar_95": metrics["cvar_95"],
         "max_drawdown_duration": int(durations["max_drawdown_duration"]),
+        **backtest["defensive_metadata"],
         **adaptive_diagnostics,
         "status": "success",
         "error": None,
@@ -422,28 +442,6 @@ def _usage_table(values: pd.Series, column_name: str) -> pd.DataFrame:
     )
 
 
-def _resolve_defensive_returns(
-    defensive_returns,
-    defensive_asset,
-    index: pd.DatetimeIndex,
-) -> pd.Series:
-    if isinstance(defensive_returns, pd.Series):
-        series = defensive_returns
-    elif isinstance(defensive_returns, Mapping):
-        if defensive_asset in defensive_returns:
-            series = defensive_returns[defensive_asset]
-        elif len(defensive_returns) == 1:
-            series = next(iter(defensive_returns.values()))
-        else:
-            raise ValueError(f"defensive returns are unavailable for '{defensive_asset}'")
-    elif defensive_returns is None:
-        daily_rate = 0.04 / 252.0
-        series = pd.Series(daily_rate, index=index, dtype=float)
-    else:
-        raise TypeError("defensive_returns must be a Series, mapping, or None")
-    return pd.to_numeric(series, errors="coerce").reindex(index).ffill().fillna(0.0)
-
-
 def _empty_adaptive_diagnostics() -> dict[str, object]:
     return {
         "average_risky_exposure": np.nan,
@@ -491,6 +489,12 @@ def _failed_adaptive_row(
     return {
         **dict(row),
         **empty_metrics,
+        "defensive_source_requested": row.get("defensive_source"),
+        "defensive_source_used": None,
+        "defensive_annual_rate": row.get("defensive_annual_rate", 0.04),
+        "defensive_ticker": row.get("defensive_ticker"),
+        "defensive_fallback_used": None,
+        "defensive_notes": error,
         **_empty_adaptive_diagnostics(),
         "status": status,
         "error": error,

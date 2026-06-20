@@ -30,7 +30,13 @@ from src.analytics import (
     risk_contribution_table,
     summarize_liquidity_diagnostics,
 )
-from src.adaptive import get_policy_preset, run_regime_adaptive_backtest
+from src.adaptive import (
+    defensive_source_from_label,
+    format_defensive_source,
+    get_defensive_returns,
+    get_policy_preset,
+    run_regime_adaptive_backtest,
+)
 from src.backtesting import RollingBacktester, VolatilityTargetingConfig, apply_volatility_targeting
 from src.backtesting.transaction_costs import TransactionCostModel
 from src.benchmarks import (
@@ -42,6 +48,24 @@ from src.benchmarks import (
 from src.clustering import compute_linkage_matrix
 from src.covariance import CovarianceFactory, compute_correlation_matrix, compute_distance_matrix
 from src.dashboard.components import render_allocation_table, render_portfolio_summary
+from src.dashboard.modes import (
+    DASHBOARD_MODES,
+    DEFAULT_DASHBOARD_MODE,
+    DEFAULT_MANAGER_ADAPTIVE_OVERLAY,
+    DEFAULT_RESEARCH_OBJECTIVE,
+    DEVELOPER_VIEW,
+    MANAGER_VIEW,
+    MANAGER_PROFILE_OBJECTIVES,
+    MODE_NOTES,
+    RESEARCH_OBJECTIVES,
+    RESEARCH_VIEW,
+    RULE_BASED_ROBUSTNESS_REFERENCE,
+    adaptive_overlay_name,
+    classify_recommended_use,
+    net_metric_label,
+    objective_metric,
+    research_objective_label,
+)
 from src.dashboard.plots import (
     format_metric_cards,
     plot_base_vs_vol_targeted_growth,
@@ -72,7 +96,7 @@ from src.dashboard.plots import (
     plot_weight_pie,
     plot_weight_vs_risk_contribution,
 )
-from src.data_pipeline import DataPreprocessor, YahooFinanceProvider, get_defensive_asset_returns
+from src.data_pipeline import DataPreprocessor, YahooFinanceProvider
 from src.experiments import (
     AdaptiveExperimentConfig,
     ExperimentConfig,
@@ -103,6 +127,15 @@ from src.regime import (
     select_best_strategy_by_regime,
 )
 from src.validation import run_cpcv_validation
+from src.selection import (
+    COST_ASSUMPTIONS,
+    COST_ASSUMPTION_NAMES,
+    PROFILE_NAMES,
+    StrategyRecommendation,
+    build_strategy_playbook,
+    load_selection_artifacts,
+    select_strategy_for_profile,
+)
 
 PORTFOLIO_RESULT_KEY = "dashboard_portfolio_results"
 SENSITIVITY_RESULT_KEY = "dashboard_sensitivity_results"
@@ -185,16 +218,7 @@ SENSITIVITY_OBJECTIVE_MAP = {
     "Calmar": "calmar",
     "Max Drawdown": "max_drawdown",
     "Final Value": "final_value",
-}
-
-TAKEAWAY_OBJECTIVE_OPTIONS = {
-    "Calmar": "calmar",
-    "Sharpe": "sharpe",
-    "Sortino": "sortino",
-    "CAGR": "cagr",
-    "Final Value": "final_value",
-    "Max Drawdown": "max_drawdown",
-    "Volatility": "volatility",
+    **RESEARCH_OBJECTIVES,
 }
 
 LOWER_IS_BETTER_METRICS = {"volatility"}
@@ -215,6 +239,27 @@ def initialize_session_state() -> None:
         "_last_select_all": True,
         "ui_ticker_to_add": "",
         "ui_added_tickers": [],
+        "ui_dashboard_mode": DEFAULT_DASHBOARD_MODE,
+        "ui_research_objective": DEFAULT_RESEARCH_OBJECTIVE,
+        "ui_manager_universe_preset": "Core Diversified",
+        "ui_manager_investor_profile": "Balanced",
+        "ui_manager_cost_assumption": "Moderate",
+        "ui_manager_start_date": date(2020, 1, 1),
+        "ui_manager_end_date": date.today(),
+        "ui_manager_initial_capital": 1_000_000.0,
+        "ui_manager_custom_base_bps": 10.0,
+        "ui_manager_custom_slippage_bps": 5.0,
+        "ui_strategy": "HERC",
+        "ui_enable_regime_analytics": True,
+        "ui_regime_method": DEFAULT_MANAGER_ADAPTIVE_OVERLAY["regime_method"],
+        "ui_enable_adaptive_strategy": True,
+        "ui_adaptive_regime_source": DEFAULT_MANAGER_ADAPTIVE_OVERLAY["regime_source"],
+        "ui_adaptive_policy_preset": DEFAULT_MANAGER_ADAPTIVE_OVERLAY["policy_preset"],
+        "ui_covariance_method": "sample",
+        "ui_rebalance_mode": "calendar",
+        "ui_threshold": 0.05,
+        "ui_defensive_sleeve": "Synthetic 4% annualized",
+        "ui_synthetic_annual_rate": 0.04,
         PORTFOLIO_RESULT_KEY: None,
         SENSITIVITY_RESULT_KEY: None,
         ROBUSTNESS_RESULT_KEY: None,
@@ -343,7 +388,8 @@ def validate_common_inputs(
         return "Start date must be before end date."
     if exposure_floor > exposure_cap:
         return "Exposure Floor must be less than or equal to Exposure Cap."
-    if defensive_sleeve != "Synthetic Risk-Free" and defensive_sleeve in selected_tickers:
+    defensive_source, defensive_ticker = defensive_source_from_label(defensive_sleeve)
+    if defensive_source == "ticker" and defensive_ticker in selected_tickers:
         return "Defensive sleeve must remain separate from the risky asset universe."
     return None
 
@@ -499,9 +545,12 @@ def render_key_takeaways(
         ),
         ("Best drawdown control", f"{drawdown_strategy} ({format_percent(drawdown_value)})"),
         ("Lowest volatility", f"{volatility_strategy} ({format_percent(volatility_value)})"),
-        ("Highest Sharpe", f"{sharpe_strategy} ({format_decimal(sharpe_value)})"),
-        ("Highest Calmar", f"{calmar_strategy} ({format_decimal(calmar_value)})"),
-        ("Highest final value", f"{final_value_strategy} ({format_currency(final_value)})"),
+        ("Highest Net Sharpe", f"{sharpe_strategy} ({format_decimal(sharpe_value)})"),
+        ("Highest Net Calmar", f"{calmar_strategy} ({format_decimal(calmar_value)})"),
+        (
+            "Highest Net Final Value",
+            f"{final_value_strategy} ({format_currency(final_value)})",
+        ),
         ("Lowest turnover", f"{turnover_strategy} ({format_decimal(turnover_value)})"),
         ("Lowest transaction cost", f"{cost_strategy} ({format_currency(cost_value)})"),
         ("Volatility targeting", "Enabled" if volatility_targeting_enabled else "Disabled"),
@@ -688,6 +737,125 @@ def format_metric_for_card(metric: str, value: float) -> str:
     return format_decimal(value)
 
 
+def dataframe_csv_bytes(frame: pd.DataFrame) -> bytes:
+    """Serialize a dashboard table for audit-friendly download."""
+    return frame.to_csv(index=True).encode("utf-8")
+
+
+def render_dataframe_download(
+    label: str,
+    frame: pd.DataFrame,
+    file_name: str,
+    *,
+    key: str,
+) -> None:
+    """Render a CSV download without forcing a large raw table inline."""
+    if not isinstance(frame, pd.DataFrame) or frame.empty:
+        st.caption(f"{label}: no data available.")
+        return
+    st.download_button(
+        label,
+        data=dataframe_csv_bytes(frame),
+        file_name=file_name,
+        mime="text/csv",
+        key=key,
+    )
+
+
+def format_net_performance_table(performance_df: pd.DataFrame) -> pd.DataFrame:
+    """Return a comparison table whose return-derived columns are explicitly net."""
+    if not isinstance(performance_df, pd.DataFrame) or performance_df.empty:
+        return pd.DataFrame()
+    display = performance_df.copy()
+    display.index.name = "Strategy"
+    return display.rename(
+        columns={column: net_metric_label(column) for column in display.columns}
+    )
+
+
+def _performance_row_from_result(
+    result: dict[str, object],
+) -> dict[str, float]:
+    metrics = PerformanceAnalytics.summary_table(result["portfolio_returns"])
+    performance = result.get("performance_metrics", {})
+    return {
+        **metrics,
+        "final_value": float(result["portfolio_values"].iloc[-1]),
+        "total_turnover": float(performance.get("total_turnover", np.nan)),
+        "total_transaction_cost": float(
+            performance.get("total_transaction_cost", np.nan)
+        ),
+        "number_of_rebalances": float(
+            performance.get("number_of_rebalances", np.nan)
+        ),
+    }
+
+
+def build_manager_decision_table(
+    portfolio_payload: dict[str, object],
+) -> tuple[pd.DataFrame, str, str, str]:
+    """Build the manager's fixed/adaptive/benchmark comparison on a net basis."""
+    fixed_table = portfolio_payload["performance_comparison_df"]
+    strategy_results = portfolio_payload.get("strategy_results", {})
+    adaptive_results = portfolio_payload.get("adaptive_results")
+    benchmark_name = BenchmarkFactory.normalize_strategy_name(
+        portfolio_payload.get("benchmark_strategy", "Equal Weight")
+    )
+
+    fixed_growth_name, _ = _best_strategy_by_metric(fixed_table, "cagr")
+    selected_names = [fixed_growth_name]
+    if benchmark_name not in selected_names:
+        selected_names.append(benchmark_name)
+
+    rows: dict[str, dict[str, float]] = {}
+    for strategy_name in selected_names:
+        if strategy_name in strategy_results:
+            rows[strategy_name] = _performance_row_from_result(
+                strategy_results[strategy_name]
+            )
+
+    adaptive_name = adaptive_overlay_name(
+        str(portfolio_payload.get("adaptive_regime_source", "")),
+        str(portfolio_payload.get("adaptive_policy_preset", "Conservative")),
+    )
+    if adaptive_results is not None:
+        rows[adaptive_name] = _performance_row_from_result(adaptive_results)
+
+    table = pd.DataFrame.from_dict(rows, orient="index")
+    table.index.name = "Strategy"
+    return table, fixed_growth_name, adaptive_name, benchmark_name
+
+
+def _format_manager_decision_table(table: pd.DataFrame) -> pd.DataFrame:
+    if table.empty:
+        return table
+    display = table[
+        [
+            "cagr",
+            "sharpe",
+            "sortino",
+            "calmar",
+            "max_drawdown",
+            "final_value",
+            "total_turnover",
+            "total_transaction_cost",
+            "number_of_rebalances",
+        ]
+    ].copy()
+    for column in ["cagr", "max_drawdown"]:
+        display[column] = display[column].map(format_percent)
+    for column in ["sharpe", "sortino", "calmar", "total_turnover"]:
+        display[column] = display[column].map(format_decimal)
+    for column in ["final_value", "total_transaction_cost"]:
+        display[column] = display[column].map(format_currency)
+    display["number_of_rebalances"] = display["number_of_rebalances"].map(
+        lambda value: "n/a" if not _is_finite(value) else str(int(value))
+    )
+    return display.rename(
+        columns={column: net_metric_label(column) for column in display.columns}
+    )
+
+
 def format_percent(value: float) -> str:
     if not _is_finite(value):
         return "n/a"
@@ -852,9 +1020,9 @@ def format_stress_period_benchmark_table(stress_df: pd.DataFrame) -> pd.DataFram
             "Strategy": stress_df["strategy"],
             "Benchmark": stress_df["benchmark"],
             "Stress Period": stress_df["stress_period"],
-            "Strategy Return": stress_df["strategy_stress_return"].map(format_percent),
-            "Benchmark Return": stress_df["benchmark_stress_return"].map(format_percent),
-            "Excess Stress Return": stress_df["excess_stress_return"].map(format_percent),
+            "Net Strategy Return": stress_df["strategy_stress_return"].map(format_percent),
+            "Net Benchmark Return": stress_df["benchmark_stress_return"].map(format_percent),
+            "Net Excess Stress Return": stress_df["excess_stress_return"].map(format_percent),
             "Strategy Max DD": stress_df["strategy_max_drawdown"].map(format_percent),
             "Benchmark Max DD": stress_df["benchmark_max_drawdown"].map(format_percent),
             "Drawdown Reduction": stress_df["drawdown_reduction"].map(format_percent),
@@ -883,7 +1051,7 @@ def format_historical_stress_table(stress_df: pd.DataFrame) -> pd.DataFrame:
         {
             "Strategy": stress_df["strategy"],
             "Stress Period": stress_df["stress_period"],
-            "Period Return": stress_df["period_return"].map(format_percent),
+            "Net Period Return": stress_df["period_return"].map(format_percent),
             "Max Drawdown": stress_df["max_drawdown"].map(format_percent),
             "Volatility": stress_df["volatility"].map(format_percent),
             "VaR 95": stress_df["var_95"].map(format_percent),
@@ -919,9 +1087,9 @@ def format_hypothetical_stress_table(stress_df: pd.DataFrame) -> pd.DataFrame:
         {
             "Scenario": stress_df["scenario"],
             "Strategy": stress_df["strategy"],
-            "Strategy Stress Return": stress_df["strategy_stress_return"].map(format_percent),
-            "Benchmark Stress Return": stress_df["benchmark_stress_return"].map(format_percent),
-            "Difference vs Benchmark": stress_df["difference_vs_benchmark"].map(format_percent),
+            "Net Strategy Stress Return": stress_df["strategy_stress_return"].map(format_percent),
+            "Net Benchmark Stress Return": stress_df["benchmark_stress_return"].map(format_percent),
+            "Net Difference vs Benchmark": stress_df["difference_vs_benchmark"].map(format_percent),
             "Worst Strategy": stress_df["worst_strategy_under_scenario"],
             "Most Defensive Strategy": stress_df["most_defensive_strategy_under_scenario"],
         }
@@ -965,7 +1133,7 @@ def format_worst_period_table(worst_periods_df: pd.DataFrame) -> pd.DataFrame:
             "Window": worst_periods_df["window_days"].map(lambda value: f"{int(value)} days"),
             "Start": worst_periods_df["start_date"],
             "End": worst_periods_df["end_date"],
-            "Period Return": worst_periods_df["period_return"].map(format_percent),
+            "Net Period Return": worst_periods_df["period_return"].map(format_percent),
             "Max Drawdown": worst_periods_df["max_drawdown"].map(format_percent),
             "Observations": worst_periods_df["n_observations"],
         }
@@ -1385,22 +1553,20 @@ def build_portfolio_results(
     vol_target_results = None
     defensive_metadata = None
     defensive_returns = None
+    resolved_defensive_result = None
+    defensive_source, defensive_ticker = defensive_source_from_label(
+        defensive_sleeve
+    )
     if enable_vol_targeting:
-        preferred_ticker = None if defensive_sleeve == "Synthetic Risk-Free" else defensive_sleeve
-        fallback_tickers = []
-        if defensive_sleeve == "LIQUIDBEES.NS":
-            fallback_tickers = ["LIQUIDETF.NS"]
-        elif defensive_sleeve == "LIQUIDETF.NS":
-            fallback_tickers = ["LIQUIDBEES.NS"]
-
-        # Defensive sleeve stays outside the risky universe by design.
-        defensive_returns, defensive_metadata = get_defensive_asset_returns(
-            start_date=returns_df.index.min(),
-            end_date=returns_df.index.max(),
-            preferred_ticker=preferred_ticker,
-            fallback_tickers=fallback_tickers,
-            synthetic_annual_rate=synthetic_annual_rate,
+        resolved_defensive_result = get_defensive_returns(
+            index=returns_df.index,
+            source=defensive_source,
+            annual_rate=synthetic_annual_rate,
+            defensive_ticker=defensive_ticker,
+            fallback="synthetic",
         )
+        defensive_returns = resolved_defensive_result.returns
+        defensive_metadata = resolved_defensive_result.metadata
         vol_target_config = VolatilityTargetingConfig(
             realized_vol_window=realized_vol_window,
             regime_lookback_window=regime_lookback_window,
@@ -1499,7 +1665,15 @@ def build_portfolio_results(
         adaptive_results = run_regime_adaptive_backtest(
             returns=returns_df,
             regimes=adaptive_regimes,
-            defensive_returns=defensive_returns,
+            defensive_returns=(
+                None
+                if (
+                    defensive_source == "provided_series"
+                    and defensive_metadata
+                    and defensive_metadata.get("defensive_fallback_used")
+                )
+                else (resolved_defensive_result or defensive_returns)
+            ),
             initial_value=initial_capital,
             training_window=adaptive_training_window,
             rebalance_frequency=adaptive_rebalance_frequency,
@@ -1508,7 +1682,12 @@ def build_portfolio_results(
             policy_map=get_policy_preset(adaptive_policy_preset),
             regime_method_name=adaptive_method_name,
             use_lagged_regimes=adaptive_use_lagged,
+            defensive_source=defensive_source,
+            defensive_annual_rate=synthetic_annual_rate,
+            defensive_ticker=defensive_ticker,
+            defensive_fallback="synthetic",
         )
+        defensive_metadata = adaptive_results["defensive_metadata"]
         combined_results = dict(strategy_results)
         combined_results["Regime-Adaptive"] = adaptive_results
         adaptive_comparison_df = build_performance_comparison_table(combined_results)
@@ -1577,7 +1756,12 @@ def build_portfolio_results(
         "adaptive_comparison_df": adaptive_comparison_df,
         "adaptive_active_risk_df": adaptive_active_risk_df,
         "adaptive_regime_performance_df": adaptive_regime_performance_df,
+        "adaptive_regime_source": adaptive_regime_source,
         "adaptive_policy_preset": adaptive_policy_preset,
+        "adaptive_strategy_label": adaptive_overlay_name(
+            adaptive_regime_source,
+            adaptive_policy_preset,
+        ),
         "adaptive_show_policy_table": adaptive_show_policy_table,
     }
 
@@ -1621,24 +1805,6 @@ def build_sensitivity_results(
     returns_df = market_context["returns_df"]
 
     defensive_input = None
-    if enable_vol_targeting or include_adaptive_strategies:
-        preferred_ticker = None if defensive_sleeve == "Synthetic Risk-Free" else defensive_sleeve
-        fallback_tickers = []
-        if defensive_sleeve == "LIQUIDBEES.NS":
-            fallback_tickers = ["LIQUIDETF.NS"]
-        elif defensive_sleeve == "LIQUIDETF.NS":
-            fallback_tickers = ["LIQUIDBEES.NS"]
-        defensive_returns, _ = get_defensive_asset_returns(
-            start_date=returns_df.index.min(),
-            end_date=returns_df.index.max(),
-            preferred_ticker=preferred_ticker,
-            fallback_tickers=fallback_tickers,
-            synthetic_annual_rate=synthetic_annual_rate,
-        )
-        key = (
-            defensive_sleeve if defensive_sleeve != "Synthetic Risk-Free" else "Synthetic Risk-Free"
-        )
-        defensive_input = {key: defensive_returns}
 
     # Sensitivity study is separated from one-off portfolio analysis so it can run independently.
     experiment_config = ExperimentConfig(
@@ -1656,6 +1822,8 @@ def build_sensitivity_results(
         end_date=str(end_dt),
         train_window=252,
         initial_capital=initial_capital,
+        defensive_annual_rate=synthetic_annual_rate,
+        defensive_fallback="synthetic",
     )
     objective_metric = SENSITIVITY_OBJECTIVE_MAP[objective_label]
     experiment_results_df = run_experiment_grid(
@@ -1687,6 +1855,8 @@ def build_sensitivity_results(
             hmm_covariance_type=hmm_covariance_type,
             hmm_decision_lag=max(1, int(hmm_decision_lag)),
             initial_capital=float(initial_capital),
+            defensive_annual_rate=float(synthetic_annual_rate),
+            defensive_fallback="synthetic",
         )
         adaptive_grid_result = run_adaptive_experiment_grid(
             returns_df=returns_df,
@@ -1793,13 +1963,8 @@ def build_robustness_results(
         defensive_returns=sensitivity_payload.get("defensive_returns"),
     )
     robustness_results["objective_metric"] = str(selected_objective)
-    robustness_results["objective_label"] = next(
-        (
-            label
-            for label, metric in SENSITIVITY_OBJECTIVE_MAP.items()
-            if metric == selected_objective
-        ),
-        str(selected_objective).replace("_", " ").title(),
+    robustness_results["objective_label"] = research_objective_label(
+        str(selected_objective)
     )
     robustness_results["include_adaptive_in_cpcv"] = bool(include_adaptive_in_cpcv)
     return robustness_results
@@ -1831,8 +1996,10 @@ def render_dashboard_tabs(
     portfolio_payload: dict[str, object] | None,
     sensitivity_payload: dict[str, object] | None,
     robustness_payload: dict[str, object] | None,
-    selected_objective_label: str = "Calmar",
+    selected_objective_label: str = DEFAULT_RESEARCH_OBJECTIVE,
 ) -> None:
+    st.info(MODE_NOTES[RESEARCH_VIEW])
+    st.caption(f"Current research objective: {selected_objective_label}")
     tabs = st.tabs(
         [
             "Portfolio Overview",
@@ -1937,19 +2104,12 @@ def render_dashboard_tabs(
         render_portfolio_summary(portfolio_payload["formatted_metrics"])
         render_risk_tracking_explainer()
 
-        takeaway_objective_label = st.selectbox(
-            "Takeaway Objective",
-            list(TAKEAWAY_OBJECTIVE_OPTIONS.keys()),
-            index=0,
-            help="Key Takeaways are ranked by this single selected objective. Default is Calmar.",
-            key="tab_takeaway_objective",
-        )
         render_key_takeaways(
             performance_comparison_df,
             strategy_results,
             active_risk_metrics_df,
-            selected_objective_label=takeaway_objective_label,
-            selected_objective_metric=TAKEAWAY_OBJECTIVE_OPTIONS[takeaway_objective_label],
+            selected_objective_label=selected_objective_label,
+            selected_objective_metric=selected_objective_metric,
             volatility_targeting_enabled=vol_target_results is not None,
         )
 
@@ -2079,8 +2239,14 @@ def render_dashboard_tabs(
                 use_container_width=True,
             )
 
-        st.dataframe(performance_comparison_df, use_container_width=True)
-        st.dataframe(relative_performance_df, use_container_width=True)
+        st.dataframe(
+            format_net_performance_table(performance_comparison_df),
+            use_container_width=True,
+        )
+        st.dataframe(
+            format_net_performance_table(relative_performance_df),
+            use_container_width=True,
+        )
 
     with tabs[2]:
         st.header("Risk & Allocation")
@@ -2206,9 +2372,16 @@ def render_dashboard_tabs(
             str(rebalance_summary["total_rebalances"]),
         )
 
-        cost_col1, cost_col2 = st.columns(2)
-        cost_col1.metric("Gross Final Value", f"{cost_drag_summary['gross_final_value']:.2f}")
+        cost_col1, cost_col2, cost_col3 = st.columns(3)
+        cost_col1.metric(
+            "Gross Final Value",
+            f"{cost_drag_summary['gross_final_value']:.2f}",
+        )
         cost_col2.metric(
+            "Net Final Value",
+            f"{cost_drag_summary['net_final_value']:.2f}",
+        )
+        cost_col3.metric(
             "Cost Drag",
             f"{cost_drag_summary['cost_drag']:.2f} ({cost_drag_summary['cost_drag_pct']:.2%})",
         )
@@ -2414,6 +2587,7 @@ def render_market_regime_content(
     *,
     selected_objective_label: str,
     selected_objective_metric: str,
+    show_debug: bool = False,
 ) -> None:
     st.header("Phase 3B — Market Regime Detection")
     st.info(
@@ -2519,7 +2693,7 @@ def render_market_regime_content(
                 f"{hmm_result.get('converged', False)} | "
                 f"Log likelihood: {format_decimal(hmm_result.get('log_likelihood'))}"
             )
-        if not state_probabilities.empty:
+        if show_debug and not state_probabilities.empty:
             st.subheader("HMM State Probabilities")
             st.plotly_chart(
                 plot_hmm_state_probabilities(state_probabilities),
@@ -2530,12 +2704,13 @@ def render_market_regime_content(
                 use_container_width=True,
             )
         hmm_diagnostics = regime_payload.get("hmm_diagnostics", pd.DataFrame())
-        if is_walk_forward and not hmm_diagnostics.empty:
+        if show_debug and is_walk_forward and not hmm_diagnostics.empty:
             st.subheader("HMM Walk-Forward Refit Diagnostics")
             st.dataframe(hmm_diagnostics, use_container_width=True)
 
-    st.subheader("Regime State Table")
-    st.dataframe(regime_payload["state_table"].tail(500), use_container_width=True)
+    if show_debug:
+        st.subheader("Regime State Table")
+        st.dataframe(regime_payload["state_table"].tail(500), use_container_width=True)
 
     st.subheader("Regime Distribution")
     distribution = regime_payload["regime_distribution"].copy()
@@ -2582,34 +2757,31 @@ def render_market_regime_content(
                 method_comparison["regime_counts_by_method"],
                 use_container_width=True,
             )
-        st.write("Timeline comparison")
-        st.dataframe(
-            method_comparison["comparison_table"].tail(500),
-            use_container_width=True,
-        )
-        with st.expander("Dates of disagreement", expanded=False):
+        if show_debug:
+            st.write("Timeline comparison")
             st.dataframe(
-                method_comparison["dates_of_disagreement"],
+                method_comparison["comparison_table"].tail(500),
                 use_container_width=True,
             )
+            with st.expander("Dates of disagreement", expanded=False):
+                st.dataframe(
+                    method_comparison["dates_of_disagreement"],
+                    use_container_width=True,
+                )
 
     st.subheader("Strategy Performance by Regime")
     performance = regime_payload["performance"]
-    st.dataframe(performance, use_container_width=True)
+    st.dataframe(
+        format_net_performance_table(performance),
+        use_container_width=True,
+    )
 
     selection = select_best_strategy_by_regime(
         performance,
         objective=selected_objective_metric,
     )
     active_objective = selection["objective"] or selected_objective_metric
-    active_objective_label = next(
-        (
-            label
-            for label, metric in SENSITIVITY_OBJECTIVE_MAP.items()
-            if metric == active_objective
-        ),
-        str(active_objective).replace("_", " ").title(),
-    )
+    active_objective_label = research_objective_label(active_objective)
     st.write(f"Current regime-performance objective: {selected_objective_label}")
     if selection["fallback_used"]:
         st.caption(
@@ -2651,6 +2823,7 @@ def render_adaptive_allocation_content(
     selected_objective_label: str,
     selected_objective_metric: str,
     show_policy_table: bool,
+    show_debug: bool = False,
 ) -> None:
     st.header("Phase 3C — Regime-Aware Adaptive Allocation")
     st.warning("Uses lagged regimes only.")
@@ -2665,10 +2838,14 @@ def render_adaptive_allocation_content(
         return
 
     metrics = adaptive_results["performance_metrics"]
+    defensive_metadata = adaptive_results.get("defensive_metadata", {})
+    st.caption(
+        f"Defensive sleeve: {format_defensive_source(defensive_metadata)}"
+    )
     metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
-    metric_col1.metric("Adaptive CAGR", format_percent(metrics.get("cagr")))
-    metric_col2.metric("Adaptive Sharpe", format_decimal(metrics.get("sharpe")))
-    metric_col3.metric("Adaptive Calmar", format_decimal(metrics.get("calmar")))
+    metric_col1.metric("Adaptive Net CAGR", format_percent(metrics.get("cagr")))
+    metric_col2.metric("Adaptive Net Sharpe", format_decimal(metrics.get("sharpe")))
+    metric_col3.metric("Adaptive Net Calmar", format_decimal(metrics.get("calmar")))
     metric_col4.metric(
         "Adaptive Max Drawdown",
         format_percent(metrics.get("max_drawdown")),
@@ -2716,7 +2893,10 @@ def render_adaptive_allocation_content(
             "objective_rank",
             kind="mergesort",
         )
-    st.dataframe(ranked_comparison, use_container_width=True)
+    st.dataframe(
+        format_net_performance_table(ranked_comparison),
+        use_container_width=True,
+    )
 
     if not active_risk_df.empty:
         st.subheader("Benchmark-Relative Adaptive Diagnostics")
@@ -2728,14 +2908,15 @@ def render_adaptive_allocation_content(
     st.subheader("Adaptive Performance by Decision Regime")
     st.dataframe(regime_performance_df, use_container_width=True)
 
-    st.subheader("Adaptive Decision Diagnostics")
-    st.dataframe(
-        adaptive_results["diagnostics"].tail(500),
-        use_container_width=True,
-    )
+    if show_debug:
+        st.subheader("Adaptive Decision Diagnostics")
+        st.dataframe(
+            adaptive_results["diagnostics"].tail(500),
+            use_container_width=True,
+        )
 
-    st.subheader("Adaptive Weight History")
-    st.dataframe(adaptive_results["weights"].tail(200), use_container_width=True)
+        st.subheader("Adaptive Weight History")
+        st.dataframe(adaptive_results["weights"].tail(200), use_container_width=True)
 
 
 def render_adaptive_evaluation_content(
@@ -2780,7 +2961,12 @@ def render_adaptive_evaluation_content(
         return
     if successful_adaptive.empty:
         st.warning("No adaptive configuration completed successfully.")
-        st.dataframe(adaptive_results, use_container_width=True)
+        render_dataframe_download(
+            "Download Full Sensitivity Table",
+            adaptive_results,
+            "adaptive_sensitivity_results.csv",
+            key="download_failed_adaptive_sensitivity",
+        )
         return
 
     objective_metric = sensitivity_payload.get(
@@ -2810,7 +2996,16 @@ def render_adaptive_evaluation_content(
     )
 
     st.subheader("Adaptive Strategy Sensitivity Results")
-    st.dataframe(adaptive_results, use_container_width=True)
+    st.dataframe(
+        format_net_performance_table(adaptive_results.head(20)),
+        use_container_width=True,
+    )
+    render_dataframe_download(
+        "Download Full Sensitivity Table",
+        adaptive_results,
+        "adaptive_sensitivity_results.csv",
+        key="download_adaptive_sensitivity",
+    )
 
     comparison = compare_adaptive_vs_fixed(
         successful_adaptive,
@@ -2819,7 +3014,10 @@ def render_adaptive_evaluation_content(
     )
     st.subheader("Adaptive vs Fixed Strategy Comparison")
     st.info(str(comparison["interpretation"]))
-    st.dataframe(pd.DataFrame([comparison]), use_container_width=True)
+    st.dataframe(
+        format_net_performance_table(pd.DataFrame([comparison])),
+        use_container_width=True,
+    )
 
     config_id = str(best_row.get("config_id"))
     adaptive_backtest = sensitivity_payload.get("adaptive_backtests", {}).get(config_id)
@@ -2926,7 +3124,10 @@ def render_adaptive_evaluation_content(
                     "analysis with fixed-strategy results."
                 )
             else:
-                st.dataframe(stress_table, use_container_width=True)
+                st.dataframe(
+                    format_net_performance_table(stress_table),
+                    use_container_width=True,
+                )
 
     st.subheader("Adaptive CPCV Robustness")
     if robustness_payload is None or not robustness_payload.get("include_adaptive_in_cpcv", False):
@@ -2989,14 +3190,7 @@ def render_sensitivity_content(
     experiment_summary_df = sensitivity_payload["experiment_summary_df"]
     top_experiments_df = sensitivity_payload["top_experiments_df"]
     parameter_sensitivity_df = sensitivity_payload["parameter_sensitivity_df"]
-    objective_label = next(
-        (
-            label
-            for label, metric in SENSITIVITY_OBJECTIVE_MAP.items()
-            if metric == objective_metric
-        ),
-        objective_metric,
-    )
+    objective_label = research_objective_label(objective_metric)
 
     st.info(
         "Sensitivity analysis is descriptive, not a weighted decision model. It shows how the "
@@ -3006,7 +3200,16 @@ def render_sensitivity_content(
     st.metric("Current ranking objective", objective_label)
 
     st.subheader("Experiment Results")
-    st.dataframe(experiment_summary_df, use_container_width=True)
+    st.dataframe(
+        format_net_performance_table(experiment_summary_df),
+        use_container_width=True,
+    )
+    render_dataframe_download(
+        "Download Full Sensitivity Table",
+        experiment_results_df,
+        "full_sensitivity_results.csv",
+        key="download_full_sensitivity",
+    )
 
     sensitivity_col1, sensitivity_col2 = st.columns(2)
     with sensitivity_col1:
@@ -3046,15 +3249,20 @@ def render_sensitivity_content(
         )
 
     st.subheader("Top 10 Configurations")
-    st.dataframe(top_experiments_df, use_container_width=True)
+    st.dataframe(
+        format_net_performance_table(top_experiments_df),
+        use_container_width=True,
+    )
 
     st.subheader("Parameter Sensitivity")
     st.dataframe(parameter_sensitivity_df, use_container_width=True)
-    render_robustness_content(robustness_payload)
+    render_robustness_content(robustness_payload, show_raw=False)
 
 
 def render_robustness_content(
     robustness_payload: dict[str, object] | None,
+    *,
+    show_raw: bool = False,
 ) -> None:
     with st.expander(
         "Phase 3A — Robustness Validation / CPCV-Style Validation",
@@ -3077,7 +3285,10 @@ def render_robustness_content(
         fold_results = robustness_payload["fold_results"]
         summary_table = robustness_payload["summary_table"]
         robustness_ranking = robustness_payload["robustness_ranking"]
-        objective_label = robustness_payload.get("objective_label", "Calmar")
+        objective_label = robustness_payload.get(
+            "objective_label",
+            DEFAULT_RESEARCH_OBJECTIVE,
+        )
 
         split_count = len(split_diagnostics)
         average_train = (
@@ -3097,14 +3308,505 @@ def render_robustness_content(
         metric_col3.metric("Average test size", f"{average_test:,.1f}")
         st.write(f"Current robustness objective: {objective_label}")
 
-        st.subheader("Split Diagnostics")
-        st.dataframe(split_diagnostics, use_container_width=True)
-        st.subheader("Fold-level Metrics")
-        st.dataframe(fold_results, use_container_width=True)
+        if show_raw:
+            st.subheader("Split Diagnostics")
+            st.dataframe(split_diagnostics, use_container_width=True)
+            st.subheader("Fold-level Metrics")
+            st.dataframe(fold_results, use_container_width=True)
+        else:
+            download_col1, download_col2 = st.columns(2)
+            with download_col1:
+                render_dataframe_download(
+                    "Download Full CPCV Split Table",
+                    split_diagnostics,
+                    "cpcv_split_diagnostics.csv",
+                    key="download_cpcv_splits",
+                )
+            with download_col2:
+                render_dataframe_download(
+                    "Download Full CPCV Fold Table",
+                    fold_results,
+                    "cpcv_fold_results.csv",
+                    key="download_cpcv_folds",
+                )
         st.subheader("Robustness Summary")
         st.dataframe(summary_table, use_container_width=True)
         st.subheader("Robustness Ranking")
         st.dataframe(robustness_ranking, use_container_width=True)
+
+
+def build_selection_candidate_metrics(
+    portfolio_payload: dict[str, object],
+    *,
+    base_bps: float,
+    slippage_bps: float,
+) -> pd.DataFrame:
+    """Translate current dashboard results into the selection engine schema."""
+
+    rows: list[dict[str, object]] = []
+    n_observations = len(portfolio_payload.get("portfolio_returns", pd.Series(dtype=float)))
+    for strategy_name, result in portfolio_payload.get("strategy_results", {}).items():
+        rows.append(
+            {
+                "strategy": str(strategy_name),
+                "strategy_type": "fixed",
+                "return_basis": "net",
+                "n_observations": n_observations,
+                "total_cost_bps": float(base_bps) + float(slippage_bps),
+                **_performance_row_from_result(result),
+            }
+        )
+
+    adaptive_results = portfolio_payload.get("adaptive_results")
+    if adaptive_results is not None:
+        defensive_metadata = adaptive_results.get("defensive_metadata", {})
+        rows.append(
+            {
+                "strategy": portfolio_payload.get(
+                    "adaptive_strategy_label",
+                    adaptive_overlay_name(
+                        str(portfolio_payload.get("adaptive_regime_source", "")),
+                        str(portfolio_payload.get("adaptive_policy_preset", "")),
+                    ),
+                ),
+                "strategy_type": "regime_adaptive",
+                "regime_source": (
+                    "hmm_walk_forward"
+                    if "hmm" in str(portfolio_payload.get("adaptive_regime_source", "")).lower()
+                    else "rule_based_lagged"
+                ),
+                "policy_preset": str(
+                    portfolio_payload.get("adaptive_policy_preset", "Conservative")
+                ).lower(),
+                "return_basis": "net",
+                "n_observations": n_observations,
+                "total_cost_bps": float(base_bps) + float(slippage_bps),
+                **defensive_metadata,
+                **_performance_row_from_result(adaptive_results),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def build_dashboard_recommendation(
+    portfolio_payload: dict[str, object] | None,
+    robustness_payload: dict[str, object] | None,
+    *,
+    investor_profile: str,
+    base_bps: float,
+    slippage_bps: float,
+) -> StrategyRecommendation:
+    """Build one recommendation from current results plus persisted validation evidence."""
+
+    artifacts = load_selection_artifacts(project_root)
+    if robustness_payload is not None:
+        current_cpcv = robustness_payload.get("robustness_ranking")
+        if not isinstance(current_cpcv, pd.DataFrame) or current_cpcv.empty:
+            current_cpcv = robustness_payload.get("summary_table")
+        if isinstance(current_cpcv, pd.DataFrame) and not current_cpcv.empty:
+            artifacts["cpcv_summary"] = current_cpcv
+
+    candidate_metrics = None
+    current_regime = None
+    n_observations = None
+    if portfolio_payload is not None:
+        candidate_metrics = build_selection_candidate_metrics(
+            portfolio_payload,
+            base_bps=base_bps,
+            slippage_bps=slippage_bps,
+        )
+        n_observations = len(
+            portfolio_payload.get("portfolio_returns", pd.Series(dtype=float))
+        )
+        regime_payload = portfolio_payload.get("market_regime_results") or {}
+        current_regime = regime_payload.get(
+            "current_decision_regime",
+            regime_payload.get("current_observed_regime"),
+        )
+
+    return select_strategy_for_profile(
+        investor_profile,
+        candidate_metrics=candidate_metrics,
+        current_regime=current_regime,
+        base_bps=base_bps,
+        slippage_bps=slippage_bps,
+        hmm_walk_forward_valid=bool(HMM_AVAILABLE),
+        n_observations=n_observations,
+        artifacts=artifacts,
+    )
+
+
+def selection_gate_table(
+    recommendation: StrategyRecommendation,
+) -> pd.DataFrame:
+    """Flatten gate dataclasses for research and developer diagnostics."""
+
+    rows = []
+    for strategy, gates in recommendation.gate_results.items():
+        for gate in gates:
+            rows.append({"strategy": strategy, **gate.to_dict()})
+    return pd.DataFrame(rows)
+
+
+def _format_selection_tradeoff_table(frame: pd.DataFrame) -> pd.DataFrame:
+    if not isinstance(frame, pd.DataFrame) or frame.empty:
+        return pd.DataFrame()
+    display = frame.copy()
+    for column in ["cagr", "max_drawdown", "stress_period_return"]:
+        if column in display:
+            display[column] = display[column].map(format_percent)
+    for column in ["calmar", "total_turnover"]:
+        if column in display:
+            display[column] = display[column].map(format_decimal)
+    for column in ["final_value", "total_transaction_cost"]:
+        if column in display:
+            display[column] = display[column].map(format_currency)
+    return display.rename(
+        columns={column: net_metric_label(column) for column in display.columns}
+    )
+
+
+def render_selection_diagnostics(
+    recommendation: StrategyRecommendation,
+) -> None:
+    """Render profile mapping, gates, scores, ranking, and playbook."""
+
+    st.header("Strategy Selection Diagnostics")
+    st.caption(
+        "Selection is based on net metrics, walk-forward-safe evidence, CPCV coverage, "
+        "replication, stress behavior, turnover, and defensive-source metadata."
+    )
+    st.write(
+        f"Profile: **{recommendation.investor_profile}** · Scenarios: "
+        f"**{', '.join(recommendation.scenario_categories)}**"
+    )
+    with st.expander("Selection Gates", expanded=True):
+        st.dataframe(selection_gate_table(recommendation), use_container_width=True)
+    with st.expander("Candidate Scores and Ranking", expanded=True):
+        scores = recommendation.candidate_scores.reset_index().rename(
+            columns={"index": "strategy"}
+        )
+        st.dataframe(scores, use_container_width=True)
+    with st.expander("Profile and Role Mapping", expanded=False):
+        role_frame = pd.DataFrame(
+            [
+                {"strategy": strategy, "assigned_role": role}
+                for strategy, role in recommendation.role_assignments.items()
+            ]
+        )
+        st.dataframe(role_frame, use_container_width=True)
+    with st.expander("Scenario Playbook", expanded=False):
+        st.dataframe(build_strategy_playbook(), use_container_width=True)
+
+
+def render_manager_view(
+    portfolio_payload: dict[str, object] | None,
+    robustness_payload: dict[str, object] | None,
+    *,
+    selected_objective_label: str,
+    recommendation: StrategyRecommendation | None = None,
+) -> None:
+    """Render only the decision inputs and outputs needed by a portfolio manager."""
+
+    if recommendation is None:
+        st.info(
+            "Choose the portfolio universe, investment amount, date range, investor "
+            "objective, and cost assumption, then select Run Recommendation."
+        )
+        st.caption(
+            "The default Balanced workflow evaluates HERC with "
+            "Regime-Adaptive HMM Walk-Forward — Conservative as the risk-control overlay."
+        )
+        return
+
+    st.header("Strategy Recommendation")
+    core_col, overlay_col, confidence_col = st.columns(3)
+    core_col.metric("Core Portfolio", recommendation.main_strategy)
+    overlay_col.metric(
+        "Overlay / Reference",
+        recommendation.overlay_strategy or "None",
+    )
+    confidence_col.metric(
+        "Recommendation Confidence",
+        recommendation.confidence,
+        delta=f"{recommendation.confidence_score:.0%}",
+    )
+    st.success(recommendation.explanation)
+    st.caption(
+        f"Current scenario assessment: {', '.join(recommendation.scenario_categories)}"
+    )
+
+    st.header("Tradeoff Table")
+    st.dataframe(
+        _format_selection_tradeoff_table(
+            recommendation.evidence.get("comparison_table", pd.DataFrame())
+        ),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    st.header("Why This Recommendation")
+    st.write(
+        f"**{recommendation.main_strategy}** is the selected fixed core. "
+        f"**{recommendation.overlay_strategy or 'No adaptive strategy'}** is assigned "
+        f"the role **{recommendation.overlay_role or 'Not selected'}**."
+    )
+    st.write(
+        "The engine separates growth leadership from risk-control and robustness roles. "
+        "It does not promote an adaptive strategy on a single backtest or gross result."
+    )
+    st.caption(
+        f"{RULE_BASED_ROBUSTNESS_REFERENCE} remains the CPCV-favored robustness reference; "
+        "limited successful-fold coverage reduces confidence."
+    )
+
+    st.header("Warnings and Assumptions")
+    for warning in recommendation.warnings:
+        st.warning(warning)
+    for assumption in recommendation.assumptions:
+        st.caption(f"• {assumption}")
+
+
+def render_developer_view(
+    portfolio_payload: dict[str, object] | None,
+    sensitivity_payload: dict[str, object] | None,
+    robustness_payload: dict[str, object] | None,
+    *,
+    selected_objective_label: str,
+    recommendation: StrategyRecommendation | None = None,
+) -> None:
+    """Render raw audit and implementation diagnostics behind collapsed sections."""
+    st.info(MODE_NOTES[DEVELOPER_VIEW])
+    st.caption(f"Current research objective: {selected_objective_label}")
+
+    if portfolio_payload is None and sensitivity_payload is None and robustness_payload is None:
+        st.info("Run an analysis before opening raw developer diagnostics.")
+        return
+
+    regime_payload = (
+        portfolio_payload.get("market_regime_results")
+        if portfolio_payload is not None
+        else None
+    )
+    adaptive_results = (
+        portfolio_payload.get("adaptive_results")
+        if portfolio_payload is not None
+        else None
+    )
+
+    with st.expander("1. Raw HMM Diagnostics", expanded=False):
+        if regime_payload is None:
+            st.caption("No regime payload is available.")
+        else:
+            probabilities = regime_payload.get(
+                "hmm_state_probabilities",
+                pd.DataFrame(),
+            )
+            diagnostics = regime_payload.get("hmm_diagnostics", pd.DataFrame())
+            comparison = regime_payload.get("method_comparison") or {}
+            disagreements = comparison.get("dates_of_disagreement", pd.DataFrame())
+            if not probabilities.empty:
+                st.dataframe(probabilities.tail(100), use_container_width=True)
+            render_dataframe_download(
+                "Download Full HMM Probability Table",
+                probabilities,
+                "hmm_state_probabilities.csv",
+                key="download_hmm_probabilities",
+            )
+            st.write("HMM fit diagnostics")
+            st.dataframe(diagnostics, use_container_width=True)
+            st.write("Rule-based versus HMM disagreement dates")
+            st.dataframe(disagreements, use_container_width=True)
+
+    with st.expander("2. Raw CPCV Diagnostics", expanded=False):
+        if robustness_payload is None:
+            st.caption("No CPCV payload is available.")
+        else:
+            split_diagnostics = robustness_payload.get(
+                "split_diagnostics",
+                pd.DataFrame(),
+            )
+            fold_results = robustness_payload.get("fold_results", pd.DataFrame())
+            st.write("Split diagnostics")
+            st.dataframe(split_diagnostics, use_container_width=True)
+            st.write("Fold-level metrics and failed-fold traces")
+            st.dataframe(fold_results, use_container_width=True)
+            render_dataframe_download(
+                "Download Full CPCV Fold Table",
+                fold_results,
+                "cpcv_fold_results.csv",
+                key="developer_download_cpcv_folds",
+            )
+
+    with st.expander("3. Full Adaptive Decision Log", expanded=False):
+        diagnostics = (
+            adaptive_results.get("diagnostics", pd.DataFrame())
+            if adaptive_results is not None
+            else pd.DataFrame()
+        )
+        st.dataframe(diagnostics, use_container_width=True)
+        render_dataframe_download(
+            "Download Full Adaptive Diagnostics",
+            diagnostics,
+            "adaptive_daily_diagnostics.csv",
+            key="download_adaptive_diagnostics",
+        )
+
+    with st.expander("4. Full Weight History", expanded=False):
+        weights = (
+            adaptive_results.get("weights", pd.DataFrame())
+            if adaptive_results is not None
+            else (
+                portfolio_payload.get("backtest_results", {}).get(
+                    "weights_history",
+                    pd.DataFrame(),
+                )
+                if portfolio_payload is not None
+                else pd.DataFrame()
+            )
+        )
+        st.dataframe(weights, use_container_width=True)
+        render_dataframe_download(
+            "Download Full Weight History",
+            weights,
+            "full_weight_history.csv",
+            key="download_full_weight_history",
+        )
+
+    with st.expander("5. Net/Gross Reconciliation", expanded=False):
+        if portfolio_payload is None:
+            st.caption("No portfolio payload is available.")
+        else:
+            cost_drag = portfolio_payload.get("cost_drag_summary", {})
+            reconciliation = pd.DataFrame(
+                [
+                    {
+                        "Gross Final Value": cost_drag.get("gross_final_value"),
+                        "Net Final Value": cost_drag.get("net_final_value"),
+                        "Cost Drag": cost_drag.get("cost_drag"),
+                        "Cost Drag %": cost_drag.get("cost_drag_pct"),
+                    }
+                ]
+            )
+            st.dataframe(reconciliation, use_container_width=True)
+            st.plotly_chart(
+                plot_cost_adjusted_comparison(
+                    portfolio_payload["gross_portfolio_value"],
+                    portfolio_payload["portfolio_value"],
+                ),
+                use_container_width=True,
+            )
+
+    with st.expander("6. Defensive Return Reconciliation", expanded=False):
+        if adaptive_results is None:
+            st.caption("No adaptive defensive-return result is available.")
+        else:
+            metadata = dict(adaptive_results.get("defensive_metadata", {}))
+            defensive_series = pd.to_numeric(
+                adaptive_results.get("defensive_returns", pd.Series(dtype=float)),
+                errors="coerce",
+            ).dropna()
+            reconciliation = pd.DataFrame(
+                [
+                    {
+                        **metadata,
+                        "observations": int(len(defensive_series)),
+                        "mean_daily_return": (
+                            float(defensive_series.mean())
+                            if not defensive_series.empty
+                            else np.nan
+                        ),
+                        "compounded_annualized_return": (
+                            float(
+                                (1.0 + defensive_series).prod()
+                                ** (252.0 / len(defensive_series))
+                                - 1.0
+                            )
+                            if not defensive_series.empty
+                            else np.nan
+                        ),
+                    }
+                ]
+            )
+            st.dataframe(reconciliation, use_container_width=True)
+            render_dataframe_download(
+                "Download Defensive Return Reconciliation",
+                reconciliation,
+                "defensive_return_reconciliation.csv",
+                key="download_defensive_reconciliation",
+            )
+
+    with st.expander("7. Internal Config Dump", expanded=False):
+        config_dump = {
+            "selected_tickers": (
+                portfolio_payload.get("selected_tickers")
+                if portfolio_payload is not None
+                else None
+            ),
+            "benchmark_strategy": (
+                portfolio_payload.get("benchmark_strategy")
+                if portfolio_payload is not None
+                else None
+            ),
+            "covariance_method": (
+                portfolio_payload.get("covariance_method")
+                if portfolio_payload is not None
+                else None
+            ),
+            "adaptive_regime_source": (
+                portfolio_payload.get("adaptive_regime_source")
+                if portfolio_payload is not None
+                else None
+            ),
+            "adaptive_policy_preset": (
+                portfolio_payload.get("adaptive_policy_preset")
+                if portfolio_payload is not None
+                else None
+            ),
+            "defensive_metadata": (
+                portfolio_payload.get("defensive_metadata")
+                if portfolio_payload is not None
+                else None
+            ),
+            "research_objective": selected_objective_label,
+        }
+        st.json(config_dump)
+        if sensitivity_payload is not None:
+            render_dataframe_download(
+                "Download Full Sensitivity Table",
+                sensitivity_payload.get("experiment_results_df", pd.DataFrame()),
+                "full_sensitivity_results.csv",
+                key="developer_download_sensitivity",
+            )
+
+    with st.expander("8. Raw Strategy Recommendation", expanded=False):
+        if recommendation is None:
+            st.caption("No strategy recommendation is available.")
+        else:
+            raw = recommendation.to_dict()
+            raw.pop("gate_results", None)
+            raw.pop("candidate_scores", None)
+            st.json(raw)
+
+    with st.expander("9. Selection Gate Results", expanded=False):
+        if recommendation is None:
+            st.caption("No selection gates are available.")
+        else:
+            st.dataframe(
+                selection_gate_table(recommendation),
+                use_container_width=True,
+            )
+
+    with st.expander("10. Selection Artifact Diagnostics and Scoring", expanded=False):
+        if recommendation is None:
+            st.caption("No selection artifact diagnostics are available.")
+        else:
+            st.json(recommendation.artifact_diagnostics)
+            st.write("Candidate scoring trace")
+            st.dataframe(
+                recommendation.candidate_scores.reset_index(),
+                use_container_width=True,
+            )
 
 
 initialize_session_state()
@@ -3114,153 +3816,304 @@ st.title("Adaptive Portfolio Risk Analytics")
 
 all_asset_labels = [ticker_label(ticker) for ticker in INDIAN_ASSET_UNIVERSE]
 
+st.sidebar.header("Dashboard Mode")
+dashboard_mode = st.sidebar.radio(
+    "View",
+    DASHBOARD_MODES,
+    key="ui_dashboard_mode",
+    help=(
+        "Manager View is decision-ready. Research View exposes methodology and "
+        "validation controls. Developer / Debug View contains raw audit outputs."
+    ),
+)
+if dashboard_mode in MODE_NOTES:
+    st.sidebar.caption(MODE_NOTES[dashboard_mode])
+
 st.sidebar.header("Portfolio Inputs")
 
-with st.sidebar.expander("Basic Portfolio Setup", expanded=True):
-    preset = st.selectbox(
-        "Universe Preset",
-        ["Core Diversified", "Banks + IT + Gold", "Full Research Universe", "Custom"],
-        key="ui_universe_preset",
-    )
-    select_all = st.checkbox(
-        "Select All Assets In Preset",
-        key="ui_select_all_assets",
-    )
+manager_investor_profile = str(
+    st.session_state.get("ui_manager_investor_profile", "Balanced")
+)
+manager_cost_assumption = str(
+    st.session_state.get("ui_manager_cost_assumption", "Moderate")
+)
 
-    if preset != st.session_state.get("_last_preset") or select_all != st.session_state.get(
-        "_last_select_all"
-    ):
-        st.session_state["ui_selected_assets"] = update_selected_assets_for_preset(
-            preset, select_all
+if dashboard_mode == MANAGER_VIEW:
+    with st.sidebar.expander("Portfolio Universe", expanded=True):
+        preset = st.selectbox(
+            "Portfolio Universe",
+            ["Core Diversified", "Banks + IT + Gold", "Full Research Universe"],
+            key="ui_manager_universe_preset",
         )
-        st.session_state["_last_preset"] = preset
-        st.session_state["_last_select_all"] = select_all
+        start_date = st.date_input("Start Date", key="ui_manager_start_date")
+        end_date = st.date_input("End Date", key="ui_manager_end_date")
+        initial_capital = st.number_input(
+            "Investment Amount",
+            min_value=100_000.0,
+            max_value=100_000_000.0,
+            step=100_000.0,
+            key="ui_manager_initial_capital",
+        )
 
-    asset_options = all_asset_labels if preset == "Custom" else default_labels_for_preset(preset)
-    st.multiselect(
-        "Selected Assets",
-        options=asset_options,
-        key="ui_selected_assets",
-        help="Search by ticker or company name. Use Add Ticker below for symbols outside this list.",
-    )
-
-    with st.expander("Add Ticker", expanded=False):
-        st.text_input(
-            "Ticker Symbol",
-            key="ui_ticker_to_add",
-            help="Enter a Yahoo Finance symbol such as AAPL, RELIANCE.NS, or BTC-USD.",
+    with st.sidebar.expander("Recommendation Inputs", expanded=True):
+        manager_investor_profile = st.selectbox(
+            "Investor Objective",
+            PROFILE_NAMES,
+            key="ui_manager_investor_profile",
         )
-        add_ticker_col, clear_ticker_col = st.columns(2)
-        add_ticker_col.button(
-            "Add Ticker",
-            key="ui_add_ticker",
-            on_click=add_tickers_to_portfolio,
+        manager_cost_assumption = st.selectbox(
+            "Cost Assumption",
+            COST_ASSUMPTION_NAMES,
+            key="ui_manager_cost_assumption",
         )
-        clear_ticker_col.button(
-            "Clear Added",
-            key="ui_clear_added_tickers",
-            on_click=clear_added_tickers,
-            disabled=not st.session_state.get("ui_added_tickers"),
-        )
-        added_tickers = st.session_state.get("ui_added_tickers", [])
-        if added_tickers:
-            st.caption(f"Added tickers: {', '.join(added_tickers)}")
+        if manager_cost_assumption == "Custom":
+            base_bps = st.number_input(
+                "Custom Base Cost (bps)",
+                min_value=0.0,
+                max_value=100.0,
+                key="ui_manager_custom_base_bps",
+            )
+            slippage_bps = st.number_input(
+                "Custom Slippage (bps)",
+                min_value=0.0,
+                max_value=100.0,
+                key="ui_manager_custom_slippage_bps",
+            )
         else:
-            st.caption("No manually added tickers.")
-
-    start_date = st.date_input("Start Date", date(2020, 1, 1), key="ui_start_date")
-    end_date = st.date_input("End Date", date.today(), key="ui_end_date")
-    initial_capital = st.number_input(
-        "Initial Capital",
-        min_value=100_000.0,
-        max_value=100_000_000.0,
-        value=1_000_000.0,
-        step=100_000.0,
-        key="ui_initial_capital",
-    )
-
-with st.sidebar.expander("Strategy & Backtest Settings", expanded=False):
-    strategy = st.selectbox(
-        "Strategy",
-        ["Equal Weight", "Inverse Volatility", "HRP", "HERC"],
-        help="Primary portfolio construction method for the main analysis.",
-        key="ui_strategy",
-    )
-    comparison_strategies = st.multiselect(
-        "Benchmark Comparison Strategies",
-        ["Equal Weight", "Inverse Volatility", "HRP", "HERC"],
-        default=["Equal Weight", "Inverse Volatility", "HRP", "HERC"],
-        help="Strategies included in the benchmark comparison table and charts.",
-        key="ui_comparison_strategies",
-    )
-    benchmark_strategy = st.selectbox(
-        "Benchmark Strategy",
-        ["Equal Weight", "Inverse Volatility", "HRP", "HERC"],
-        index=0,
-        help="Reference strategy used for relative performance metrics.",
-        key="ui_benchmark_strategy",
-    )
-    covariance_method = st.selectbox(
-        "Covariance Method",
-        COVARIANCE_METHOD_OPTIONS,
-        index=0,
-        help="Covariance estimator used by HRP, HERC, and research comparisons.",
-        key="ui_covariance_method",
-    )
-    rebalance_mode = st.selectbox(
-        "Rebalance Mode",
-        ["calendar", "threshold", "calendar_or_threshold"],
-        index=0,
-        help="Calendar rebalances on schedule. Threshold modes wait for weight drift triggers.",
-        key="ui_rebalance_mode",
-    )
-    if rebalance_mode in {"threshold", "calendar_or_threshold"}:
-        threshold = st.slider(
-            "Threshold",
-            min_value=0.01,
-            max_value=0.20,
-            value=0.05,
-            step=0.01,
-            help="Maximum absolute weight drift required before a threshold rebalance triggers.",
-            key="ui_threshold",
+            base_bps, slippage_bps = COST_ASSUMPTIONS[manager_cost_assumption]
+            st.caption(
+                f"Applied cost: {base_bps:.0f} bps base + "
+                f"{slippage_bps:.0f} bps slippage."
+            )
+        run_portfolio_button = st.button(
+            "Run Recommendation",
+            key="ui_run_portfolio",
+            type="primary",
         )
-    else:
-        threshold = 0.05
-    base_bps = st.number_input(
-        "Base Cost (bps)",
-        min_value=0.0,
-        max_value=100.0,
-        value=10.0,
-        step=1.0,
-        help="Base proportional trading cost applied to turnover.",
-        key="ui_base_bps",
-    )
-    slippage_bps = st.number_input(
-        "Slippage (bps)",
-        min_value=0.0,
-        max_value=100.0,
-        value=5.0,
-        step=1.0,
-        help="Additional slippage cost layered on top of the base trading cost.",
-        key="ui_slippage_bps",
-    )
-    run_portfolio_button = st.button("Run Portfolio Analysis", key="ui_run_portfolio")
 
-with st.sidebar.expander("Advanced Risk Controls", expanded=False):
-    # Advanced controls are hidden by default to keep first-run usage focused on the base workflow.
-    enable_vol_targeting = st.checkbox(
-        "Enable Volatility Targeting",
-        value=False,
-        key="ui_enable_vol_targeting",
-    )
-    if enable_vol_targeting:
+    strategy = "HERC"
+    comparison_strategies = ["Equal Weight", "Inverse Volatility", "HRP", "HERC"]
+    benchmark_strategy = "Equal Weight"
+    global_research_objective_label = MANAGER_PROFILE_OBJECTIVES[
+        manager_investor_profile
+    ]
+else:
+    with st.sidebar.expander("Portfolio Scope", expanded=dashboard_mode != DEVELOPER_VIEW):
+        preset = st.selectbox(
+            "Universe Preset",
+            ["Core Diversified", "Banks + IT + Gold", "Full Research Universe", "Custom"],
+            key="ui_universe_preset",
+        )
+        select_all = st.checkbox(
+            "Select All Assets In Preset",
+            key="ui_select_all_assets",
+        )
+
+        if preset != st.session_state.get("_last_preset") or select_all != st.session_state.get(
+            "_last_select_all"
+        ):
+            st.session_state["ui_selected_assets"] = update_selected_assets_for_preset(
+                preset, select_all
+            )
+            st.session_state["_last_preset"] = preset
+            st.session_state["_last_select_all"] = select_all
+
+        asset_options = all_asset_labels if preset == "Custom" else default_labels_for_preset(preset)
+        st.multiselect(
+            "Selected Assets",
+            options=asset_options,
+            key="ui_selected_assets",
+            help="Search by ticker or company name. Use Add Ticker below for symbols outside this list.",
+        )
+
+        with st.expander("Add Ticker", expanded=False):
+            st.text_input(
+                "Ticker Symbol",
+                key="ui_ticker_to_add",
+                help="Enter a Yahoo Finance symbol such as AAPL, RELIANCE.NS, or BTC-USD.",
+            )
+            add_ticker_col, clear_ticker_col = st.columns(2)
+            add_ticker_col.button(
+                "Add Ticker",
+                key="ui_add_ticker",
+                on_click=add_tickers_to_portfolio,
+            )
+            clear_ticker_col.button(
+                "Clear Added",
+                key="ui_clear_added_tickers",
+                on_click=clear_added_tickers,
+                disabled=not st.session_state.get("ui_added_tickers"),
+            )
+
+        start_date = st.date_input("Start Date", date(2020, 1, 1), key="ui_start_date")
+        end_date = st.date_input("End Date", date.today(), key="ui_end_date")
+        initial_capital = st.number_input(
+            "Initial Capital",
+            min_value=100_000.0,
+            max_value=100_000_000.0,
+            value=1_000_000.0,
+            step=100_000.0,
+            key="ui_initial_capital",
+        )
+
+    with st.sidebar.expander("Core Strategy Setup", expanded=False):
+        strategy = st.selectbox(
+            "Strategy",
+            ["Equal Weight", "Inverse Volatility", "HRP", "HERC"],
+            help="Primary portfolio construction method for the main analysis.",
+            key="ui_strategy",
+        )
+        comparison_strategies = st.multiselect(
+            "Benchmark Comparison Strategies",
+            ["Equal Weight", "Inverse Volatility", "HRP", "HERC"],
+            default=["Equal Weight", "Inverse Volatility", "HRP", "HERC"],
+            key="ui_comparison_strategies",
+        )
+        benchmark_strategy = st.selectbox(
+            "Benchmark Strategy",
+            ["Equal Weight", "Inverse Volatility", "HRP", "HERC"],
+            index=0,
+            key="ui_benchmark_strategy",
+        )
+        base_bps = st.number_input(
+            "Base Cost (bps)",
+            min_value=0.0,
+            max_value=100.0,
+            value=10.0,
+            step=1.0,
+            key="ui_base_bps",
+        )
+        slippage_bps = st.number_input(
+            "Slippage (bps)",
+            min_value=0.0,
+            max_value=100.0,
+            value=5.0,
+            step=1.0,
+            key="ui_slippage_bps",
+        )
+        global_research_objective_label = st.selectbox(
+            "Research Objective",
+            list(RESEARCH_OBJECTIVES),
+            key="ui_research_objective",
+        )
+        run_portfolio_button = (
+            st.button("Run Portfolio Analysis", key="ui_run_portfolio")
+            if dashboard_mode != DEVELOPER_VIEW
+            else False
+        )
+
+if dashboard_mode == RESEARCH_VIEW:
+    with st.sidebar.expander("Advanced Strategy Controls", expanded=False):
+        covariance_method = st.selectbox(
+            "Covariance Method",
+            COVARIANCE_METHOD_OPTIONS,
+            help="Covariance estimator used by HRP, HERC, and research comparisons.",
+            key="ui_covariance_method",
+        )
+        rebalance_mode = st.selectbox(
+            "Rebalance Mode",
+            ["calendar", "threshold", "calendar_or_threshold"],
+            help="Calendar rebalances on schedule. Threshold modes use weight drift.",
+            key="ui_rebalance_mode",
+        )
+        if rebalance_mode in {"threshold", "calendar_or_threshold"}:
+            threshold = st.slider(
+                "Threshold",
+                min_value=0.01,
+                max_value=0.20,
+                step=0.01,
+                help="Maximum absolute weight drift required before rebalancing.",
+                key="ui_threshold",
+            )
+        else:
+            threshold = 0.05
+else:
+    covariance_method = str(st.session_state.get("ui_covariance_method", "sample"))
+    rebalance_mode = str(st.session_state.get("ui_rebalance_mode", "calendar"))
+    threshold = float(st.session_state.get("ui_threshold", 0.05))
+
+enable_vol_targeting = False
+defensive_sleeve = "Synthetic 4% annualized"
+synthetic_annual_rate = 0.04
+vol_target_mode = "Adaptive"
+base_target_vol = 0.10
+realized_vol_window = 63
+regime_lookback_window = 252
+exposure_floor = 0.25
+exposure_cap = 1.0
+no_trade_band = 0.05
+
+enable_regime_analytics = dashboard_mode == MANAGER_VIEW
+regime_method = (
+    DEFAULT_MANAGER_ADAPTIVE_OVERLAY["regime_method"]
+    if HMM_AVAILABLE
+    else "Rule-based"
+)
+regime_vol_lookback = 63
+regime_trend_lookback = 126
+regime_corr_lookback = 63
+regime_crisis_drawdown = -0.15
+regime_stress_drawdown = -0.08
+use_lagged_decision_regime = True
+hmm_n_states = 4
+hmm_min_train_size = 504
+hmm_refit_frequency = 21
+hmm_covariance_type = "diag"
+hmm_decision_lag = 1
+hmm_feature_columns = list(DEFAULT_HMM_FEATURE_COLUMNS)
+
+enable_adaptive_strategy = dashboard_mode == MANAGER_VIEW
+adaptive_regime_source = (
+    DEFAULT_MANAGER_ADAPTIVE_OVERLAY["regime_source"]
+    if HMM_AVAILABLE
+    else "Rule-based lagged decision regime"
+)
+adaptive_policy_preset = DEFAULT_MANAGER_ADAPTIVE_OVERLAY["policy_preset"]
+adaptive_training_window = 252
+adaptive_rebalance_frequency = "M"
+adaptive_show_policy_table = False
+
+sensitivity_strategies = ["HRP", "HERC"]
+sensitivity_covariance_methods = ["sample", "ledoit_wolf", "ewma_ledoit_wolf"]
+sensitivity_rebalance_modes = ["calendar", "threshold"]
+sensitivity_thresholds = "0.03,0.05,0.10"
+sensitivity_max_runs = 24
+include_adaptive_sensitivity = False
+sensitivity_adaptive_sources = ["rule_based_lagged"]
+sensitivity_adaptive_presets = ["conservative", "balanced", "aggressive"]
+sensitivity_adaptive_training_window = 252
+sensitivity_adaptive_rebalance_frequency = "M"
+sensitivity_max_adaptive_configs = 6
+run_sensitivity_button = False
+
+enable_robustness_validation = False
+robustness_n_blocks = 6
+robustness_n_test_blocks = 2
+robustness_embargo_pct = 1.0
+robustness_purge_window = 0
+robustness_max_configs = 5
+include_adaptive_in_cpcv = False
+robustness_max_adaptive_configs = 2
+run_robustness_button = False
+
+if dashboard_mode == RESEARCH_VIEW:
+    with st.sidebar.expander("Defensive Sleeve", expanded=False):
+        defensive_options = [
+            "Synthetic 4% annualized",
+            "Cash / zero return",
+            "LIQUIDBEES.NS",
+            "LIQUIDETF.NS",
+            "Provided series if available",
+        ]
+        if st.session_state.get("ui_defensive_sleeve") not in defensive_options:
+            st.session_state["ui_defensive_sleeve"] = defensive_options[0]
         defensive_sleeve = st.selectbox(
-            "Defensive Sleeve",
-            ["LIQUIDBEES.NS", "LIQUIDETF.NS", "Synthetic Risk-Free"],
+            "Defensive sleeve source",
+            defensive_options,
             key="ui_defensive_sleeve",
         )
         synthetic_annual_rate = st.number_input(
-            "Synthetic Annual Rate",
+            "Synthetic annual rate",
             min_value=0.0,
             max_value=0.20,
             value=0.04,
@@ -3268,470 +4121,386 @@ with st.sidebar.expander("Advanced Risk Controls", expanded=False):
             format="%.2f",
             key="ui_synthetic_annual_rate",
         )
-        vol_target_mode = st.selectbox(
-            "Vol Target Mode",
-            ["Adaptive", "Fixed"],
-            index=0,
-            key="ui_vol_target_mode",
-        )
-        base_target_vol = st.slider(
-            "Base Target Vol",
-            min_value=0.03,
-            max_value=0.20,
-            value=0.10,
-            step=0.01,
-            key="ui_base_target_vol",
-        )
-        realized_vol_window = st.slider(
-            "Realized Vol Window",
-            min_value=21,
-            max_value=126,
-            value=63,
-            step=1,
-            key="ui_realized_vol_window",
-        )
-        regime_lookback_window = st.slider(
-            "Regime Lookback Window",
-            min_value=126,
-            max_value=504,
-            value=252,
-            step=21,
-            key="ui_regime_lookback_window",
-        )
-        exposure_floor = st.slider(
-            "Exposure Floor",
-            min_value=0.0,
-            max_value=1.0,
-            value=0.25,
-            step=0.05,
-            key="ui_exposure_floor",
-        )
-        exposure_cap = st.slider(
-            "Exposure Cap",
-            min_value=0.25,
-            max_value=1.0,
-            value=1.0,
-            step=0.05,
-            key="ui_exposure_cap",
-        )
-        no_trade_band = st.slider(
-            "No-Trade Band",
-            min_value=0.00,
-            max_value=0.20,
-            value=0.05,
-            step=0.01,
-            key="ui_no_trade_band",
-        )
-    else:
-        defensive_sleeve = "Synthetic Risk-Free"
-        synthetic_annual_rate = 0.04
-        vol_target_mode = "Adaptive"
-        base_target_vol = 0.10
-        realized_vol_window = 63
-        regime_lookback_window = 252
-        exposure_floor = 0.25
-        exposure_cap = 1.0
-        no_trade_band = 0.05
+        if defensive_sleeve == "Provided series if available":
+            st.caption(
+                "No uploaded series is available in the current dashboard flow; "
+                "the run will record and use the synthetic fallback."
+            )
 
-with st.sidebar.expander("Phase 3B — Market Regime Detection", expanded=False):
-    enable_regime_analytics = st.checkbox(
-        "Enable Regime Analytics",
-        value=False,
-        key="ui_enable_regime_analytics",
-    )
-    if enable_regime_analytics:
+    with st.sidebar.expander("Volatility Targeting", expanded=False):
+        enable_vol_targeting = st.checkbox(
+            "Enable Volatility Targeting",
+            value=False,
+            key="ui_enable_vol_targeting",
+        )
+        if enable_vol_targeting:
+            vol_target_mode = st.selectbox(
+                "Vol Target Mode",
+                ["Adaptive", "Fixed"],
+                key="ui_vol_target_mode",
+            )
+            base_target_vol = st.slider(
+                "Base Target Vol",
+                min_value=0.03,
+                max_value=0.20,
+                value=0.10,
+                step=0.01,
+                key="ui_base_target_vol",
+            )
+            realized_vol_window = st.slider(
+                "Realized Vol Window",
+                min_value=21,
+                max_value=126,
+                value=63,
+                key="ui_realized_vol_window",
+            )
+            regime_lookback_window = st.slider(
+                "Regime Lookback Window",
+                min_value=126,
+                max_value=504,
+                value=252,
+                step=21,
+                key="ui_regime_lookback_window",
+            )
+            exposure_floor = st.slider(
+                "Exposure Floor",
+                min_value=0.0,
+                max_value=1.0,
+                value=0.25,
+                step=0.05,
+                key="ui_exposure_floor",
+            )
+            exposure_cap = st.slider(
+                "Exposure Cap",
+                min_value=0.25,
+                max_value=1.0,
+                value=1.0,
+                step=0.05,
+                key="ui_exposure_cap",
+            )
+            no_trade_band = st.slider(
+                "No-Trade Band",
+                min_value=0.0,
+                max_value=0.20,
+                value=0.05,
+                step=0.01,
+                key="ui_no_trade_band",
+            )
+
+    with st.sidebar.expander("Phase 3B — Regime Detection", expanded=False):
+        enable_regime_analytics = st.checkbox(
+            "Enable Regime Analytics",
+            key="ui_enable_regime_analytics",
+        )
         regime_method_options = ["Rule-based"]
         if HMM_AVAILABLE:
             regime_method_options.extend(
-                [
-                    "HMM full-sample historical",
-                    "HMM walk-forward experimental",
-                ]
+                ["HMM full-sample historical", "HMM walk-forward experimental"]
             )
-        else:
-            st.info("HMM regime detection requires the optional dependency `hmmlearn`.")
-        regime_method = st.selectbox(
-            "Regime Method",
-            regime_method_options,
-            index=0,
-            key="ui_regime_method",
-            help="Rule-based is the explainable baseline. HMM methods are probabilistic and experimental.",
-        )
-        regime_vol_lookback = st.slider(
-            "Volatility Lookback",
-            min_value=21,
-            max_value=126,
-            value=63,
-            step=1,
-            key="ui_market_regime_vol_lookback",
-        )
-        regime_trend_lookback = st.slider(
-            "Trend Lookback",
-            min_value=63,
-            max_value=252,
-            value=126,
-            step=1,
-            key="ui_market_regime_trend_lookback",
-        )
-        regime_corr_lookback = st.slider(
-            "Correlation Lookback",
-            min_value=21,
-            max_value=126,
-            value=63,
-            step=1,
-            key="ui_market_regime_corr_lookback",
-        )
-        regime_crisis_drawdown = st.slider(
-            "Crisis Drawdown Threshold",
-            min_value=-0.40,
-            max_value=-0.05,
-            value=-0.15,
-            step=0.01,
-            format="%.2f",
-            key="ui_market_regime_crisis_drawdown",
-        )
-        regime_stress_drawdown = st.slider(
-            "Stress Drawdown Threshold",
-            min_value=-0.25,
-            max_value=-0.02,
-            value=-0.08,
-            step=0.01,
-            format="%.2f",
-            key="ui_market_regime_stress_drawdown",
-        )
-        use_lagged_decision_regime = st.checkbox(
-            "Use Lagged Decision Regime",
-            value=True,
-            key="ui_use_lagged_decision_regime",
-            help="Uses the regime observed at t for portfolio analysis at t+1.",
-        )
-        if regime_method != "Rule-based":
-            hmm_n_states = st.selectbox(
-                "Number of Hidden States",
-                [2, 3, 4],
-                index=2,
-                key="ui_hmm_n_states",
+        elif st.session_state.get("ui_regime_method") not in regime_method_options:
+            st.session_state["ui_regime_method"] = "Rule-based"
+        if enable_regime_analytics:
+            if st.session_state.get("ui_regime_method") not in regime_method_options:
+                st.session_state["ui_regime_method"] = regime_method_options[0]
+            regime_method = st.selectbox(
+                "Regime Method",
+                regime_method_options,
+                key="ui_regime_method",
+                help="Full-sample HMM is historical-only and cannot drive adaptive trading.",
             )
-            hmm_covariance_type = st.selectbox(
-                "HMM Covariance Type",
-                ["diag", "full"],
-                index=0,
-                key="ui_hmm_covariance_type",
+            regime_vol_lookback = st.slider(
+                "Volatility Lookback",
+                min_value=21,
+                max_value=126,
+                value=63,
+                key="ui_market_regime_vol_lookback",
             )
-            hmm_decision_lag = st.number_input(
-                "HMM Decision Lag",
-                min_value=0,
-                max_value=21,
-                value=1,
-                step=1,
-                key="ui_hmm_decision_lag",
+            regime_trend_lookback = st.slider(
+                "Trend Lookback",
+                min_value=63,
+                max_value=252,
+                value=126,
+                key="ui_market_regime_trend_lookback",
             )
-            hmm_feature_columns = st.multiselect(
-                "HMM Feature Columns",
-                DEFAULT_HMM_FEATURE_COLUMNS,
-                default=DEFAULT_HMM_FEATURE_COLUMNS,
-                key="ui_hmm_feature_columns",
+            regime_corr_lookback = st.slider(
+                "Correlation Lookback",
+                min_value=21,
+                max_value=126,
+                value=63,
+                key="ui_market_regime_corr_lookback",
             )
-            if regime_method == "HMM walk-forward experimental":
-                hmm_min_train_size = st.number_input(
-                    "HMM Minimum Training Size",
-                    min_value=63,
-                    max_value=2520,
-                    value=504,
-                    step=21,
-                    key="ui_hmm_min_train_size",
+            regime_crisis_drawdown = st.slider(
+                "Crisis Drawdown Threshold",
+                min_value=-0.40,
+                max_value=-0.05,
+                value=-0.15,
+                step=0.01,
+                format="%.2f",
+                key="ui_market_regime_crisis_drawdown",
+            )
+            regime_stress_drawdown = st.slider(
+                "Stress Drawdown Threshold",
+                min_value=-0.25,
+                max_value=-0.02,
+                value=-0.08,
+                step=0.01,
+                format="%.2f",
+                key="ui_market_regime_stress_drawdown",
+            )
+            use_lagged_decision_regime = st.checkbox(
+                "Use Lagged Decision Regime",
+                value=True,
+                key="ui_use_lagged_decision_regime",
+            )
+            if regime_method != "Rule-based":
+                hmm_n_states = st.selectbox(
+                    "Number of Hidden States",
+                    [2, 3, 4],
+                    index=2,
+                    key="ui_hmm_n_states",
                 )
-                hmm_refit_frequency = st.number_input(
-                    "HMM Refit Frequency",
-                    min_value=1,
-                    max_value=252,
-                    value=21,
-                    step=1,
-                    key="ui_hmm_refit_frequency",
+                hmm_covariance_type = st.selectbox(
+                    "HMM Covariance Type",
+                    ["diag", "full"],
+                    key="ui_hmm_covariance_type",
                 )
-            else:
-                hmm_min_train_size = 504
-                hmm_refit_frequency = 21
-        else:
-            hmm_n_states = 4
-            hmm_min_train_size = 504
-            hmm_refit_frequency = 21
-            hmm_covariance_type = "diag"
-            hmm_decision_lag = 1
-            hmm_feature_columns = list(DEFAULT_HMM_FEATURE_COLUMNS)
-    else:
-        regime_method = "Rule-based"
-        regime_vol_lookback = 63
-        regime_trend_lookback = 126
-        regime_corr_lookback = 63
-        regime_crisis_drawdown = -0.15
-        regime_stress_drawdown = -0.08
-        use_lagged_decision_regime = True
-        hmm_n_states = 4
-        hmm_min_train_size = 504
-        hmm_refit_frequency = 21
-        hmm_covariance_type = "diag"
-        hmm_decision_lag = 1
-        hmm_feature_columns = list(DEFAULT_HMM_FEATURE_COLUMNS)
+                hmm_decision_lag = st.number_input(
+                    "HMM Decision Lag",
+                    min_value=0,
+                    max_value=21,
+                    value=1,
+                    key="ui_hmm_decision_lag",
+                )
+                hmm_feature_columns = st.multiselect(
+                    "HMM Feature Columns",
+                    DEFAULT_HMM_FEATURE_COLUMNS,
+                    default=DEFAULT_HMM_FEATURE_COLUMNS,
+                    key="ui_hmm_feature_columns",
+                )
+                if regime_method == "HMM walk-forward experimental":
+                    hmm_min_train_size = st.number_input(
+                        "HMM Minimum Training Size",
+                        min_value=63,
+                        max_value=2520,
+                        value=504,
+                        step=21,
+                        key="ui_hmm_min_train_size",
+                    )
+                    hmm_refit_frequency = st.number_input(
+                        "HMM Refit Frequency",
+                        min_value=1,
+                        max_value=252,
+                        value=21,
+                        key="ui_hmm_refit_frequency",
+                    )
 
-with st.sidebar.expander(
-    "Phase 3C — Regime-Aware Adaptive Allocation",
-    expanded=False,
-):
-    enable_adaptive_strategy = st.checkbox(
-        "Enable Adaptive Regime Strategy",
-        value=False,
-        key="ui_enable_adaptive_strategy",
-    )
-    if enable_adaptive_strategy:
-        adaptive_regime_sources = ["Rule-based lagged decision regime"]
-        if HMM_AVAILABLE:
-            adaptive_regime_sources.append("HMM walk-forward decision regime")
-        else:
-            st.caption(
-                "HMM adaptive allocation is unavailable because `hmmlearn` " "is not installed."
+    with st.sidebar.expander("Phase 3C — Adaptive Allocation Policy", expanded=False):
+        enable_adaptive_strategy = st.checkbox(
+            "Enable Adaptive Regime Strategy",
+            key="ui_enable_adaptive_strategy",
+        )
+        if enable_adaptive_strategy:
+            adaptive_regime_sources = ["Rule-based lagged decision regime"]
+            if HMM_AVAILABLE:
+                adaptive_regime_sources.append("HMM walk-forward decision regime")
+            if st.session_state.get("ui_adaptive_regime_source") not in adaptive_regime_sources:
+                st.session_state["ui_adaptive_regime_source"] = adaptive_regime_sources[0]
+            adaptive_regime_source = st.selectbox(
+                "Adaptive Regime Source",
+                adaptive_regime_sources,
+                key="ui_adaptive_regime_source",
             )
-        adaptive_regime_source = st.selectbox(
-            "Adaptive Regime Source",
-            adaptive_regime_sources,
-            index=0,
-            key="ui_adaptive_regime_source",
-        )
-        adaptive_policy_preset = st.selectbox(
-            "Policy Preset",
-            ["Conservative", "Balanced default", "Aggressive"],
-            index=1,
-            key="ui_adaptive_policy_preset",
-        )
-        adaptive_training_window = st.number_input(
-            "Adaptive Training Window",
-            min_value=60,
-            max_value=756,
-            value=252,
-            step=21,
-            key="ui_adaptive_training_window",
-        )
-        adaptive_rebalance_frequency = st.selectbox(
-            "Adaptive Rebalance Frequency",
-            ["M", "W", "Q"],
-            index=0,
-            format_func=lambda value: {
-                "M": "Monthly",
-                "W": "Weekly",
-                "Q": "Quarterly",
-            }[value],
-            key="ui_adaptive_rebalance_frequency",
-        )
-        adaptive_show_policy_table = st.checkbox(
-            "Show Policy Table",
-            value=True,
-            key="ui_adaptive_show_policy_table",
-        )
-    else:
-        adaptive_regime_source = "Rule-based lagged decision regime"
-        adaptive_policy_preset = "Balanced default"
-        adaptive_training_window = 252
-        adaptive_rebalance_frequency = "M"
-        adaptive_show_policy_table = True
-
-with st.sidebar.expander("Experiment Sensitivity", expanded=False):
-    sensitivity_strategies = st.multiselect(
-        "Sensitivity Strategies",
-        ["Equal Weight", "Inverse Volatility", "HRP", "HERC"],
-        default=["HRP", "HERC"],
-        key="ui_sensitivity_strategies",
-    )
-    sensitivity_covariance_methods = st.multiselect(
-        "Sensitivity Covariance Methods",
-        COVARIANCE_METHOD_OPTIONS,
-        default=["sample", "ledoit_wolf", "ewma_ledoit_wolf"],
-        key="ui_sensitivity_covariance_methods",
-    )
-    sensitivity_rebalance_modes = st.multiselect(
-        "Sensitivity Rebalance Modes",
-        ["calendar", "threshold"],
-        default=["calendar", "threshold"],
-        key="ui_sensitivity_rebalance_modes",
-    )
-    sensitivity_thresholds = st.text_input(
-        "Sensitivity Thresholds",
-        "0.03,0.05,0.10",
-        help="Comma-separated thresholds such as 0.03,0.05,0.10.",
-        key="ui_sensitivity_thresholds",
-    )
-    sensitivity_objective_label = st.selectbox(
-        "Sensitivity Objective",
-        list(SENSITIVITY_OBJECTIVE_MAP.keys()),
-        index=3,
-        key="ui_sensitivity_objective",
-    )
-    sensitivity_max_runs = st.number_input(
-        "Sensitivity Max Runs",
-        min_value=1,
-        max_value=500,
-        value=24,
-        step=1,
-        key="ui_sensitivity_max_runs",
-    )
-    include_adaptive_sensitivity = st.checkbox(
-        "Include Adaptive Regime Strategies",
-        value=False,
-        key="ui_include_adaptive_sensitivity",
-        help="Adds a bounded Phase 3D adaptive grid to the fixed-strategy study.",
-    )
-    if include_adaptive_sensitivity:
-        adaptive_source_options = ["rule_based_lagged"]
-        if HMM_AVAILABLE:
-            adaptive_source_options.append("hmm_walk_forward")
-        else:
-            st.caption(
-                "HMM walk-forward experiments will remain unavailable until "
-                "`hmmlearn` is installed."
+            adaptive_policy_preset = st.selectbox(
+                "Policy Preset",
+                ["Conservative", "Balanced default", "Aggressive"],
+                key="ui_adaptive_policy_preset",
             )
-        sensitivity_adaptive_sources = st.multiselect(
-            "Adaptive Regime Sources",
-            adaptive_source_options,
-            default=["rule_based_lagged"],
-            format_func=lambda value: {
-                "rule_based_lagged": "Rule-based lagged",
-                "hmm_walk_forward": "HMM walk-forward",
-            }[value],
-            key="ui_sensitivity_adaptive_sources",
+            adaptive_training_window = st.number_input(
+                "Adaptive Training Window",
+                min_value=60,
+                max_value=756,
+                value=252,
+                step=21,
+                key="ui_adaptive_training_window",
+            )
+            adaptive_rebalance_frequency = st.selectbox(
+                "Adaptive Rebalance Frequency",
+                ["M", "W", "Q"],
+                format_func=lambda value: {
+                    "M": "Monthly",
+                    "W": "Weekly",
+                    "Q": "Quarterly",
+                }[value],
+                key="ui_adaptive_rebalance_frequency",
+            )
+            adaptive_show_policy_table = st.checkbox(
+                "Show Policy Table",
+                value=True,
+                key="ui_adaptive_show_policy_table",
+            )
+        st.caption(
+            "Rule-based Conservative is the CPCV-favored robustness reference. "
+            "HMM Conservative is the post-P0 low-drawdown overlay."
         )
-        sensitivity_adaptive_presets = st.multiselect(
-            "Adaptive Policy Presets",
-            ["conservative", "balanced", "aggressive"],
-            default=["conservative", "balanced", "aggressive"],
-            format_func=str.title,
-            key="ui_sensitivity_adaptive_presets",
-        )
-        sensitivity_adaptive_training_window = st.number_input(
-            "Adaptive Experiment Training Window",
-            min_value=60,
-            max_value=756,
-            value=252,
-            step=21,
-            key="ui_sensitivity_adaptive_training_window",
-        )
-        sensitivity_adaptive_rebalance_frequency = st.selectbox(
-            "Adaptive Experiment Rebalance Frequency",
-            ["M", "W", "Q"],
-            index=0,
-            format_func=lambda value: {
-                "M": "Monthly",
-                "W": "Weekly",
-                "Q": "Quarterly",
-            }[value],
-            key="ui_sensitivity_adaptive_rebalance_frequency",
-        )
-        sensitivity_max_adaptive_configs = st.number_input(
-            "Maximum Adaptive Configurations",
-            min_value=1,
-            max_value=12,
-            value=6,
-            step=1,
-            key="ui_sensitivity_max_adaptive_configs",
-        )
-    else:
-        sensitivity_adaptive_sources = ["rule_based_lagged"]
-        sensitivity_adaptive_presets = [
-            "conservative",
-            "balanced",
-            "aggressive",
-        ]
-        sensitivity_adaptive_training_window = 252
-        sensitivity_adaptive_rebalance_frequency = "M"
-        sensitivity_max_adaptive_configs = 6
-    run_sensitivity_button = st.button("Run Sensitivity Study", key="ui_run_sensitivity")
 
-with st.sidebar.expander(
-    "Phase 3A — Robustness Validation / CPCV-Style Validation",
-    expanded=False,
-):
-    enable_robustness_validation = st.checkbox(
-        "Enable Robustness Validation",
-        value=False,
-        key="ui_enable_robustness_validation",
-        help="CPCV validation can be computationally expensive.",
-    )
-    if enable_robustness_validation:
-        robustness_n_blocks = st.number_input(
-            "Number of Time Blocks",
-            min_value=2,
-            max_value=12,
-            value=6,
-            step=1,
-            key="ui_robustness_n_blocks",
+    with st.sidebar.expander("Experiment Sensitivity", expanded=False):
+        sensitivity_strategies = st.multiselect(
+            "Sensitivity Strategies",
+            ["Equal Weight", "Inverse Volatility", "HRP", "HERC"],
+            default=["HRP", "HERC"],
+            key="ui_sensitivity_strategies",
         )
-        robustness_n_test_blocks = st.number_input(
-            "Test Blocks per Split",
+        sensitivity_covariance_methods = st.multiselect(
+            "Sensitivity Covariance Methods",
+            COVARIANCE_METHOD_OPTIONS,
+            default=["sample", "ledoit_wolf", "ewma_ledoit_wolf"],
+            key="ui_sensitivity_covariance_methods",
+        )
+        sensitivity_rebalance_modes = st.multiselect(
+            "Sensitivity Rebalance Modes",
+            ["calendar", "threshold"],
+            default=["calendar", "threshold"],
+            key="ui_sensitivity_rebalance_modes",
+        )
+        sensitivity_thresholds = st.text_input(
+            "Sensitivity Thresholds",
+            "0.03,0.05,0.10",
+            key="ui_sensitivity_thresholds",
+        )
+        sensitivity_max_runs = st.number_input(
+            "Sensitivity Max Runs",
             min_value=1,
-            max_value=6,
-            value=2,
-            step=1,
-            key="ui_robustness_n_test_blocks",
+            max_value=500,
+            value=24,
+            key="ui_sensitivity_max_runs",
         )
-        robustness_embargo_pct = st.number_input(
-            "Embargo (%)",
-            min_value=0.0,
-            max_value=20.0,
-            value=1.0,
-            step=0.5,
-            key="ui_robustness_embargo_pct",
-        )
-        robustness_purge_window = st.number_input(
-            "Purge Window (observations)",
-            min_value=0,
-            max_value=63,
-            value=0,
-            step=1,
-            key="ui_robustness_purge_window",
-        )
-        robustness_max_configs = st.number_input(
-            "Maximum Configurations",
-            min_value=1,
-            max_value=10,
-            value=5,
-            step=1,
-            key="ui_robustness_max_configs",
-        )
-        include_adaptive_in_cpcv = st.checkbox(
-            "Include Adaptive Strategies in CPCV",
+        include_adaptive_sensitivity = st.checkbox(
+            "Include Adaptive Regime Strategies",
             value=False,
-            key="ui_include_adaptive_in_cpcv",
-            help="Re-runs only the top bounded adaptive configurations inside each fold.",
+            key="ui_include_adaptive_sensitivity",
         )
-        if include_adaptive_in_cpcv:
-            robustness_max_adaptive_configs = st.number_input(
-                "Maximum Adaptive Configurations in CPCV",
-                min_value=1,
-                max_value=5,
-                value=2,
-                step=1,
-                key="ui_robustness_max_adaptive_configs",
+        if include_adaptive_sensitivity:
+            adaptive_source_options = ["rule_based_lagged"]
+            if HMM_AVAILABLE:
+                adaptive_source_options.append("hmm_walk_forward")
+            sensitivity_adaptive_sources = st.multiselect(
+                "Adaptive Regime Sources",
+                adaptive_source_options,
+                default=["rule_based_lagged"],
+                format_func=lambda value: {
+                    "rule_based_lagged": "Rule-based lagged",
+                    "hmm_walk_forward": "HMM walk-forward",
+                }[value],
+                key="ui_sensitivity_adaptive_sources",
             )
-        else:
-            robustness_max_adaptive_configs = 2
-        st.caption("The robustness objective follows the current sensitivity-study objective.")
-        run_robustness_button = st.button(
-            "Run Robustness Validation",
-            key="ui_run_robustness",
+            sensitivity_adaptive_presets = st.multiselect(
+                "Adaptive Policy Presets",
+                ["conservative", "balanced", "aggressive"],
+                default=["conservative", "balanced", "aggressive"],
+                format_func=str.title,
+                key="ui_sensitivity_adaptive_presets",
+            )
+            sensitivity_adaptive_training_window = st.number_input(
+                "Adaptive Experiment Training Window",
+                min_value=60,
+                max_value=756,
+                value=252,
+                step=21,
+                key="ui_sensitivity_adaptive_training_window",
+            )
+            sensitivity_adaptive_rebalance_frequency = st.selectbox(
+                "Adaptive Experiment Rebalance Frequency",
+                ["M", "W", "Q"],
+                key="ui_sensitivity_adaptive_rebalance_frequency",
+            )
+            sensitivity_max_adaptive_configs = st.number_input(
+                "Maximum Adaptive Configurations",
+                min_value=1,
+                max_value=12,
+                value=6,
+                key="ui_sensitivity_max_adaptive_configs",
+            )
+        run_sensitivity_button = st.button(
+            "Run Sensitivity Study",
+            key="ui_run_sensitivity",
         )
-    else:
-        robustness_n_blocks = 6
-        robustness_n_test_blocks = 2
-        robustness_embargo_pct = 1.0
-        robustness_purge_window = 0
-        robustness_max_configs = 5
-        include_adaptive_in_cpcv = False
-        robustness_max_adaptive_configs = 2
-        run_robustness_button = False
+
+    with st.sidebar.expander(
+        "Phase 3A — CPCV Robustness Validation",
+        expanded=False,
+    ):
+        enable_robustness_validation = st.checkbox(
+            "Enable Robustness Validation",
+            value=False,
+            key="ui_enable_robustness_validation",
+        )
+        if enable_robustness_validation:
+            robustness_n_blocks = st.number_input(
+                "Number of Time Blocks",
+                min_value=2,
+                max_value=12,
+                value=6,
+                key="ui_robustness_n_blocks",
+            )
+            robustness_n_test_blocks = st.number_input(
+                "Test Blocks per Split",
+                min_value=1,
+                max_value=6,
+                value=2,
+                key="ui_robustness_n_test_blocks",
+            )
+            robustness_embargo_pct = st.number_input(
+                "Embargo (%)",
+                min_value=0.0,
+                max_value=20.0,
+                value=1.0,
+                step=0.5,
+                key="ui_robustness_embargo_pct",
+            )
+            robustness_purge_window = st.number_input(
+                "Purge Window (observations)",
+                min_value=0,
+                max_value=63,
+                value=0,
+                key="ui_robustness_purge_window",
+            )
+            robustness_max_configs = st.number_input(
+                "Maximum Configurations",
+                min_value=1,
+                max_value=10,
+                value=5,
+                key="ui_robustness_max_configs",
+            )
+            include_adaptive_in_cpcv = st.checkbox(
+                "Include Adaptive Strategies in CPCV",
+                value=False,
+                key="ui_include_adaptive_in_cpcv",
+            )
+            if include_adaptive_in_cpcv:
+                robustness_max_adaptive_configs = st.number_input(
+                    "Maximum Adaptive Configurations in CPCV",
+                    min_value=1,
+                    max_value=5,
+                    value=2,
+                    key="ui_robustness_max_adaptive_configs",
+                )
+            st.caption(
+                f"Current research objective: {global_research_objective_label}. "
+                "Calmar is the fallback only when no objective is supplied."
+            )
+            run_robustness_button = st.button(
+                "Run Robustness Validation",
+                key="ui_run_robustness",
+            )
 
 
-selected_tickers = merge_portfolio_tickers(
-    st.session_state["ui_selected_assets"],
-    st.session_state.get("ui_added_tickers", []),
-)
+if dashboard_mode == MANAGER_VIEW:
+    selected_tickers = list(DEFAULT_UNIVERSES[preset])
+else:
+    selected_tickers = merge_portfolio_tickers(
+        st.session_state["ui_selected_assets"],
+        st.session_state.get("ui_added_tickers", []),
+    )
 
 if run_portfolio_button:
     validation_error = validate_common_inputs(
@@ -3784,7 +4553,9 @@ if run_portfolio_button:
                 regime_crisis_drawdown=float(regime_crisis_drawdown),
                 regime_stress_drawdown=float(regime_stress_drawdown),
                 use_lagged_decision_regime=use_lagged_decision_regime,
-                regime_objective_metric=SENSITIVITY_OBJECTIVE_MAP[sensitivity_objective_label],
+                regime_objective_metric=objective_metric(
+                    global_research_objective_label
+                ),
                 regime_method=regime_method,
                 hmm_n_states=int(hmm_n_states),
                 hmm_min_train_size=int(hmm_min_train_size),
@@ -3799,8 +4570,26 @@ if run_portfolio_button:
                 adaptive_rebalance_frequency=adaptive_rebalance_frequency,
                 adaptive_show_policy_table=adaptive_show_policy_table,
             )
+            portfolio_payload["strategy_recommendation"] = (
+                build_dashboard_recommendation(
+                    portfolio_payload,
+                    st.session_state.get(ROBUSTNESS_RESULT_KEY),
+                    investor_profile=manager_investor_profile,
+                    base_bps=float(base_bps),
+                    slippage_bps=float(slippage_bps),
+                )
+            )
+            portfolio_payload["selection_investor_profile"] = manager_investor_profile
+            portfolio_payload["selection_cost_assumption"] = manager_cost_assumption
+            portfolio_payload["selection_base_bps"] = float(base_bps)
+            portfolio_payload["selection_slippage_bps"] = float(slippage_bps)
             st.session_state[PORTFOLIO_RESULT_KEY] = portfolio_payload
-            st.session_state[UI_MESSAGE_KEY] = ("info", "Portfolio analysis updated.")
+            st.session_state[UI_MESSAGE_KEY] = (
+                "info",
+                "Recommendation updated."
+                if dashboard_mode == MANAGER_VIEW
+                else "Portfolio analysis updated.",
+            )
         except Exception as exc:
             st.session_state[UI_MESSAGE_KEY] = ("error", f"Portfolio analysis failed: {exc}")
 
@@ -3831,7 +4620,7 @@ if run_sensitivity_button:
                 covariance_methods=sensitivity_covariance_methods,
                 rebalance_modes=sensitivity_rebalance_modes,
                 thresholds_text=sensitivity_thresholds,
-                objective_label=sensitivity_objective_label,
+                objective_label=global_research_objective_label,
                 max_runs=int(sensitivity_max_runs),
                 initial_capital=initial_capital,
                 include_adaptive_strategies=include_adaptive_sensitivity,
@@ -3875,7 +4664,7 @@ if run_robustness_button:
                 embargo_pct=float(robustness_embargo_pct) / 100.0,
                 purge_window=int(robustness_purge_window),
                 max_configs=int(robustness_max_configs),
-                objective_metric=SENSITIVITY_OBJECTIVE_MAP[sensitivity_objective_label],
+                objective_metric=objective_metric(global_research_objective_label),
                 include_adaptive_in_cpcv=include_adaptive_in_cpcv,
                 max_adaptive_configs=int(robustness_max_adaptive_configs),
             )
@@ -3897,9 +4686,47 @@ if st.session_state.get(UI_MESSAGE_KEY) is not None:
     message_level, message_text = st.session_state[UI_MESSAGE_KEY]
     show_message(message_level, message_text)
 
-render_dashboard_tabs(
-    st.session_state.get(PORTFOLIO_RESULT_KEY),
-    st.session_state.get(SENSITIVITY_RESULT_KEY),
-    st.session_state.get(ROBUSTNESS_RESULT_KEY),
-    selected_objective_label=sensitivity_objective_label,
+portfolio_payload = st.session_state.get(PORTFOLIO_RESULT_KEY)
+sensitivity_payload = st.session_state.get(SENSITIVITY_RESULT_KEY)
+robustness_payload = st.session_state.get(ROBUSTNESS_RESULT_KEY)
+selection_recommendation = (
+    portfolio_payload.get("strategy_recommendation")
+    if portfolio_payload is not None
+    else None
 )
+if selection_recommendation is None and dashboard_mode != MANAGER_VIEW:
+    try:
+        selection_recommendation = build_dashboard_recommendation(
+            portfolio_payload,
+            robustness_payload,
+            investor_profile=manager_investor_profile,
+            base_bps=float(base_bps),
+            slippage_bps=float(slippage_bps),
+        )
+    except ValueError:
+        selection_recommendation = None
+
+if dashboard_mode == MANAGER_VIEW:
+    render_manager_view(
+        portfolio_payload,
+        robustness_payload,
+        selected_objective_label=global_research_objective_label,
+        recommendation=selection_recommendation,
+    )
+elif dashboard_mode == RESEARCH_VIEW:
+    render_dashboard_tabs(
+        portfolio_payload,
+        sensitivity_payload,
+        robustness_payload,
+        selected_objective_label=global_research_objective_label,
+    )
+    if selection_recommendation is not None:
+        render_selection_diagnostics(selection_recommendation)
+else:
+    render_developer_view(
+        portfolio_payload,
+        sensitivity_payload,
+        robustness_payload,
+        selected_objective_label=global_research_objective_label,
+        recommendation=selection_recommendation,
+    )

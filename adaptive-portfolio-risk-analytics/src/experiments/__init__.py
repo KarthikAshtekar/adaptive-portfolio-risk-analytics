@@ -32,6 +32,12 @@ from .reporting import (
     log_experiment_to_mlflow,
 )
 from .runner import generate_parameter_grid, run_experiment_grid, run_single_experiment
+from .replication import (
+    DEFAULT_REPLICATION_UNIVERSES,
+    run_policy_tuning_study,
+    run_replication_study,
+    summarize_replication_results,
+)
 from .sensitivity import (
     compute_parameter_sensitivity,
     rank_experiments,
@@ -68,4 +74,8 @@ __all__ = [
     "build_adaptive_attribution",
     "compare_adaptive_vs_fixed",
     "build_adaptive_stress_comparison",
+    "DEFAULT_REPLICATION_UNIVERSES",
+    "run_replication_study",
+    "summarize_replication_results",
+    "run_policy_tuning_study",
 ]

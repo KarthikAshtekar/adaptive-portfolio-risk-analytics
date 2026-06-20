@@ -11,6 +11,8 @@ import plotly.express as px
 import plotly.graph_objects as go
 from scipy.cluster.hierarchy import dendrogram as scipy_dendrogram
 
+from src.dashboard.modes import net_metric_label
+
 # ============================================================
 # PERFORMANCE CHARTS
 # ============================================================
@@ -34,9 +36,9 @@ def plot_performance_curves(
         )
 
     fig.update_layout(
-        title="Portfolio Growth Comparison",
+        title="Net Portfolio Growth Comparison",
         xaxis_title="Date",
-        yaxis_title="Portfolio Value",
+        yaxis_title="Net Portfolio Value",
         template="plotly_white",
         hovermode="x unified",
     )
@@ -46,7 +48,7 @@ def plot_performance_curves(
 
 def plot_equity_curve(
     portfolio_values: pd.Series,
-    title: str = "Equity Curve",
+    title: str = "Net Equity Curve",
 ) -> go.Figure:
     """Single portfolio growth curve."""
 
@@ -64,7 +66,7 @@ def plot_equity_curve(
     fig.update_layout(
         title=title,
         xaxis_title="Date",
-        yaxis_title="Portfolio Value",
+        yaxis_title="Net Portfolio Value",
         template="plotly_white",
         hovermode="x unified",
     )
@@ -470,9 +472,9 @@ def plot_metric_comparison(
     )
 
     fig.update_layout(
-        title=f"{metric_name.replace('_', ' ').title()} Comparison",
+        title=f"{net_metric_label(metric_name)} Comparison",
         xaxis_title="Strategy",
-        yaxis_title=metric_name.replace("_", " ").title(),
+        yaxis_title=net_metric_label(metric_name),
         template="plotly_white",
     )
 
@@ -495,9 +497,9 @@ def plot_relative_performance(
     )
 
     fig.update_layout(
-        title=f"{metric_name.replace('_', ' ').title()} vs Benchmark",
+        title=f"{net_metric_label(metric_name)} vs Benchmark",
         xaxis_title="Strategy",
-        yaxis_title=metric_name.replace("_", " ").title(),
+        yaxis_title=net_metric_label(metric_name),
         template="plotly_white",
     )
 
@@ -519,9 +521,9 @@ def plot_final_value_comparison(
     )
 
     fig.update_layout(
-        title="Final Value Comparison",
+        title="Net Final Value Comparison",
         xaxis_title="Strategy",
-        yaxis_title="Final Portfolio Value",
+        yaxis_title="Net Final Portfolio Value",
         template="plotly_white",
     )
 
@@ -581,7 +583,7 @@ def plot_rebalance_events(
             x=portfolio_values.index,
             y=portfolio_values.values,
             mode="lines",
-            name="Portfolio Value",
+            name="Net Portfolio Value",
         )
     )
 
@@ -602,9 +604,9 @@ def plot_rebalance_events(
         )
 
     fig.update_layout(
-        title="Portfolio Value with Rebalance Events",
+        title="Net Portfolio Value with Rebalance Events",
         xaxis_title="Date",
-        yaxis_title="Portfolio Value",
+        yaxis_title="Net Portfolio Value",
         template="plotly_white",
         hovermode="x unified",
     )
