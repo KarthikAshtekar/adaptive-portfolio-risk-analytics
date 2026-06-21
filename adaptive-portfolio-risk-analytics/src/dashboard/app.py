@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from dataclasses import replace
 from datetime import date
+import os
 from pathlib import Path
 import sys
 
 import numpy as np
 import pandas as pd
+import plotly.graph_objects as go
 import streamlit as st
 
 project_root = Path(__file__).resolve().parents[2]
@@ -136,11 +138,101 @@ from src.selection import (
     load_selection_artifacts,
     select_strategy_for_profile,
 )
+from src.sentiment import (
+    AlphaVantageNewsProvider,
+    EarningsCallProvider,
+    GDELTProvider,
+    RBIProvider,
+    apply_publication_lag,
+    build_alignment_checks,
+    build_composite_nlp_risk_index,
+    build_current_macro_summary,
+    build_current_sentiment_summary,
+    build_daily_sentiment_signal,
+    build_macro_stance_index,
+    compare_macro_to_regimes,
+    compare_composite_nlp_to_regimes,
+    compare_sentiment_to_regimes,
+    load_local_sentiment_csv,
+    load_real_rbi_corpus,
+    load_rbi_documents,
+    flag_reaction_data_leakage,
+    plot_daily_sentiment_signal,
+    plot_macro_regime_timeline,
+    plot_macro_stance_shares,
+    plot_macro_stance_index,
+    plot_macro_uncertainty_share,
+    plot_sentiment_regime_timeline,
+    score_rbi_sentences,
+    score_sentiment_records,
+    score_with_finbert,
+    split_rbi_sentences,
+    run_sentiment_provider_ingestion,
+    validate_ex_ante_records,
+    validate_rbi_manifest,
+)
 
 PORTFOLIO_RESULT_KEY = "dashboard_portfolio_results"
 SENSITIVITY_RESULT_KEY = "dashboard_sensitivity_results"
 ROBUSTNESS_RESULT_KEY = "dashboard_robustness_results"
 UI_MESSAGE_KEY = "dashboard_ui_message"
+DEFAULT_SENTIMENT_CSV = project_root / "data" / "sentiment" / "sample_market_news.csv"
+DEFAULT_RBI_MANIFEST = (
+    project_root
+    / "data"
+    / "sentiment"
+    / "rbi_documents"
+    / "sample_manifest.csv"
+)
+DEFAULT_REAL_RBI_MANIFEST = (
+    project_root
+    / "data"
+    / "sentiment"
+    / "rbi_real"
+    / "manifest.csv"
+)
+DEFAULT_EARNINGS_MANIFEST = (
+    project_root
+    / "data"
+    / "sentiment"
+    / "earnings_calls"
+    / "manifest.csv"
+)
+DEFAULT_GDELT_FIXTURE = (
+    project_root
+    / "data"
+    / "sentiment"
+    / "provider_fixtures"
+    / "gdelt_sample.json"
+)
+DEFAULT_API_NLP_OUTPUT_DIR = (
+    project_root / "outputs" / "cache" / "dashboard_api_nlp"
+)
+
+NLP_QUERY_PRESETS = {
+    "India macro risk": [
+        "India inflation",
+        "RBI rate hike",
+        "banking stress",
+        "currency crisis",
+    ],
+    "Geopolitical and supply risk": [
+        "geopolitical risk India",
+        "oil price shock",
+        "war escalation",
+        "supply chain disruption",
+    ],
+    "Broad monitoring": [
+        "India inflation",
+        "RBI rate hike",
+        "geopolitical risk India",
+        "oil price shock",
+        "banking stress",
+        "currency crisis",
+        "war escalation",
+        "supply chain disruption",
+    ],
+}
 
 INDIAN_ASSET_UNIVERSE = {
     "HDFCBANK.NS": "HDFC Bank",
@@ -249,6 +341,27 @@ def initialize_session_state() -> None:
         "ui_manager_initial_capital": 1_000_000.0,
         "ui_manager_custom_base_bps": 10.0,
         "ui_manager_custom_slippage_bps": 5.0,
+        "ui_enable_sentiment_confirmation": True,
+        "ui_sentiment_source": "Bundled synthetic sample",
+        "ui_sentiment_csv_path": str(DEFAULT_SENTIMENT_CSV),
+        "ui_sentiment_lookback_window": 5,
+        "ui_sentiment_decision_lag": 1,
+        "ui_enable_rbi_macro_sentiment": True,
+        "ui_rbi_corpus_mode": "synthetic_fixture",
+        "ui_rbi_manifest_path": str(DEFAULT_REAL_RBI_MANIFEST),
+        "ui_rbi_scorer_method": "lexicon",
+        "ui_rbi_lookback_window": 63,
+        "ui_rbi_decision_lag": 1,
+        "ui_rbi_minimum_coverage_threshold": 0.10,
+        "ui_enable_api_nlp_monitoring": True,
+        "ui_nlp_providers": [
+            "RBI local fallback",
+            "Earnings local",
+            "GDELT fixture",
+        ],
+        "ui_nlp_query_preset": "Broad monitoring",
+        "ui_nlp_scoring_method": "lexicon",
+        "ui_nlp_decision_lag": 1,
         "ui_strategy": "HERC",
         "ui_enable_regime_analytics": True,
         "ui_regime_method": DEFAULT_MANAGER_ADAPTIVE_OVERLAY["regime_method"],
@@ -1399,6 +1512,7 @@ def build_market_regime_results(
         "hmm_diagnostics": hmm_diagnostics,
         "method_comparison": method_comparison,
         "rule_based_regimes": rule_based_regimes,
+        "rule_based_decision_regimes": rule_based_decision_regimes,
         "features": features,
         "observed_regimes": observed_regimes,
         "decision_regimes": decision_regimes,
@@ -1413,6 +1527,670 @@ def build_market_regime_results(
         "current_decision_regime": current_decision_regime,
         "objective_metric": objective_metric,
     }
+
+
+def build_sentiment_confirmation_results(
+    *,
+    sentiment_source,
+    market_index: pd.DatetimeIndex,
+    regime_payload: dict[str, object],
+    lookback_window: int = 5,
+    decision_lag: int = 1,
+    source_description: str = "Local CSV",
+) -> dict[str, object]:
+    """Build Phase 4A confirmation diagnostics without changing allocation."""
+    try:
+        if isinstance(sentiment_source, pd.DataFrame):
+            raw_records = sentiment_source.copy()
+        else:
+            raw_records = load_local_sentiment_csv(sentiment_source)
+        scored_records = score_sentiment_records(raw_records, method="lexicon")
+        signal = build_daily_sentiment_signal(
+            scored_records,
+            market_index,
+            lookback_window=int(lookback_window),
+            decision_lag=max(1, int(decision_lag)),
+        )
+        rule_decisions = regime_payload.get(
+            "rule_based_decision_regimes",
+            regime_payload.get("rule_based_regimes", pd.Series(dtype="object")),
+        )
+        hmm_decisions = None
+        if (
+            regime_payload.get("method") == "HMM walk-forward experimental"
+            and not regime_payload.get("hmm_error")
+        ):
+            hmm_decisions = regime_payload.get("decision_regimes")
+        comparison = compare_sentiment_to_regimes(
+            signal,
+            rule_decisions,
+            hmm_decisions,
+        )
+        quantitative_regimes = (
+            hmm_decisions
+            if isinstance(hmm_decisions, pd.Series) and not hmm_decisions.empty
+            else rule_decisions
+        )
+        current_quantitative_regime = (
+            str(quantitative_regimes.reindex(signal.index).iloc[-1])
+            if isinstance(quantitative_regimes, pd.Series)
+            and not quantitative_regimes.empty
+            else "Unknown"
+        )
+        current_summary = build_current_sentiment_summary(
+            signal,
+            current_quantitative_regime,
+        )
+        alignment = build_alignment_checks(
+            scored_records,
+            signal,
+            market_index,
+            decision_lag=max(1, int(decision_lag)),
+        )
+        return {
+            "enabled": True,
+            "source_description": source_description,
+            "scoring_method": "lexicon",
+            "lookback_window": int(lookback_window),
+            "decision_lag": max(1, int(decision_lag)),
+            "raw_records": raw_records,
+            "scored_records": scored_records,
+            "signal": signal,
+            "comparison": comparison,
+            "current": current_summary,
+            "alignment": alignment,
+            "rule_based_regimes": rule_decisions,
+            "hmm_regimes": hmm_decisions,
+            "error": None,
+        }
+    except Exception as exc:
+        return {
+            "enabled": True,
+            "source_description": source_description,
+            "scoring_method": "lexicon",
+            "lookback_window": int(lookback_window),
+            "decision_lag": max(1, int(decision_lag)),
+            "raw_records": pd.DataFrame(),
+            "scored_records": pd.DataFrame(),
+            "signal": pd.DataFrame(index=market_index),
+            "comparison": {},
+            "current": {
+                "quantitative_regime": regime_payload.get(
+                    "current_decision_regime",
+                    "Unknown",
+                ),
+                "sentiment_label": "unknown",
+                "confirmation_status": "Insufficient Sentiment Data",
+                "article_coverage": 0,
+                "coverage_ratio": 0.0,
+                "last_sentiment_date": None,
+                "sentiment_warning": f"Sentiment layer unavailable: {exc}",
+            },
+            "alignment": {
+                "checks": pd.DataFrame(),
+                "all_checks_passed": False,
+            },
+            "rule_based_regimes": pd.Series(dtype="object"),
+            "hmm_regimes": None,
+            "error": str(exc),
+        }
+
+
+def build_rbi_macro_sentiment_results(
+    *,
+    manifest_path,
+    market_index: pd.DatetimeIndex,
+    regime_payload: dict[str, object],
+    corpus_mode: str = "synthetic_fixture",
+    scorer_method: str = "lexicon",
+    lookback_window: int = 63,
+    decision_lag: int = 1,
+    minimum_coverage_threshold: float = 0.10,
+    source_description: str = "Local RBI manifest",
+) -> dict[str, object]:
+    """Build RBI macro confirmation with explicit real/synthetic provenance."""
+    try:
+        requested_corpus_type = str(corpus_mode).strip().lower()
+        if requested_corpus_type not in {"synthetic_fixture", "real_rbi"}:
+            raise ValueError(
+                "corpus_mode must be 'synthetic_fixture' or 'real_rbi'"
+            )
+        manifest_validation: dict[str, object] = {}
+        fallback_reason = None
+        real_corpus_available = False
+        if requested_corpus_type == "real_rbi":
+            manifest_validation = validate_rbi_manifest(manifest_path)
+            documents = load_real_rbi_corpus(manifest_path)
+            if documents.empty:
+                fallback_reason = (
+                    "Real RBI corpus unavailable or contains no valid documents; "
+                    "the bundled synthetic fixture is used only for pipeline "
+                    "validation."
+                )
+                documents = load_rbi_documents(DEFAULT_RBI_MANIFEST)
+                corpus_type = "synthetic_fixture"
+            else:
+                corpus_type = "real_rbi"
+                real_corpus_available = True
+        else:
+            documents = load_rbi_documents(
+                DEFAULT_RBI_MANIFEST
+                if manifest_path is None
+                else manifest_path
+            )
+            corpus_type = "synthetic_fixture"
+        sentences = split_rbi_sentences(documents)
+        scored_sentences = score_rbi_sentences(sentences, method=scorer_method)
+        macro_index = build_macro_stance_index(
+            scored_sentences,
+            market_index,
+            lookback_window=int(lookback_window),
+            decision_lag=max(1, int(decision_lag)),
+        )
+        rule_decisions = regime_payload.get(
+            "rule_based_decision_regimes",
+            regime_payload.get("rule_based_regimes", pd.Series(dtype="object")),
+        )
+        hmm_decisions = None
+        if (
+            regime_payload.get("method") == "HMM walk-forward experimental"
+            and not regime_payload.get("hmm_error")
+        ):
+            hmm_decisions = regime_payload.get("decision_regimes")
+        comparison = compare_macro_to_regimes(
+            macro_index,
+            rule_decisions,
+            hmm_decisions,
+        )
+        quantitative_regimes = (
+            hmm_decisions
+            if isinstance(hmm_decisions, pd.Series) and not hmm_decisions.empty
+            else rule_decisions
+        )
+        current_quantitative_regime = (
+            str(quantitative_regimes.reindex(macro_index.index).iloc[-1])
+            if isinstance(quantitative_regimes, pd.Series)
+            and not quantitative_regimes.empty
+            else "Unknown"
+        )
+        current = build_current_macro_summary(
+            macro_index,
+            current_quantitative_regime,
+        )
+        coverage_ratio = float(comparison.get("coverage_ratio", 0.0) or 0.0)
+        passes_minimum_coverage = bool(
+            corpus_type == "real_rbi"
+            and coverage_ratio >= float(minimum_coverage_threshold)
+        )
+        illustrative_only = not passes_minimum_coverage
+        corpus_label = (
+            "Real"
+            if corpus_type == "real_rbi"
+            else "Synthetic fixture / unavailable"
+        )
+        illustrative_warning = (
+            "Macro confirmation is illustrative only because a validated real "
+            "RBI corpus with sufficient coverage is not active."
+            if illustrative_only
+            else None
+        )
+        existing_warning = current.get("macro_sentiment_warning")
+        current.update(
+            {
+                "corpus_type": corpus_type,
+                "requested_corpus_type": requested_corpus_type,
+                "corpus_label": corpus_label,
+                "corpus_document_count": int(len(documents)),
+                "corpus_coverage_ratio": coverage_ratio,
+                "minimum_coverage_threshold": float(
+                    minimum_coverage_threshold
+                ),
+                "passes_minimum_coverage": passes_minimum_coverage,
+                "illustrative_only": illustrative_only,
+                "fallback_reason": fallback_reason,
+                "illustrative_warning": illustrative_warning,
+                "macro_sentiment_warning": " ".join(
+                    str(value)
+                    for value in (existing_warning, illustrative_warning)
+                    if value
+                )
+                or None,
+            }
+        )
+        source_dates = pd.to_datetime(
+            macro_index["decision_source_date"],
+            errors="coerce",
+        )
+        decision_dates = pd.Series(macro_index.index, index=macro_index.index)
+        expected_labels = (
+            macro_index["macro_label"]
+            .shift(max(1, int(decision_lag)))
+            .fillna("insufficient_macro_data")
+            .astype(str)
+        )
+        checks = pd.DataFrame(
+            [
+                {
+                    "check": "manifest_rows_are_retained",
+                    "passed": len(documents) > 0,
+                },
+                {
+                    "check": "macro_index_matches_market_index",
+                    "passed": macro_index.index.equals(market_index),
+                },
+                {
+                    "check": "decision_labels_match_configured_lag",
+                    "passed": expected_labels.equals(
+                        macro_index["decision_macro_label"].astype(str)
+                    ),
+                },
+                {
+                    "check": "decision_sources_precede_decision_date",
+                    "passed": bool(
+                        (
+                            source_dates.isna()
+                            | (source_dates.dt.normalize() < decision_dates)
+                        ).all()
+                    ),
+                },
+            ]
+        )
+        return {
+            "enabled": True,
+            "source_description": source_description,
+            "manifest_path": str(manifest_path),
+            "corpus_type": corpus_type,
+            "requested_corpus_type": requested_corpus_type,
+            "real_corpus_available": real_corpus_available,
+            "fallback_reason": fallback_reason,
+            "minimum_coverage_threshold": float(minimum_coverage_threshold),
+            "passes_minimum_coverage": passes_minimum_coverage,
+            "scoring_method": scorer_method,
+            "lookback_window": int(lookback_window),
+            "decision_lag": max(1, int(decision_lag)),
+            "documents": documents,
+            "sentences": sentences,
+            "scored_sentences": scored_sentences,
+            "macro_index": macro_index,
+            "comparison": comparison,
+            "current": current,
+            "construction_diagnostics": {
+                "checks": checks,
+                "all_checks_passed": bool(checks["passed"].all()),
+                "loaded_document_count": int(
+                    documents["load_status"].eq("loaded").sum()
+                ),
+                "document_error_count": int(
+                    documents["load_status"].eq("error").sum()
+                ),
+                "fallback_sentence_count": int(
+                    scored_sentences["fallback_used"].fillna(False).sum()
+                ),
+                "ingestion_diagnostics": documents.attrs.get(
+                    "diagnostics",
+                    {},
+                ),
+                "manifest_validation_diagnostics": manifest_validation.get(
+                    "diagnostics",
+                    pd.DataFrame(),
+                ),
+            },
+            "manifest_validation": manifest_validation,
+            "invalid_documents": manifest_validation.get(
+                "invalid_documents",
+                pd.DataFrame(),
+            ),
+            "rule_based_regimes": rule_decisions,
+            "hmm_regimes": hmm_decisions,
+            "error": None,
+        }
+    except Exception as exc:
+        return {
+            "enabled": True,
+            "source_description": source_description,
+            "manifest_path": str(manifest_path),
+            "corpus_type": "unavailable",
+            "requested_corpus_type": str(corpus_mode),
+            "real_corpus_available": False,
+            "fallback_reason": str(exc),
+            "minimum_coverage_threshold": float(minimum_coverage_threshold),
+            "passes_minimum_coverage": False,
+            "scoring_method": scorer_method,
+            "lookback_window": int(lookback_window),
+            "decision_lag": max(1, int(decision_lag)),
+            "documents": pd.DataFrame(),
+            "sentences": pd.DataFrame(),
+            "scored_sentences": pd.DataFrame(),
+            "macro_index": pd.DataFrame(index=market_index),
+            "comparison": {},
+            "current": {
+                "quantitative_regime": regime_payload.get(
+                    "current_decision_regime",
+                    "Unknown",
+                ),
+                "macro_sentiment_label": "insufficient_macro_data",
+                "macro_sentiment_confirmation": "Insufficient Macro Data",
+                "macro_sentiment_coverage": 0,
+                "macro_sentiment_sentence_coverage": 0,
+                "coverage_status": (
+                    "Insufficient: 0 RBI documents in rolling window"
+                ),
+                "macro_sentiment_warning": (
+                    f"RBI macro-sentiment layer unavailable: {exc}"
+                ),
+                "stance_summary": "No macro stance evidence",
+                "uncertainty_share": np.nan,
+                "last_document_date": None,
+                "corpus_type": "unavailable",
+                "requested_corpus_type": str(corpus_mode),
+                "corpus_label": "Synthetic fixture / unavailable",
+                "corpus_document_count": 0,
+                "corpus_coverage_ratio": 0.0,
+                "minimum_coverage_threshold": float(
+                    minimum_coverage_threshold
+                ),
+                "passes_minimum_coverage": False,
+                "illustrative_only": True,
+                "illustrative_warning": (
+                    "Macro confirmation is illustrative only."
+                ),
+            },
+            "construction_diagnostics": {
+                "checks": pd.DataFrame(),
+                "all_checks_passed": False,
+                "fallback_sentence_count": 0,
+                "ingestion_diagnostics": {},
+                "manifest_validation_diagnostics": pd.DataFrame(),
+            },
+            "manifest_validation": {},
+            "invalid_documents": pd.DataFrame(),
+            "rule_based_regimes": pd.Series(dtype="object"),
+            "hmm_regimes": None,
+            "error": str(exc),
+        }
+
+
+def _api_nlp_providers(provider_names: list[str]) -> list[object]:
+    """Create offline-safe provider instances from Research View labels."""
+    providers: list[object] = []
+    for name in provider_names:
+        if name == "RBI local fallback":
+            providers.append(
+                RBIProvider(
+                    feeds_enabled=False,
+                    local_manifest_path=DEFAULT_REAL_RBI_MANIFEST,
+                    local_corpus_path=DEFAULT_RBI_MANIFEST,
+                )
+            )
+        elif name == "RBI feeds (optional)":
+            providers.append(
+                RBIProvider(
+                    feeds_enabled=os.getenv(
+                        "RBI_FEEDS_ENABLED", "false"
+                    ).lower()
+                    in {"1", "true", "yes", "on"},
+                    local_manifest_path=DEFAULT_REAL_RBI_MANIFEST,
+                    local_corpus_path=DEFAULT_RBI_MANIFEST,
+                )
+            )
+        elif name == "Earnings local":
+            providers.append(EarningsCallProvider(DEFAULT_EARNINGS_MANIFEST))
+        elif name == "GDELT fixture":
+            providers.append(
+                GDELTProvider(enabled=True, fixture_path=DEFAULT_GDELT_FIXTURE)
+            )
+        elif name == "GDELT API (optional)":
+            providers.append(
+                GDELTProvider(
+                    enabled=os.getenv(
+                        "GDELT_NEWS_ENABLED", "false"
+                    ).lower()
+                    in {"1", "true", "yes", "on"}
+                )
+            )
+        elif name == "Alpha Vantage API (optional)":
+            providers.append(AlphaVantageNewsProvider())
+    return providers
+
+
+def _component_nlp_label(value: object) -> str:
+    score = pd.to_numeric(pd.Series([value]), errors="coerce").iloc[0]
+    if pd.isna(score):
+        return "Insufficient"
+    if float(score) >= 0.15:
+        return "Risk-Off"
+    if float(score) <= -0.15:
+        return "Risk-On"
+    return "Neutral"
+
+
+def build_api_nlp_monitoring_results(
+    *,
+    providers: list[object],
+    start_date,
+    end_date,
+    market_index: pd.DatetimeIndex,
+    regime_payload: dict[str, object],
+    rbi_macro_payload: dict[str, object] | None = None,
+    query_terms: list[str] | None = None,
+    scoring_method: str = "lexicon",
+    decision_lag: int = 1,
+    output_dir: str | Path = DEFAULT_API_NLP_OUTPUT_DIR,
+) -> dict[str, object]:
+    """Build commentary-only API/provider NLP monitoring diagnostics."""
+    try:
+        ingestion = run_sentiment_provider_ingestion(
+            providers,
+            start_date,
+            end_date,
+            output_dir,
+            query_config={
+                "gdelt": {"query": query_terms or [], "limit": 100},
+                "default": {"limit": 100},
+            },
+            use_cache=True,
+        )
+        normalized = ingestion["deduped_sentiment_records"]
+        ex_ante = validate_ex_ante_records(normalized)
+        ex_ante = flag_reaction_data_leakage(ex_ante)
+        ex_ante = apply_publication_lag(
+            ex_ante,
+            lag_days=max(1, int(decision_lag)),
+        )
+        if scoring_method == "finbert":
+            scores = score_with_finbert(ex_ante)
+        else:
+            scores = score_sentiment_records(ex_ante, method="lexicon")
+            scores["finbert_label"] = pd.NA
+            scores["finbert_score"] = np.nan
+            scores["scoring_method_used"] = "lexicon"
+            scores["fallback_used"] = False
+            scores["fallback_reason"] = pd.NA
+
+        earnings = scores.loc[
+            scores.get(
+                "document_type", pd.Series("", index=scores.index)
+            ).astype(str).eq("earnings_call")
+        ].copy()
+        news = scores.loc[
+            scores.get(
+                "document_type", pd.Series("", index=scores.index)
+            ).astype(str).eq("financial_news")
+        ].copy()
+        rbi_macro_index = (
+            (rbi_macro_payload or {}).get("macro_index")
+            if rbi_macro_payload
+            else None
+        )
+        composite = build_composite_nlp_risk_index(
+            rbi_macro_index=rbi_macro_index,
+            earnings_sentiment=earnings,
+            news_sentiment=news,
+            market_index=market_index,
+            decision_lag=max(1, int(decision_lag)),
+        )
+        rule_regimes = regime_payload.get(
+            "rule_based_decision_regimes",
+            regime_payload.get("rule_based_regimes", pd.Series(dtype="object")),
+        )
+        hmm_regimes = (
+            regime_payload.get("decision_regimes")
+            if regime_payload.get("method") == "HMM walk-forward experimental"
+            and not regime_payload.get("hmm_error")
+            else None
+        )
+        comparison = compare_composite_nlp_to_regimes(
+            composite,
+            rule_regimes,
+            hmm_regimes,
+        )
+        current_row = composite.iloc[-1] if not composite.empty else pd.Series()
+        provider_diagnostics = ingestion["provider_diagnostics"]
+        providers_with_data = (
+            provider_diagnostics.loc[
+                pd.to_numeric(
+                    provider_diagnostics["deduped_valid_record_count"],
+                    errors="coerce",
+                ).fillna(0).gt(0),
+                "provider",
+            ].astype(str).tolist()
+            if not provider_diagnostics.empty
+            else []
+        )
+        publication_times = pd.to_datetime(
+            ex_ante.get("publication_time"), errors="coerce", utc=True
+        ).dropna()
+        freshness = (
+            publication_times.max()
+            if not publication_times.empty
+            else None
+        )
+        coverage_score = float(
+            current_row.get("decision_coverage_score", 0.0) or 0.0
+        )
+        coverage_quality = (
+            "High"
+            if coverage_score >= 0.99
+            else "Moderate"
+            if coverage_score >= (2 / 3)
+            else "Low"
+            if coverage_score > 0
+            else "Insufficient"
+        )
+        reaction_count = int(
+            ex_ante.get(
+                "possible_reaction_data",
+                pd.Series(False, index=ex_ante.index),
+            )
+            .fillna(False)
+            .sum()
+        )
+        fallback_count = int(
+            scores.get(
+                "fallback_used", pd.Series(False, index=scores.index)
+            )
+            .fillna(False)
+            .sum()
+        )
+        warnings = []
+        if not providers_with_data:
+            warnings.append("No configured NLP provider returned valid records.")
+        if reaction_count:
+            warnings.append(
+                f"{reaction_count} possible market-reaction record(s) were "
+                "flagged and excluded from composite source scoring."
+            )
+        if fallback_count:
+            warnings.append(
+                f"FinBERT fell back for {fallback_count} record(s)."
+            )
+        current = {
+            "quantitative_regime": comparison[
+                "current_quantitative_regime"
+            ],
+            "rbi_macro_signal": _component_nlp_label(
+                current_row.get("decision_rbi_macro_risk_score")
+            ),
+            "earnings_sector_signal": _component_nlp_label(
+                current_row.get("decision_earnings_sector_risk_score")
+            ),
+            "news_geopolitical_signal": _component_nlp_label(
+                current_row.get(
+                    "decision_news_geopolitical_risk_score"
+                )
+            ),
+            "composite_nlp_label": comparison["current_nlp_label"],
+            "composite_nlp_confirmation": comparison[
+                "current_confirmation"
+            ],
+            "coverage_score": coverage_score,
+            "coverage_quality": coverage_quality,
+            "data_freshness": freshness,
+            "important_warning": " ".join(warnings)
+            or (
+                "NLP risk is monitoring commentary only and is not used for "
+                "allocation or strategy scoring."
+            ),
+        }
+        return {
+            "enabled": True,
+            "providers_configured": [
+                provider.provider_name for provider in providers
+            ],
+            "providers_with_data": providers_with_data,
+            "scoring_method": scoring_method,
+            "decision_lag": max(1, int(decision_lag)),
+            "query_terms": query_terms or [],
+            "raw_provider_records": ingestion["raw_provider_records"],
+            "normalized_records": normalized,
+            "provider_diagnostics": provider_diagnostics,
+            "ex_ante_validation": ex_ante,
+            "finbert_scores": scores,
+            "composite_index": composite,
+            "comparison": comparison,
+            "current": current,
+            "reaction_data_warnings": ex_ante.loc[
+                ex_ante.get(
+                    "possible_reaction_data",
+                    pd.Series(False, index=ex_ante.index),
+                ).fillna(False)
+            ].copy(),
+            "error": None,
+        }
+    except Exception as exc:
+        return {
+            "enabled": True,
+            "providers_configured": [
+                getattr(provider, "provider_name", "unknown")
+                for provider in providers
+            ],
+            "providers_with_data": [],
+            "scoring_method": scoring_method,
+            "decision_lag": max(1, int(decision_lag)),
+            "raw_provider_records": [],
+            "normalized_records": pd.DataFrame(),
+            "provider_diagnostics": pd.DataFrame(),
+            "ex_ante_validation": pd.DataFrame(),
+            "finbert_scores": pd.DataFrame(),
+            "composite_index": pd.DataFrame(index=market_index),
+            "comparison": {},
+            "current": {
+                "quantitative_regime": regime_payload.get(
+                    "current_decision_regime", "Unknown"
+                ),
+                "rbi_macro_signal": "Insufficient",
+                "earnings_sector_signal": "Insufficient",
+                "news_geopolitical_signal": "Insufficient",
+                "composite_nlp_label": "insufficient_nlp_data",
+                "composite_nlp_confirmation": "Insufficient NLP Data",
+                "coverage_score": 0.0,
+                "coverage_quality": "Insufficient",
+                "data_freshness": None,
+                "important_warning": f"NLP monitoring unavailable: {exc}",
+            },
+            "reaction_data_warnings": pd.DataFrame(),
+            "error": str(exc),
+        }
 
 
 def build_portfolio_results(
@@ -1460,6 +2238,24 @@ def build_portfolio_results(
     adaptive_training_window: int = 252,
     adaptive_rebalance_frequency: str = "M",
     adaptive_show_policy_table: bool = True,
+    enable_sentiment_confirmation: bool = False,
+    sentiment_source=None,
+    sentiment_source_description: str = "Local CSV",
+    sentiment_lookback_window: int = 5,
+    sentiment_decision_lag: int = 1,
+    enable_rbi_macro_sentiment: bool = False,
+    rbi_manifest_path=None,
+    rbi_corpus_mode: str = "synthetic_fixture",
+    rbi_source_description: str = "Local RBI manifest",
+    rbi_scorer_method: str = "lexicon",
+    rbi_lookback_window: int = 63,
+    rbi_decision_lag: int = 1,
+    rbi_minimum_coverage_threshold: float = 0.10,
+    enable_api_nlp_monitoring: bool = False,
+    api_nlp_provider_names: list[str] | None = None,
+    api_nlp_query_terms: list[str] | None = None,
+    api_nlp_scoring_method: str = "lexicon",
+    api_nlp_decision_lag: int = 1,
 ) -> dict[str, object]:
     market_context = load_market_context(selected_tickers, start_dt, end_dt)
     returns_df = market_context["returns_df"]
@@ -1595,7 +2391,13 @@ def build_portfolio_results(
 
     metrics = PerformanceAnalytics.summary_table(portfolio_returns)
     market_regime_results = None
-    if enable_regime_analytics or enable_adaptive_strategy:
+    if (
+        enable_regime_analytics
+        or enable_adaptive_strategy
+        or enable_sentiment_confirmation
+        or enable_rbi_macro_sentiment
+        or enable_api_nlp_monitoring
+    ):
         market_regime_results = build_market_regime_results(
             returns_df=returns_df,
             strategy_results=strategy_results,
@@ -1614,6 +2416,53 @@ def build_portfolio_results(
             hmm_covariance_type=hmm_covariance_type,
             hmm_decision_lag=hmm_decision_lag,
             hmm_feature_columns=hmm_feature_columns,
+        )
+
+    sentiment_results = None
+    if enable_sentiment_confirmation and market_regime_results is not None:
+        sentiment_results = build_sentiment_confirmation_results(
+            sentiment_source=(
+                DEFAULT_SENTIMENT_CSV
+                if sentiment_source is None
+                else sentiment_source
+            ),
+            market_index=returns_df.index,
+            regime_payload=market_regime_results,
+            lookback_window=sentiment_lookback_window,
+            decision_lag=sentiment_decision_lag,
+            source_description=sentiment_source_description,
+        )
+
+    rbi_macro_sentiment_results = None
+    if enable_rbi_macro_sentiment and market_regime_results is not None:
+        rbi_macro_sentiment_results = build_rbi_macro_sentiment_results(
+            manifest_path=(
+                DEFAULT_RBI_MANIFEST
+                if rbi_manifest_path is None
+                else rbi_manifest_path
+            ),
+            market_index=returns_df.index,
+            regime_payload=market_regime_results,
+            corpus_mode=rbi_corpus_mode,
+            scorer_method=rbi_scorer_method,
+            lookback_window=rbi_lookback_window,
+            decision_lag=rbi_decision_lag,
+            minimum_coverage_threshold=rbi_minimum_coverage_threshold,
+            source_description=rbi_source_description,
+        )
+
+    api_nlp_results = None
+    if enable_api_nlp_monitoring and market_regime_results is not None:
+        api_nlp_results = build_api_nlp_monitoring_results(
+            providers=_api_nlp_providers(api_nlp_provider_names or []),
+            start_date=start_dt,
+            end_date=end_dt,
+            market_index=returns_df.index,
+            regime_payload=market_regime_results,
+            rbi_macro_payload=rbi_macro_sentiment_results,
+            query_terms=api_nlp_query_terms,
+            scoring_method=api_nlp_scoring_method,
+            decision_lag=max(1, int(api_nlp_decision_lag)),
         )
 
     adaptive_results = None
@@ -1752,6 +2601,9 @@ def build_portfolio_results(
         "vol_target_results": vol_target_results,
         "defensive_metadata": defensive_metadata,
         "market_regime_results": market_regime_results,
+        "sentiment_results": sentiment_results,
+        "rbi_macro_sentiment_results": rbi_macro_sentiment_results,
+        "api_nlp_results": api_nlp_results,
         "adaptive_results": adaptive_results,
         "adaptive_comparison_df": adaptive_comparison_df,
         "adaptive_active_risk_df": adaptive_active_risk_df,
@@ -2006,6 +2858,7 @@ def render_dashboard_tabs(
             "Backtest Results",
             "Risk & Allocation",
             "Phase 3B — Market Regimes",
+            "Phase 4A / 4A.5 — Sentiment & NLP Monitoring",
             "Phase 3C — Adaptive Allocation",
             "Phase 3D — Adaptive Evaluation",
             "Trading Activity",
@@ -2027,23 +2880,28 @@ def render_dashboard_tabs(
             )
         with tabs[4]:
             st.info(
+                "Enable market-news and/or RBI macro-sentiment confirmation and "
+                "run the portfolio analysis to view Phase 4A through 4A.5 diagnostics."
+            )
+        with tabs[5]:
+            st.info(
                 "Enable the adaptive regime strategy and run the portfolio analysis "
                 "to view Phase 3C results."
             )
-        with tabs[5]:
+        with tabs[6]:
             render_adaptive_evaluation_content(
                 sensitivity_payload=sensitivity_payload,
                 robustness_payload=robustness_payload,
                 portfolio_payload=None,
                 selected_objective_label=selected_objective_label,
             )
-        with tabs[6]:
-            st.info("Trading activity diagnostics will appear here after a portfolio run.")
         with tabs[7]:
+            st.info("Trading activity diagnostics will appear here after a portfolio run.")
+        with tabs[8]:
             st.info(
                 "Enable Volatility Targeting and run the portfolio analysis to see overlay results."
             )
-        with tabs[8]:
+        with tabs[9]:
             if sensitivity_payload is None:
                 st.info("Run Sensitivity Study to populate experiment outputs.")
                 render_robustness_content(robustness_payload)
@@ -2080,6 +2938,11 @@ def render_dashboard_tabs(
     vol_target_results = portfolio_payload["vol_target_results"]
     defensive_metadata = portfolio_payload["defensive_metadata"]
     market_regime_results = portfolio_payload.get("market_regime_results")
+    sentiment_results = portfolio_payload.get("sentiment_results")
+    rbi_macro_sentiment_results = portfolio_payload.get(
+        "rbi_macro_sentiment_results"
+    )
+    api_nlp_results = portfolio_payload.get("api_nlp_results")
     adaptive_results = portfolio_payload.get("adaptive_results")
     adaptive_comparison_df = portfolio_payload.get(
         "adaptive_comparison_df",
@@ -2338,6 +3201,11 @@ def render_dashboard_tabs(
         )
 
     with tabs[4]:
+        render_sentiment_research_content(sentiment_results)
+        render_rbi_macro_research_content(rbi_macro_sentiment_results)
+        render_api_nlp_research_content(api_nlp_results)
+
+    with tabs[5]:
         render_adaptive_allocation_content(
             adaptive_results=adaptive_results,
             strategy_results=strategy_results,
@@ -2349,7 +3217,7 @@ def render_dashboard_tabs(
             show_policy_table=bool(portfolio_payload.get("adaptive_show_policy_table", True)),
         )
 
-    with tabs[5]:
+    with tabs[6]:
         render_adaptive_evaluation_content(
             sensitivity_payload=sensitivity_payload,
             robustness_payload=robustness_payload,
@@ -2357,7 +3225,7 @@ def render_dashboard_tabs(
             selected_objective_label=selected_objective_label,
         )
 
-    with tabs[6]:
+    with tabs[7]:
         st.header("Trading Activity")
 
         summary_col1, summary_col2, summary_col3, summary_col4 = st.columns(4)
@@ -2462,7 +3330,7 @@ def render_dashboard_tabs(
         st.subheader("Rebalance Log")
         st.dataframe(rebalance_log_df, use_container_width=True)
 
-    with tabs[7]:
+    with tabs[8]:
         st.header("Volatility Targeting")
         if vol_target_results is None or defensive_metadata is None:
             st.info(
@@ -2574,7 +3442,7 @@ def render_dashboard_tabs(
                 "and correlation features."
             )
 
-    with tabs[8]:
+    with tabs[9]:
         if sensitivity_payload is None:
             st.info("Run Sensitivity Study to populate experiment outputs.")
             render_robustness_content(robustness_payload)
@@ -2810,6 +3678,567 @@ def render_market_regime_content(
     st.caption(
         f"Current observed regime: {transitions.get('current_regime', 'Unknown')} | "
         f"Current duration: {current_duration} days"
+    )
+
+
+def render_sentiment_research_content(
+    sentiment_payload: dict[str, object] | None,
+) -> None:
+    """Render Phase 4A sentiment diagnostics without allocation controls."""
+    st.header("Phase 4A — Sentiment Regime Confirmation")
+    st.info(
+        "Sentiment is an auxiliary confirmation and explanation layer. "
+        "It does not change portfolio weights, adaptive policies, strategy scores, "
+        "or recommendation confidence in Phase 4A."
+    )
+    if sentiment_payload is None:
+        st.info(
+            "Enable sentiment confirmation and run the portfolio analysis to "
+            "populate this section."
+        )
+        return
+    if sentiment_payload.get("error"):
+        st.warning(str(sentiment_payload["error"]))
+        return
+
+    current = sentiment_payload.get("current", {})
+    current_col1, current_col2, current_col3, current_col4 = st.columns(4)
+    current_col1.metric(
+        "Quantitative Regime",
+        current.get("quantitative_regime", "Unknown"),
+    )
+    current_col2.metric(
+        "Lagged Sentiment",
+        str(current.get("sentiment_label", "unknown")).replace("_", " ").title(),
+    )
+    current_col3.metric(
+        "Confirmation",
+        current.get("confirmation_status", "Insufficient Sentiment Data"),
+    )
+    current_col4.metric(
+        "Decision Coverage",
+        f"{int(current.get('article_coverage', 0) or 0)} headlines",
+    )
+    st.caption(
+        f"Source: {sentiment_payload.get('source_description', 'Local CSV')} · "
+        f"Scorer: {sentiment_payload.get('scoring_method', 'lexicon')} · "
+        f"Lookback: {sentiment_payload.get('lookback_window', 5)} market days · "
+        f"Decision lag: {sentiment_payload.get('decision_lag', 1)} market day(s)"
+    )
+    if current.get("sentiment_warning"):
+        st.warning(str(current["sentiment_warning"]))
+
+    signal = sentiment_payload.get("signal", pd.DataFrame())
+    if not signal.empty:
+        st.plotly_chart(
+            plot_daily_sentiment_signal(signal),
+            use_container_width=True,
+        )
+        timeline_col1, timeline_col2 = st.columns(2)
+        with timeline_col1:
+            st.plotly_chart(
+                plot_sentiment_regime_timeline(
+                    signal,
+                    sentiment_payload.get(
+                        "rule_based_regimes",
+                        pd.Series(dtype="object"),
+                    ),
+                    title="Sentiment vs Rule-Based Decision Regime",
+                ),
+                use_container_width=True,
+            )
+        with timeline_col2:
+            hmm_regimes = sentiment_payload.get("hmm_regimes")
+            if isinstance(hmm_regimes, pd.Series) and not hmm_regimes.empty:
+                st.plotly_chart(
+                    plot_sentiment_regime_timeline(
+                        signal,
+                        hmm_regimes,
+                        title="Sentiment vs HMM Walk-Forward Decision Regime",
+                    ),
+                    use_container_width=True,
+                )
+            else:
+                st.info(
+                    "HMM comparison requires the HMM walk-forward regime method. "
+                    "Full-sample HMM is not used for decision-facing confirmation."
+                )
+
+    comparison = sentiment_payload.get("comparison") or {}
+    agreement_table = pd.DataFrame(
+        [
+            {
+                "comparison": "Rule-based decision regime",
+                "agreement_rate": comparison.get("agreement_with_rule_based"),
+                "risk_off_stress_agreement": comparison.get(
+                    "risk_off_agreement_rule_based"
+                ),
+            },
+            {
+                "comparison": "HMM walk-forward decision regime",
+                "agreement_rate": comparison.get("agreement_with_hmm"),
+                "risk_off_stress_agreement": comparison.get(
+                    "risk_off_agreement_hmm"
+                ),
+            },
+        ]
+    )
+    for column in ("agreement_rate", "risk_off_stress_agreement"):
+        agreement_table[column] = agreement_table[column].map(format_percent)
+    st.subheader("Agreement and Coverage")
+    st.dataframe(agreement_table, use_container_width=True, hide_index=True)
+    coverage = pd.DataFrame(
+        [
+            {
+                "article_day_coverage_ratio": comparison.get(
+                    "article_coverage_ratio"
+                ),
+                "decision_label_coverage_ratio": comparison.get(
+                    "decision_coverage_ratio"
+                ),
+                "last_sentiment_date": current.get("last_sentiment_date"),
+            }
+        ]
+    )
+    st.dataframe(coverage, use_container_width=True, hide_index=True)
+
+    st.subheader("Sentiment Distribution")
+    st.dataframe(
+        comparison.get("sentiment_distribution", pd.DataFrame()),
+        use_container_width=True,
+    )
+    st.subheader("Leading / Lagging Diagnostic")
+    st.caption(
+        "This diagnostic describes alignment only; it does not establish predictive power."
+    )
+    st.dataframe(
+        comparison.get("lead_lag_diagnostics", pd.DataFrame()),
+        use_container_width=True,
+    )
+    with st.expander("Major disagreement dates", expanded=False):
+        st.dataframe(
+            comparison.get("dates_of_major_disagreement", pd.DataFrame()),
+            use_container_width=True,
+        )
+
+
+def render_rbi_macro_research_content(
+    macro_payload: dict[str, object] | None,
+) -> None:
+    """Render Phase 4A.3 real-versus-synthetic RBI corpus diagnostics."""
+    st.header("Phase 4A.3 — Real RBI Corpus Validation")
+    st.caption(
+        "Extends Phase 4A.2 — RBI Macro-Sentiment Confirmation with governed "
+        "real-corpus validation and explicit fallback provenance."
+    )
+    st.info(
+        "RBI macro-sentiment is a lagged confirmation and explanation layer. "
+        "It does not change strategy ranking, evidence gates, recommendation "
+        "confidence, adaptive allocation, or portfolio weights."
+    )
+    if macro_payload is None:
+        st.info(
+            "Enable RBI macro-sentiment and run the portfolio analysis to "
+            "populate this section."
+        )
+        return
+    if macro_payload.get("error"):
+        st.warning(str(macro_payload["error"]))
+        return
+
+    current = macro_payload.get("current", {})
+    corpus_col1, corpus_col2, corpus_col3, corpus_col4 = st.columns(4)
+    corpus_col1.metric("Corpus Type", current.get("corpus_label", "Unavailable"))
+    corpus_col2.metric(
+        "Corpus Documents",
+        int(current.get("corpus_document_count", 0) or 0),
+    )
+    corpus_col3.metric(
+        "Decision Coverage",
+        format_percent(current.get("corpus_coverage_ratio")),
+    )
+    corpus_col4.metric(
+        "Coverage Gate",
+        "Pass" if current.get("passes_minimum_coverage") else "Insufficient",
+    )
+    if current.get("illustrative_only", True):
+        st.warning(
+            current.get("fallback_reason")
+            or "Macro confirmation is illustrative only because real-document "
+            "coverage is unavailable or below the selected threshold."
+        )
+
+    manifest_validation = macro_payload.get("manifest_validation") or {}
+    corpus_diagnostics = manifest_validation.get(
+        "diagnostics",
+        pd.DataFrame(),
+    )
+    if isinstance(corpus_diagnostics, pd.DataFrame) and not corpus_diagnostics.empty:
+        st.subheader("Corpus Diagnostics")
+        st.dataframe(corpus_diagnostics, use_container_width=True, hide_index=True)
+    documents = macro_payload.get("documents", pd.DataFrame())
+    if isinstance(documents, pd.DataFrame) and not documents.empty:
+        type_counts = (
+            documents["document_type"]
+            .value_counts()
+            .rename_axis("document_type")
+            .reset_index(name="document_count")
+        )
+        type_fig = go.Figure(
+            go.Bar(
+                x=type_counts["document_count"],
+                y=type_counts["document_type"],
+                orientation="h",
+                marker={
+                    "color": "#A3BEFA",
+                    "line": {"color": "#2E4780", "width": 1},
+                },
+            )
+        )
+        type_fig.update_layout(
+            title="RBI Document Type Distribution",
+            xaxis_title="Documents",
+            yaxis_title="Document type",
+            template="plotly_white",
+        )
+        st.plotly_chart(type_fig, use_container_width=True)
+
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Quantitative Regime", current.get("quantitative_regime", "Unknown"))
+    col2.metric(
+        "Lagged Macro Label",
+        str(
+            current.get(
+                "macro_sentiment_label",
+                "insufficient_macro_data",
+            )
+        )
+        .replace("_", " ")
+        .title(),
+    )
+    col3.metric(
+        "Confirmation",
+        current.get("macro_sentiment_confirmation", "Insufficient Macro Data"),
+    )
+    col4.metric(
+        "Document Coverage",
+        f"{int(current.get('macro_sentiment_coverage', 0) or 0)} documents",
+    )
+    st.caption(
+        f"Manifest: {macro_payload.get('manifest_path', 'Unavailable')} · "
+        f"Corpus mode: {macro_payload.get('corpus_type', 'unavailable')} · "
+        f"Scorer requested: {macro_payload.get('scoring_method', 'lexicon')} · "
+        f"Lookback: {macro_payload.get('lookback_window', 63)} market days · "
+        f"Decision lag: {macro_payload.get('decision_lag', 1)} market day(s)"
+    )
+    if current.get("macro_sentiment_warning"):
+        st.warning(str(current["macro_sentiment_warning"]))
+
+    macro_index = macro_payload.get("macro_index", pd.DataFrame())
+    if not macro_index.empty:
+        st.plotly_chart(
+            plot_macro_stance_index(macro_index),
+            use_container_width=True,
+        )
+        share_col, uncertainty_col = st.columns(2)
+        with share_col:
+            st.plotly_chart(
+                plot_macro_stance_shares(macro_index),
+                use_container_width=True,
+            )
+        with uncertainty_col:
+            st.plotly_chart(
+                plot_macro_uncertainty_share(macro_index),
+                use_container_width=True,
+            )
+        timeline_col1, timeline_col2 = st.columns(2)
+        with timeline_col1:
+            st.plotly_chart(
+                plot_macro_regime_timeline(
+                    macro_index,
+                    macro_payload.get(
+                        "rule_based_regimes",
+                        pd.Series(dtype="object"),
+                    ),
+                    title="RBI Macro vs Rule-Based Decision Regime",
+                ),
+                use_container_width=True,
+            )
+        with timeline_col2:
+            hmm_regimes = macro_payload.get("hmm_regimes")
+            if isinstance(hmm_regimes, pd.Series) and not hmm_regimes.empty:
+                st.plotly_chart(
+                    plot_macro_regime_timeline(
+                        macro_index,
+                        hmm_regimes,
+                        title="RBI Macro vs HMM Walk-Forward Decision Regime",
+                    ),
+                    use_container_width=True,
+                )
+            else:
+                st.info(
+                    "HMM timeline requires the HMM walk-forward regime method. "
+                    "Full-sample HMM is not used for decision-facing comparison."
+                )
+        share_columns = [
+            "hawkish_share",
+            "dovish_share",
+            "uncertainty_share",
+            "forward_looking_share",
+            "net_stance_score",
+            "macro_risk_score",
+            "macro_label",
+            "decision_macro_label",
+            "document_count",
+            "sentence_count",
+            "coverage_flag",
+        ]
+        st.subheader("Stance, uncertainty, and time shares")
+        st.dataframe(
+            macro_index[[column for column in share_columns if column in macro_index]]
+            .tail(126),
+            use_container_width=True,
+        )
+
+    comparison = macro_payload.get("comparison") or {}
+    st.subheader("Agreement, disagreement, and coverage")
+    agreement = pd.DataFrame(
+        [
+            {
+                "comparison": "Rule-based decision regime",
+                "agreement_rate": comparison.get("agreement_with_rule_based"),
+                "stress_crisis_risk_off_confirmation": comparison.get(
+                    "stress_crisis_risk_off_confirmation_rule_based"
+                ),
+            },
+            {
+                "comparison": "HMM walk-forward decision regime",
+                "agreement_rate": comparison.get(
+                    "agreement_with_hmm_walk_forward"
+                ),
+                "stress_crisis_risk_off_confirmation": comparison.get(
+                    "stress_crisis_risk_off_confirmation_hmm"
+                ),
+            },
+        ]
+    )
+    for column in ("agreement_rate", "stress_crisis_risk_off_confirmation"):
+        agreement[column] = agreement[column].map(format_percent)
+    st.dataframe(agreement, use_container_width=True, hide_index=True)
+    st.write(
+        {
+            "decision_coverage_ratio": comparison.get("coverage_ratio"),
+            "sentence_day_coverage_ratio": comparison.get(
+                "sentence_day_coverage_ratio"
+            ),
+            "last_document_date": current.get("last_document_date"),
+            "coverage_status": current.get("coverage_status"),
+            "rolling_document_count": current.get("macro_sentiment_coverage"),
+            "rolling_sentence_count": current.get(
+                "macro_sentiment_sentence_coverage"
+            ),
+        }
+    )
+    st.subheader("Leading / lagging diagnostic")
+    st.caption(
+        "This is descriptive alignment only and does not establish predictive power."
+    )
+    st.dataframe(
+        comparison.get("lead_lag_diagnostics", pd.DataFrame()),
+        use_container_width=True,
+    )
+    with st.expander("Macro risk-off before stress dates", expanded=False):
+        st.dataframe(
+            comparison.get(
+                "macro_risk_off_before_stress_dates",
+                pd.DataFrame(),
+            ),
+            use_container_width=True,
+        )
+    with st.expander("Macro-regime disagreement dates", expanded=False):
+        st.dataframe(
+            comparison.get("dates_of_major_disagreement", pd.DataFrame()),
+            use_container_width=True,
+        )
+
+
+def render_api_nlp_research_content(
+    nlp_payload: dict[str, object] | None,
+) -> None:
+    """Render provider, ex-ante, and composite NLP monitoring diagnostics."""
+    st.header("Phase 4A.5 — API-Based Ex-Ante NLP Risk Monitoring")
+    st.info(
+        "Only publication-timestamped, decision-lagged textual signals enter "
+        "this monitoring view. Price movement, volatility, drawdown, and "
+        "post-event returns are not NLP inputs."
+    )
+    if nlp_payload is None:
+        st.info(
+            "Enable API-Based NLP Monitoring and run the portfolio analysis "
+            "to populate this section."
+        )
+        return
+    if nlp_payload.get("error"):
+        st.warning(str(nlp_payload["error"]))
+    current = nlp_payload.get("current", {})
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric(
+        "Composite NLP Label",
+        str(
+            current.get("composite_nlp_label", "insufficient_nlp_data")
+        )
+        .replace("_", " ")
+        .title(),
+    )
+    col2.metric(
+        "Quantitative Regime",
+        current.get("quantitative_regime", "Unknown"),
+    )
+    col3.metric(
+        "Coverage Quality",
+        current.get("coverage_quality", "Insufficient"),
+    )
+    freshness = current.get("data_freshness")
+    col4.metric(
+        "Data Freshness",
+        pd.Timestamp(freshness).date().isoformat()
+        if freshness is not None and pd.notna(freshness)
+        else "Unavailable",
+    )
+    st.caption(
+        f"Providers configured: {', '.join(nlp_payload.get('providers_configured', [])) or 'None'} · "
+        f"Providers with data: {', '.join(nlp_payload.get('providers_with_data', [])) or 'None'} · "
+        f"Scoring: {nlp_payload.get('scoring_method', 'lexicon')} · "
+        f"Decision lag: {nlp_payload.get('decision_lag', 1)} day(s)"
+    )
+    if current.get("important_warning"):
+        st.warning(str(current["important_warning"]))
+
+    diagnostics = nlp_payload.get("provider_diagnostics", pd.DataFrame())
+    st.subheader("Provider Diagnostics and Source Coverage")
+    st.dataframe(diagnostics, use_container_width=True, hide_index=True)
+    if isinstance(diagnostics, pd.DataFrame) and not diagnostics.empty:
+        coverage_fig = go.Figure(
+            go.Bar(
+                x=diagnostics["valid_record_count"],
+                y=diagnostics["provider"],
+                orientation="h",
+                marker={
+                    "color": "#A3BEFA",
+                    "line": {"color": "#2E4780", "width": 1},
+                },
+            )
+        )
+        coverage_fig.update_layout(
+            title="Valid Records by Provider",
+            xaxis_title="Valid records",
+            yaxis_title="Provider",
+            template="plotly_white",
+        )
+        st.plotly_chart(coverage_fig, use_container_width=True)
+
+    composite = nlp_payload.get("composite_index", pd.DataFrame())
+    if isinstance(composite, pd.DataFrame) and not composite.empty:
+        st.subheader("Composite and Source-Level NLP Risk")
+        risk_fig = go.Figure()
+        for column, label, color, dash in (
+            (
+                "decision_rbi_macro_risk_score",
+                "RBI macro risk",
+                "#5477C4",
+                "solid",
+            ),
+            (
+                "decision_earnings_sector_risk_score",
+                "Earnings sector risk",
+                "#B8A037",
+                "dot",
+            ),
+            (
+                "decision_news_geopolitical_risk_score",
+                "News/geopolitical risk",
+                "#CC6F47",
+                "dash",
+            ),
+            (
+                "decision_composite_nlp_risk_score",
+                "Composite NLP risk",
+                "#1F2430",
+                "solid",
+            ),
+        ):
+            if column in composite:
+                risk_fig.add_trace(
+                    go.Scatter(
+                        x=composite.index,
+                        y=composite[column],
+                        name=label,
+                        line={"color": color, "dash": dash},
+                    )
+                )
+        risk_fig.add_hline(y=0.15, line_dash="dot", line_color="#804126")
+        risk_fig.add_hline(y=-0.15, line_dash="dot", line_color="#386411")
+        risk_fig.update_layout(
+            title="Decision-Lagged Composite NLP Risk Index",
+            xaxis_title="Date",
+            yaxis_title="Textual risk score",
+            template="plotly_white",
+            legend={"orientation": "h"},
+        )
+        st.plotly_chart(risk_fig, use_container_width=True)
+
+    comparison = nlp_payload.get("comparison") or {}
+    st.subheader("Agreement Diagnostics")
+    st.dataframe(
+        pd.DataFrame(
+            [
+                {
+                    "comparison": "HMM walk-forward",
+                    "agreement_rate": comparison.get(
+                        "agreement_with_hmm_walk_forward"
+                    ),
+                    "risk_off_stress_confirmation": comparison.get(
+                        "risk_off_confirmation_hmm"
+                    ),
+                },
+                {
+                    "comparison": "Rule-based lagged",
+                    "agreement_rate": comparison.get(
+                        "agreement_with_rule_based"
+                    ),
+                    "risk_off_stress_confirmation": comparison.get(
+                        "risk_off_confirmation_rule_based"
+                    ),
+                },
+            ]
+        ),
+        use_container_width=True,
+        hide_index=True,
+    )
+    comparison_table = comparison.get("comparison_table", pd.DataFrame())
+    if isinstance(comparison_table, pd.DataFrame) and not comparison_table.empty:
+        timeline = comparison_table[
+            [
+                "composite_nlp_risk_score",
+                "rule_based_regime",
+                "hmm_walk_forward_regime",
+                "agreement_rule_based",
+                "agreement_hmm",
+            ]
+        ].tail(252)
+        st.write("NLP vs HMM and rule-based timeline")
+        st.dataframe(timeline, use_container_width=True)
+    st.write("Source-level contribution")
+    st.dataframe(
+        comparison.get("source_level_contribution", pd.DataFrame()),
+        use_container_width=True,
+        hide_index=True,
+    )
+    warnings = nlp_payload.get("reaction_data_warnings", pd.DataFrame())
+    st.caption(
+        f"Possible reaction-data warnings: "
+        f"{len(warnings) if isinstance(warnings, pd.DataFrame) else 0}. "
+        "Agreement is descriptive and does not establish predictiveness."
     )
 
 
@@ -3409,6 +4838,9 @@ def build_dashboard_recommendation(
     candidate_metrics = None
     current_regime = None
     n_observations = None
+    sentiment_current: dict[str, object] = {}
+    macro_current: dict[str, object] = {}
+    nlp_current: dict[str, object] = {}
     if portfolio_payload is not None:
         candidate_metrics = build_selection_candidate_metrics(
             portfolio_payload,
@@ -3423,6 +4855,14 @@ def build_dashboard_recommendation(
             "current_decision_regime",
             regime_payload.get("current_observed_regime"),
         )
+        sentiment_payload = portfolio_payload.get("sentiment_results") or {}
+        sentiment_current = sentiment_payload.get("current") or {}
+        macro_payload = (
+            portfolio_payload.get("rbi_macro_sentiment_results") or {}
+        )
+        macro_current = macro_payload.get("current") or {}
+        nlp_payload = portfolio_payload.get("api_nlp_results") or {}
+        nlp_current = nlp_payload.get("current") or {}
 
     return select_strategy_for_profile(
         investor_profile,
@@ -3432,6 +4872,45 @@ def build_dashboard_recommendation(
         slippage_bps=slippage_bps,
         hmm_walk_forward_valid=bool(HMM_AVAILABLE),
         n_observations=n_observations,
+        sentiment_confirmation_status=str(
+            sentiment_current.get(
+                "confirmation_status",
+                "Insufficient Sentiment Data",
+            )
+        ),
+        sentiment_label=str(sentiment_current.get("sentiment_label", "unknown")),
+        sentiment_coverage=float(sentiment_current.get("article_coverage", 0) or 0),
+        sentiment_warning=sentiment_current.get("sentiment_warning"),
+        macro_sentiment_label=str(
+            macro_current.get(
+                "macro_sentiment_label",
+                "insufficient_macro_data",
+            )
+        ),
+        macro_sentiment_confirmation=str(
+            macro_current.get(
+                "macro_sentiment_confirmation",
+                "Insufficient Macro Data",
+            )
+        ),
+        macro_sentiment_coverage=float(
+            macro_current.get("macro_sentiment_coverage", 0) or 0
+        ),
+        macro_sentiment_warning=macro_current.get("macro_sentiment_warning"),
+        nlp_risk_label=str(
+            nlp_current.get(
+                "composite_nlp_label",
+                "insufficient_nlp_data",
+            )
+        ),
+        nlp_confirmation_status=str(
+            nlp_current.get(
+                "composite_nlp_confirmation",
+                "Insufficient NLP Data",
+            )
+        ),
+        nlp_coverage=float(nlp_current.get("coverage_score", 0.0) or 0.0),
+        nlp_warning=nlp_current.get("important_warning"),
         artifacts=artifacts,
     )
 
@@ -3479,6 +4958,24 @@ def render_selection_diagnostics(
     st.write(
         f"Profile: **{recommendation.investor_profile}** · Scenarios: "
         f"**{', '.join(recommendation.scenario_categories)}**"
+    )
+    st.caption(
+        "Sentiment commentary: "
+        f"{recommendation.sentiment_confirmation_status} "
+        f"({recommendation.sentiment_label.replace('_', ' ').title()}); "
+        "candidate scores are unchanged by sentiment."
+    )
+    st.caption(
+        "RBI macro-sentiment commentary: "
+        f"{recommendation.macro_sentiment_confirmation} "
+        f"({recommendation.macro_sentiment_label.replace('_', ' ').title()}); "
+        "ranking, gates, confidence, allocation, and weights are unchanged."
+    )
+    st.caption(
+        "Composite NLP commentary: "
+        f"{recommendation.nlp_confirmation_status} "
+        f"({recommendation.nlp_risk_label.replace('_', ' ').title()}); "
+        "candidate scores, gates, confidence, allocation, and weights are unchanged."
     )
     with st.expander("Selection Gates", expanded=True):
         st.dataframe(selection_gate_table(recommendation), use_container_width=True)
@@ -3534,6 +5031,161 @@ def render_manager_view(
     st.success(recommendation.explanation)
     st.caption(
         f"Current scenario assessment: {', '.join(recommendation.scenario_categories)}"
+    )
+
+    st.header("Sentiment Confirmation")
+    sentiment_col1, sentiment_col2, sentiment_col3, sentiment_col4 = st.columns(4)
+    sentiment_col1.metric(
+        "Current Quant Regime",
+        (
+            (portfolio_payload.get("sentiment_results") or {})
+            .get("current", {})
+            .get("quantitative_regime", "Unknown")
+            if portfolio_payload is not None
+            else "Unknown"
+        ),
+    )
+    sentiment_col2.metric(
+        "Current Sentiment",
+        recommendation.sentiment_label.replace("_", " ").title(),
+    )
+    sentiment_col3.metric(
+        "Confirmation Status",
+        recommendation.sentiment_confirmation_status,
+    )
+    sentiment_col4.metric(
+        "Article Coverage",
+        f"{int(recommendation.sentiment_coverage)} headlines",
+    )
+    sentiment_current = (
+        (portfolio_payload.get("sentiment_results") or {}).get("current", {})
+        if portfolio_payload is not None
+        else {}
+    )
+    last_sentiment_date = sentiment_current.get("last_sentiment_date")
+    st.caption(
+        "Last sentiment date: "
+        + (
+            pd.Timestamp(last_sentiment_date).date().isoformat()
+            if last_sentiment_date is not None
+            else "Unavailable"
+        )
+    )
+    if recommendation.sentiment_warning:
+        st.warning(recommendation.sentiment_warning)
+    st.caption(
+        "Sentiment is confirmation commentary only and does not change the "
+        "recommended strategy or portfolio weights."
+    )
+
+    st.header("RBI Macro-Sentiment Confirmation")
+    macro_current = (
+        (portfolio_payload.get("rbi_macro_sentiment_results") or {}).get(
+            "current",
+            {},
+        )
+        if portfolio_payload is not None
+        else {}
+    )
+    corpus_documents = int(
+        macro_current.get("corpus_document_count", 0) or 0
+    )
+    manager_corpus_label = (
+        macro_current.get("corpus_label", "Real")
+        if macro_current.get("passes_minimum_coverage")
+        else "Synthetic fixture / unavailable"
+    )
+    macro_col1, macro_col2, macro_col3, macro_col4 = st.columns(4)
+    macro_col1.metric(
+        "RBI Corpus",
+        manager_corpus_label,
+    )
+    macro_col2.metric(
+        "Documents",
+        corpus_documents,
+    )
+    macro_col3.metric(
+        "Coverage",
+        format_percent(macro_current.get("corpus_coverage_ratio")),
+    )
+    macro_col4.metric(
+        "Macro Label",
+        recommendation.macro_sentiment_label.replace("_", " ").title(),
+    )
+    uncertainty_share = macro_current.get("uncertainty_share")
+    last_document_date = macro_current.get("last_document_date")
+    st.caption(
+        f"Stance: {macro_current.get('stance_summary', 'No macro stance evidence')} · "
+        f"Quant regime: {macro_current.get('quantitative_regime', 'Unknown')} · "
+        f"Macro label: {recommendation.macro_sentiment_label.replace('_', ' ').title()} · "
+        f"Macro confirmation: {recommendation.macro_sentiment_confirmation} · "
+        f"Coverage status: "
+        f"{'Pass' if macro_current.get('passes_minimum_coverage') else 'Insufficient'} · "
+        f"Uncertainty: {format_percent(uncertainty_share)} · "
+        "Last document date: "
+        + (
+            pd.Timestamp(last_document_date).date().isoformat()
+            if last_document_date is not None
+            else "Unavailable"
+        )
+    )
+    if recommendation.macro_sentiment_warning:
+        st.warning(recommendation.macro_sentiment_warning)
+    if macro_current.get("illustrative_only", True):
+        st.warning(
+            "RBI corpus: Synthetic fixture / unavailable. "
+            "Macro confirmation is illustrative only."
+        )
+    st.caption(
+        "RBI macro-sentiment is commentary only and does not change strategy "
+        "ranking, gates, confidence, allocation, or portfolio weights."
+    )
+
+    st.header("NLP Risk Confirmation")
+    nlp_current = (
+        (portfolio_payload.get("api_nlp_results") or {}).get("current", {})
+        if portfolio_payload is not None
+        else {}
+    )
+    nlp_col1, nlp_col2, nlp_col3, nlp_col4 = st.columns(4)
+    nlp_col1.metric(
+        "Current Quant Regime",
+        nlp_current.get("quantitative_regime", "Unknown"),
+    )
+    nlp_col2.metric(
+        "RBI Macro Signal",
+        nlp_current.get("rbi_macro_signal", "Insufficient"),
+    )
+    nlp_col3.metric(
+        "Earnings / Sector",
+        nlp_current.get("earnings_sector_signal", "Insufficient"),
+    )
+    nlp_col4.metric(
+        "News / Geopolitics",
+        nlp_current.get("news_geopolitical_signal", "Insufficient"),
+    )
+    nlp_summary_col1, nlp_summary_col2, nlp_summary_col3 = st.columns(3)
+    nlp_summary_col1.metric(
+        "Composite NLP Confirmation",
+        recommendation.nlp_confirmation_status,
+    )
+    nlp_summary_col2.metric(
+        "Coverage Quality",
+        nlp_current.get("coverage_quality", "Insufficient"),
+    )
+    freshness = nlp_current.get("data_freshness")
+    nlp_summary_col3.metric(
+        "Data Freshness",
+        pd.Timestamp(freshness).date().isoformat()
+        if freshness is not None and pd.notna(freshness)
+        else "Unavailable",
+    )
+    if nlp_current.get("important_warning"):
+        st.warning(str(nlp_current["important_warning"]))
+    st.caption(
+        "API-based NLP risk is a monitoring and confirmation layer only. "
+        "Provider keys, raw records, transcripts, and model internals are "
+        "not exposed in Manager View."
     )
 
     st.header("Tradeoff Table")
@@ -3593,6 +5245,21 @@ def render_developer_view(
         if portfolio_payload is not None
         else None
     )
+    sentiment_results = (
+        portfolio_payload.get("sentiment_results")
+        if portfolio_payload is not None
+        else None
+    )
+    rbi_macro_results = (
+        portfolio_payload.get("rbi_macro_sentiment_results")
+        if portfolio_payload is not None
+        else None
+    )
+    api_nlp_results = (
+        portfolio_payload.get("api_nlp_results")
+        if portfolio_payload is not None
+        else None
+    )
 
     with st.expander("1. Raw HMM Diagnostics", expanded=False):
         if regime_payload is None:
@@ -3618,7 +5285,171 @@ def render_developer_view(
             st.write("Rule-based versus HMM disagreement dates")
             st.dataframe(disagreements, use_container_width=True)
 
-    with st.expander("2. Raw CPCV Diagnostics", expanded=False):
+    with st.expander("2. Raw Sentiment and Alignment Diagnostics", expanded=False):
+        if sentiment_results is None:
+            st.caption("No sentiment payload is available.")
+        else:
+            st.write("Raw timestamped sentiment records")
+            st.dataframe(
+                sentiment_results.get("raw_records", pd.DataFrame()),
+                use_container_width=True,
+            )
+            st.write("Scored sentiment records")
+            st.dataframe(
+                sentiment_results.get("scored_records", pd.DataFrame()),
+                use_container_width=True,
+            )
+            alignment = sentiment_results.get("alignment") or {}
+            st.write("Timestamp and look-ahead checks")
+            st.dataframe(
+                alignment.get("checks", pd.DataFrame()),
+                use_container_width=True,
+            )
+            st.write("Market-date assignment diagnostics")
+            st.dataframe(
+                alignment.get("assigned_records", pd.DataFrame()),
+                use_container_width=True,
+            )
+            signal = sentiment_results.get("signal", pd.DataFrame())
+            st.write("Observed and lagged daily signal")
+            st.dataframe(signal, use_container_width=True)
+            render_dataframe_download(
+                "Download Full Sentiment Signal",
+                signal,
+                "sentiment_signal.csv",
+                key="download_sentiment_signal",
+            )
+
+    with st.expander(
+        "2B. Raw RBI Macro-Sentiment Diagnostics",
+        expanded=False,
+    ):
+        if rbi_macro_results is None:
+            st.caption("No RBI macro-sentiment payload is available.")
+        else:
+            st.write("Raw RBI document manifest and load status")
+            st.dataframe(
+                rbi_macro_results.get("documents", pd.DataFrame()),
+                use_container_width=True,
+            )
+            st.write("Processed sentence table")
+            st.dataframe(
+                rbi_macro_results.get("sentences", pd.DataFrame()),
+                use_container_width=True,
+            )
+            scored_sentences = rbi_macro_results.get(
+                "scored_sentences",
+                pd.DataFrame(),
+            )
+            st.write("Sentence-level stance, certainty, and time scores")
+            st.dataframe(scored_sentences, use_container_width=True)
+            if not scored_sentences.empty and "fallback_used" in scored_sentences:
+                st.write("Transformer fallback diagnostics")
+                st.dataframe(
+                    scored_sentences.loc[
+                        scored_sentences["fallback_used"].fillna(False)
+                    ],
+                    use_container_width=True,
+                )
+            construction = (
+                rbi_macro_results.get("construction_diagnostics") or {}
+            )
+            validation = rbi_macro_results.get("manifest_validation") or {}
+            st.write("Real-manifest validation diagnostics")
+            st.dataframe(
+                validation.get("diagnostics", pd.DataFrame()),
+                use_container_width=True,
+            )
+            st.write("Invalid real-corpus documents")
+            st.dataframe(
+                rbi_macro_results.get("invalid_documents", pd.DataFrame()),
+                use_container_width=True,
+            )
+            st.write("Manifest ingestion diagnostics")
+            st.json(construction.get("ingestion_diagnostics", {}))
+            st.write("Timestamp, look-ahead, and construction diagnostics")
+            st.dataframe(
+                construction.get("checks", pd.DataFrame()),
+                use_container_width=True,
+            )
+            macro_index = rbi_macro_results.get(
+                "macro_index",
+                pd.DataFrame(),
+            )
+            st.write("Observed and lagged macro stance index")
+            st.dataframe(macro_index, use_container_width=True)
+            render_dataframe_download(
+                "Download Full Macro Stance Index",
+                macro_index,
+                "macro_stance_index.csv",
+                key="download_macro_stance_index",
+            )
+
+    with st.expander(
+        "2C. Raw API / Ex-Ante NLP Diagnostics",
+        expanded=False,
+    ):
+        if api_nlp_results is None:
+            st.caption("No API/provider NLP payload is available.")
+        else:
+            st.write("Raw provider records")
+            st.json(api_nlp_results.get("raw_provider_records", [])[:50])
+            st.write("Normalized and deduplicated records")
+            st.dataframe(
+                api_nlp_results.get("normalized_records", pd.DataFrame()),
+                use_container_width=True,
+            )
+            st.write("Provider and API/cache diagnostics")
+            st.dataframe(
+                api_nlp_results.get(
+                    "provider_diagnostics", pd.DataFrame()
+                ),
+                use_container_width=True,
+            )
+            st.write("Ex-ante validation and timestamp alignment checks")
+            st.dataframe(
+                api_nlp_results.get(
+                    "ex_ante_validation", pd.DataFrame()
+                ),
+                use_container_width=True,
+            )
+            st.write("Possible reaction-data records")
+            st.dataframe(
+                api_nlp_results.get(
+                    "reaction_data_warnings", pd.DataFrame()
+                ),
+                use_container_width=True,
+            )
+            st.write("FinBERT and lexicon fallback metadata")
+            finbert_scores = api_nlp_results.get(
+                "finbert_scores", pd.DataFrame()
+            )
+            fallback_columns = [
+                column
+                for column in [
+                    "record_id",
+                    "provider",
+                    "finbert_label",
+                    "finbert_score",
+                    "scoring_method_used",
+                    "model_name",
+                    "model_version",
+                    "fallback_used",
+                    "fallback_reason",
+                ]
+                if column in finbert_scores
+            ]
+            st.dataframe(
+                finbert_scores.loc[:, fallback_columns],
+                use_container_width=True,
+            )
+            st.write("Decision-lagged composite NLP risk index")
+            st.dataframe(
+                api_nlp_results.get("composite_index", pd.DataFrame()),
+                use_container_width=True,
+            )
+
+    with st.expander("3. Raw CPCV Diagnostics", expanded=False):
         if robustness_payload is None:
             st.caption("No CPCV payload is available.")
         else:
@@ -3638,7 +5469,7 @@ def render_developer_view(
                 key="developer_download_cpcv_folds",
             )
 
-    with st.expander("3. Full Adaptive Decision Log", expanded=False):
+    with st.expander("4. Full Adaptive Decision Log", expanded=False):
         diagnostics = (
             adaptive_results.get("diagnostics", pd.DataFrame())
             if adaptive_results is not None
@@ -3652,7 +5483,7 @@ def render_developer_view(
             key="download_adaptive_diagnostics",
         )
 
-    with st.expander("4. Full Weight History", expanded=False):
+    with st.expander("5. Full Weight History", expanded=False):
         weights = (
             adaptive_results.get("weights", pd.DataFrame())
             if adaptive_results is not None
@@ -3673,7 +5504,7 @@ def render_developer_view(
             key="download_full_weight_history",
         )
 
-    with st.expander("5. Net/Gross Reconciliation", expanded=False):
+    with st.expander("6. Net/Gross Reconciliation", expanded=False):
         if portfolio_payload is None:
             st.caption("No portfolio payload is available.")
         else:
@@ -3697,7 +5528,7 @@ def render_developer_view(
                 use_container_width=True,
             )
 
-    with st.expander("6. Defensive Return Reconciliation", expanded=False):
+    with st.expander("7. Defensive Return Reconciliation", expanded=False):
         if adaptive_results is None:
             st.caption("No adaptive defensive-return result is available.")
         else:
@@ -3736,7 +5567,7 @@ def render_developer_view(
                 key="download_defensive_reconciliation",
             )
 
-    with st.expander("7. Internal Config Dump", expanded=False):
+    with st.expander("8. Internal Config Dump", expanded=False):
         config_dump = {
             "selected_tickers": (
                 portfolio_payload.get("selected_tickers")
@@ -3768,6 +5599,61 @@ def render_developer_view(
                 if portfolio_payload is not None
                 else None
             ),
+            "sentiment_source": (
+                sentiment_results.get("source_description")
+                if sentiment_results is not None
+                else None
+            ),
+            "sentiment_decision_lag": (
+                sentiment_results.get("decision_lag")
+                if sentiment_results is not None
+                else None
+            ),
+            "rbi_macro_manifest": (
+                rbi_macro_results.get("manifest_path")
+                if rbi_macro_results is not None
+                else None
+            ),
+            "rbi_corpus_type": (
+                rbi_macro_results.get("corpus_type")
+                if rbi_macro_results is not None
+                else None
+            ),
+            "rbi_real_corpus_available": (
+                rbi_macro_results.get("real_corpus_available")
+                if rbi_macro_results is not None
+                else None
+            ),
+            "rbi_minimum_coverage_threshold": (
+                rbi_macro_results.get("minimum_coverage_threshold")
+                if rbi_macro_results is not None
+                else None
+            ),
+            "rbi_macro_scorer": (
+                rbi_macro_results.get("scoring_method")
+                if rbi_macro_results is not None
+                else None
+            ),
+            "rbi_macro_decision_lag": (
+                rbi_macro_results.get("decision_lag")
+                if rbi_macro_results is not None
+                else None
+            ),
+            "api_nlp_providers": (
+                api_nlp_results.get("providers_configured")
+                if api_nlp_results is not None
+                else None
+            ),
+            "api_nlp_scoring_method": (
+                api_nlp_results.get("scoring_method")
+                if api_nlp_results is not None
+                else None
+            ),
+            "api_nlp_decision_lag": (
+                api_nlp_results.get("decision_lag")
+                if api_nlp_results is not None
+                else None
+            ),
             "research_objective": selected_objective_label,
         }
         st.json(config_dump)
@@ -3779,7 +5665,7 @@ def render_developer_view(
                 key="developer_download_sensitivity",
             )
 
-    with st.expander("8. Raw Strategy Recommendation", expanded=False):
+    with st.expander("9. Raw Strategy Recommendation", expanded=False):
         if recommendation is None:
             st.caption("No strategy recommendation is available.")
         else:
@@ -3788,7 +5674,7 @@ def render_developer_view(
             raw.pop("candidate_scores", None)
             st.json(raw)
 
-    with st.expander("9. Selection Gate Results", expanded=False):
+    with st.expander("10. Selection Gate Results", expanded=False):
         if recommendation is None:
             st.caption("No selection gates are available.")
         else:
@@ -3797,7 +5683,7 @@ def render_developer_view(
                 use_container_width=True,
             )
 
-    with st.expander("10. Selection Artifact Diagnostics and Scoring", expanded=False):
+    with st.expander("11. Selection Artifact Diagnostics and Scoring", expanded=False):
         if recommendation is None:
             st.caption("No selection artifact diagnostics are available.")
         else:
@@ -4062,6 +5948,29 @@ hmm_covariance_type = "diag"
 hmm_decision_lag = 1
 hmm_feature_columns = list(DEFAULT_HMM_FEATURE_COLUMNS)
 
+enable_sentiment_confirmation = True
+sentiment_source = DEFAULT_SENTIMENT_CSV
+sentiment_source_description = "Bundled synthetic sample"
+sentiment_lookback_window = 5
+sentiment_decision_lag = 1
+enable_rbi_macro_sentiment = True
+rbi_manifest_path = DEFAULT_RBI_MANIFEST
+rbi_corpus_mode = "synthetic_fixture"
+rbi_source_description = "Bundled synthetic RBI-style fixture"
+rbi_scorer_method = "lexicon"
+rbi_lookback_window = 63
+rbi_decision_lag = 1
+rbi_minimum_coverage_threshold = 0.10
+enable_api_nlp_monitoring = True
+api_nlp_provider_names = [
+    "RBI local fallback",
+    "Earnings local",
+    "GDELT fixture",
+]
+api_nlp_query_preset = "Broad monitoring"
+api_nlp_scoring_method = "lexicon"
+api_nlp_decision_lag = 1
+
 enable_adaptive_strategy = dashboard_mode == MANAGER_VIEW
 adaptive_regime_source = (
     DEFAULT_MANAGER_ADAPTIVE_OVERLAY["regime_source"]
@@ -4293,6 +6202,193 @@ if dashboard_mode == RESEARCH_VIEW:
                         value=21,
                         key="ui_hmm_refit_frequency",
                     )
+
+    with st.sidebar.expander("Phase 4A — Sentiment Confirmation", expanded=False):
+        enable_sentiment_confirmation = st.checkbox(
+            "Enable Sentiment Confirmation",
+            key="ui_enable_sentiment_confirmation",
+        )
+        if enable_sentiment_confirmation:
+            sentiment_source_option = st.selectbox(
+                "Sentiment Source",
+                [
+                    "Bundled synthetic sample",
+                    "Local CSV path",
+                    "Upload CSV",
+                ],
+                key="ui_sentiment_source",
+            )
+            if sentiment_source_option == "Local CSV path":
+                sentiment_path = st.text_input(
+                    "Sentiment CSV Path",
+                    key="ui_sentiment_csv_path",
+                )
+                sentiment_source = sentiment_path
+                sentiment_source_description = f"Local CSV: {sentiment_path}"
+            elif sentiment_source_option == "Upload CSV":
+                uploaded_sentiment = st.file_uploader(
+                    "Upload Sentiment CSV",
+                    type=["csv"],
+                    key="ui_sentiment_csv_upload",
+                )
+                sentiment_source = (
+                    uploaded_sentiment
+                    if uploaded_sentiment is not None
+                    else DEFAULT_SENTIMENT_CSV
+                )
+                sentiment_source_description = (
+                    f"Uploaded CSV: {uploaded_sentiment.name}"
+                    if uploaded_sentiment is not None
+                    else "Bundled synthetic sample fallback"
+                )
+            else:
+                sentiment_source = DEFAULT_SENTIMENT_CSV
+                sentiment_source_description = "Bundled synthetic sample"
+            sentiment_lookback_window = st.slider(
+                "Sentiment Lookback Window",
+                min_value=1,
+                max_value=21,
+                key="ui_sentiment_lookback_window",
+            )
+            sentiment_decision_lag = st.number_input(
+                "Sentiment Decision Lag",
+                min_value=1,
+                max_value=10,
+                step=1,
+                key="ui_sentiment_decision_lag",
+            )
+            st.caption(
+                "Sentiment is timestamped and lagged. It is not an allocation "
+                "input or a strategy-ranking control in Phase 4A."
+            )
+
+    with st.sidebar.expander(
+        "Phase 4A.3 — RBI Corpus Validation",
+        expanded=False,
+    ):
+        enable_rbi_macro_sentiment = st.checkbox(
+            "Enable RBI Macro-Sentiment",
+            key="ui_enable_rbi_macro_sentiment",
+        )
+        if enable_rbi_macro_sentiment:
+            rbi_corpus_mode = st.selectbox(
+                "RBI Corpus Mode",
+                ["synthetic_fixture", "real_rbi"],
+                key="ui_rbi_corpus_mode",
+            )
+            if rbi_corpus_mode == "real_rbi":
+                rbi_manifest_path = st.text_input(
+                    "RBI Manifest Path",
+                    key="ui_rbi_manifest_path",
+                )
+                rbi_source_description = (
+                    f"Real RBI manifest: {rbi_manifest_path}"
+                )
+            else:
+                rbi_manifest_path = DEFAULT_RBI_MANIFEST
+                rbi_source_description = (
+                    "Bundled synthetic RBI-style fixture"
+                )
+            rbi_scorer_method = st.selectbox(
+                "RBI Scorer Method",
+                ["lexicon", "transformer"],
+                key="ui_rbi_scorer_method",
+                help=(
+                    "Transformer mode uses locally available Hugging Face models "
+                    "and falls back sentence-by-sentence to the lexicon."
+                ),
+            )
+            rbi_lookback_window = st.slider(
+                "Macro Lookback Window",
+                min_value=5,
+                max_value=252,
+                step=1,
+                key="ui_rbi_lookback_window",
+            )
+            rbi_decision_lag = st.number_input(
+                "Macro Decision Lag",
+                min_value=1,
+                max_value=21,
+                step=1,
+                key="ui_rbi_decision_lag",
+            )
+            rbi_minimum_coverage_threshold = st.slider(
+                "Minimum Coverage Threshold",
+                min_value=0.0,
+                max_value=1.0,
+                step=0.01,
+                key="ui_rbi_minimum_coverage_threshold",
+                format="%.2f",
+            )
+            st.caption(
+                "Real mode validates the local manifest and falls back safely "
+                "when no valid corpus exists. RBI macro-sentiment remains "
+                "commentary-only."
+            )
+
+    with st.sidebar.expander(
+        "Phase 4A.5 — API-Based Ex-Ante NLP",
+        expanded=False,
+    ):
+        enable_api_nlp_monitoring = st.checkbox(
+            "Enable API-Based NLP Monitoring",
+            key="ui_enable_api_nlp_monitoring",
+        )
+        if enable_api_nlp_monitoring:
+            provider_options = [
+                "RBI local fallback",
+                "RBI feeds (optional)",
+                "Earnings local",
+                "GDELT fixture",
+                "GDELT API (optional)",
+                "Alpha Vantage API (optional)",
+            ]
+            selected_defaults = [
+                name
+                for name in st.session_state.get("ui_nlp_providers", [])
+                if name in provider_options
+            ]
+            if not selected_defaults:
+                st.session_state["ui_nlp_providers"] = [
+                    "RBI local fallback",
+                    "Earnings local",
+                    "GDELT fixture",
+                ]
+            api_nlp_provider_names = st.multiselect(
+                "NLP Provider Selector",
+                provider_options,
+                key="ui_nlp_providers",
+            )
+            api_nlp_query_preset = st.selectbox(
+                "NLP Query Preset",
+                list(NLP_QUERY_PRESETS),
+                key="ui_nlp_query_preset",
+            )
+            api_nlp_scoring_method = st.selectbox(
+                "NLP Scoring Method",
+                ["lexicon", "finbert"],
+                key="ui_nlp_scoring_method",
+                help=(
+                    "FinBERT uses local model files only and falls back to "
+                    "the deterministic lexicon when unavailable."
+                ),
+            )
+            api_nlp_decision_lag = st.number_input(
+                "NLP Decision Lag",
+                min_value=1,
+                max_value=10,
+                step=1,
+                key="ui_nlp_decision_lag",
+            )
+            st.caption(
+                f"Provider date range follows the portfolio analysis: "
+                f"{start_date} to {end_date}. API keys are read from environment "
+                "variables and are never displayed."
+            )
+            st.caption(
+                "Possible market-reaction records are flagged and excluded "
+                "from composite scoring. NLP remains commentary-only."
+            )
 
     with st.sidebar.expander("Phase 3C — Adaptive Allocation Policy", expanded=False):
         enable_adaptive_strategy = st.checkbox(
@@ -4569,6 +6665,29 @@ if run_portfolio_button:
                 adaptive_training_window=int(adaptive_training_window),
                 adaptive_rebalance_frequency=adaptive_rebalance_frequency,
                 adaptive_show_policy_table=adaptive_show_policy_table,
+                enable_sentiment_confirmation=enable_sentiment_confirmation,
+                sentiment_source=sentiment_source,
+                sentiment_source_description=sentiment_source_description,
+                sentiment_lookback_window=int(sentiment_lookback_window),
+                sentiment_decision_lag=int(sentiment_decision_lag),
+                enable_rbi_macro_sentiment=enable_rbi_macro_sentiment,
+                rbi_manifest_path=rbi_manifest_path,
+                rbi_corpus_mode=rbi_corpus_mode,
+                rbi_source_description=rbi_source_description,
+                rbi_scorer_method=rbi_scorer_method,
+                rbi_lookback_window=int(rbi_lookback_window),
+                rbi_decision_lag=int(rbi_decision_lag),
+                rbi_minimum_coverage_threshold=float(
+                    rbi_minimum_coverage_threshold
+                ),
+                enable_api_nlp_monitoring=enable_api_nlp_monitoring,
+                api_nlp_provider_names=api_nlp_provider_names,
+                api_nlp_query_terms=NLP_QUERY_PRESETS.get(
+                    api_nlp_query_preset,
+                    NLP_QUERY_PRESETS["Broad monitoring"],
+                ),
+                api_nlp_scoring_method=api_nlp_scoring_method,
+                api_nlp_decision_lag=int(api_nlp_decision_lag),
             )
             portfolio_payload["strategy_recommendation"] = (
                 build_dashboard_recommendation(

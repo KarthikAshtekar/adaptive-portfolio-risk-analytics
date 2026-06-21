@@ -40,6 +40,18 @@ class StrategyRecommendation:
     assumptions: list[str]
     explanation: str
     warnings: list[str]
+    sentiment_confirmation_status: str = "Insufficient Sentiment Data"
+    sentiment_label: str = "unknown"
+    sentiment_coverage: float = 0.0
+    sentiment_warning: str | None = None
+    macro_sentiment_label: str = "insufficient_macro_data"
+    macro_sentiment_confirmation: str = "Insufficient Macro Data"
+    macro_sentiment_coverage: float = 0.0
+    macro_sentiment_warning: str | None = None
+    nlp_risk_label: str = "insufficient_nlp_data"
+    nlp_confirmation_status: str = "Insufficient NLP Data"
+    nlp_coverage: float = 0.0
+    nlp_warning: str | None = None
     artifact_diagnostics: dict[str, object] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, object]:
@@ -245,6 +257,18 @@ def select_strategy_for_profile(
     slippage_bps: float = 5.0,
     hmm_walk_forward_valid: bool = True,
     n_observations: int | None = None,
+    sentiment_confirmation_status: str = "Insufficient Sentiment Data",
+    sentiment_label: str = "unknown",
+    sentiment_coverage: float = 0.0,
+    sentiment_warning: str | None = None,
+    macro_sentiment_label: str = "insufficient_macro_data",
+    macro_sentiment_confirmation: str = "Insufficient Macro Data",
+    macro_sentiment_coverage: float = 0.0,
+    macro_sentiment_warning: str | None = None,
+    nlp_risk_label: str = "insufficient_nlp_data",
+    nlp_confirmation_status: str = "Insufficient NLP Data",
+    nlp_coverage: float = 0.0,
+    nlp_warning: str | None = None,
     artifacts: Mapping[str, object] | None = None,
     repo_root: str | Path | None = None,
 ) -> StrategyRecommendation:
@@ -334,10 +358,19 @@ def select_strategy_for_profile(
         warnings.append("HMM walk-forward evidence is unavailable or unstable; full-sample HMM is not used for selection.")
     if overlay_strategy is None:
         warnings.append("No adaptive overlay cleared the current evidence and safety gates.")
+    if sentiment_warning:
+        warnings.append(str(sentiment_warning))
+    if macro_sentiment_warning:
+        warnings.append(str(macro_sentiment_warning))
+    if nlp_warning:
+        warnings.append(str(nlp_warning))
     assumptions = [
         "All performance comparisons use net return metrics.",
         "HERC remains the strategic core unless current fixed-strategy evidence invalidates it.",
         "Adaptive strategies are overlays or robustness references, not automatic HERC replacements.",
+        "Sentiment is commentary only and does not change strategy scores or portfolio weights.",
+        "RBI macro-sentiment is commentary only and does not change ranking, gates, confidence, allocation, or portfolio weights.",
+        "Composite ex-ante NLP risk is commentary only and does not change selection scores, gates, confidence, allocation, or portfolio weights.",
         f"Trading costs are assumed to be {base_bps:.0f} bps base plus {slippage_bps:.0f} bps slippage.",
     ]
     comparison_columns = [
@@ -368,6 +401,9 @@ def select_strategy_for_profile(
         overlay_strategy=overlay_strategy,
         scenarios=scenarios,
         confidence=confidence,
+        sentiment_confirmation_status=sentiment_confirmation_status,
+        macro_sentiment_confirmation=macro_sentiment_confirmation,
+        nlp_confirmation_status=nlp_confirmation_status,
     )
     return StrategyRecommendation(
         investor_profile=investor_profile,
@@ -384,6 +420,18 @@ def select_strategy_for_profile(
         assumptions=assumptions,
         explanation=explanation,
         warnings=list(dict.fromkeys(warnings)),
+        sentiment_confirmation_status=str(sentiment_confirmation_status),
+        sentiment_label=str(sentiment_label),
+        sentiment_coverage=float(sentiment_coverage),
+        sentiment_warning=sentiment_warning,
+        macro_sentiment_label=str(macro_sentiment_label),
+        macro_sentiment_confirmation=str(macro_sentiment_confirmation),
+        macro_sentiment_coverage=float(macro_sentiment_coverage),
+        macro_sentiment_warning=macro_sentiment_warning,
+        nlp_risk_label=str(nlp_risk_label),
+        nlp_confirmation_status=str(nlp_confirmation_status),
+        nlp_coverage=float(nlp_coverage),
+        nlp_warning=nlp_warning,
         artifact_diagnostics={
             "phase3e_available": bool(artifacts.get("phase3e_available")),
             "fallback_used": bool(artifacts.get("fallback_used")),

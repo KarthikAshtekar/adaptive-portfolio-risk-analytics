@@ -74,6 +74,22 @@ data/external/*
 
 outputs/*
 !outputs/.gitkeep
+!outputs/final_project_pack/
+!outputs/final_project_pack/**
+!outputs/reports/
+outputs/reports/*
+!outputs/reports/phase_4a_sentiment_confirmation/
+!outputs/reports/phase_4a_sentiment_confirmation/**
+!outputs/reports/phase_4a2_rbi_macro_sentiment/
+!outputs/reports/phase_4a2_rbi_macro_sentiment/**
+!outputs/reports/phase_4a3_real_rbi_macro_validation/
+!outputs/reports/phase_4a3_real_rbi_macro_validation/**
+!outputs/reports/phase_4a5_api_sentiment_ingestion/
+!outputs/reports/phase_4a5_api_sentiment_ingestion/**
+
+# Real RBI source documents are local research inputs; retain only structure and manifest.
+data/sentiment/rbi_real/raw/*
+!data/sentiment/rbi_real/raw/.gitkeep
 
 # Logs
 logs/

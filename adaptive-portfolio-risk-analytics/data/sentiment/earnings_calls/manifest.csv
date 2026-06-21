@@ -1,0 +1,3 @@
+document_id,company,ticker,sector,quarter,publication_date,title,local_path,source_url,retrieval_date,language,notes
+sample_bank_q4_2024,Sample Bank Ltd,SAMPLEBANK.NS,Financials,Q4 FY2024,2024-05-08,Sample Bank Q4 FY2024 earnings call,sample_bank_q4_2024.txt,https://example.com/sample-bank-q4-2024,2026-06-21,en,Synthetic fixture for offline pipeline tests only.
+sample_energy_q2_2025,Sample Energy Ltd,SAMPLEENERGY.NS,Energy,Q2 FY2025,2025-10-20,Sample Energy Q2 FY2025 earnings call,sample_energy_q2_2025.txt,https://example.com/sample-energy-q2-2025,2026-06-21,en,Synthetic fixture for offline pipeline tests only.

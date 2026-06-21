@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phase 4A.3 Real RBI Corpus Validation</title>
+  <style>
+    :root { --ink:#1f2430; --muted:#6f768a; --line:#e6e8f0; --blue:#2e4780; --open:#eaf1fe; --bg:#fcfcfd; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink); font-family:Inter,"Segoe UI",Arial,sans-serif; }
+    main { max-width:980px; margin:auto; padding:42px 24px 72px; }
+    header,section { margin-bottom:34px; }
+    h1 { font-size:38px; margin:0 0 10px; }
+    h2 { font-size:25px; margin:0 0 12px; }
+    p,li { line-height:1.65; }
+    .status { border-left:4px solid var(--blue); background:var(--open); padding:16px 18px; border-radius:8px; }
+    .metric-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin:18px 0; }
+    .metric { background:white; border:1px solid var(--line); border-radius:12px; padding:16px; }
+    .metric span { display:block; color:var(--muted); font-size:12px; }
+    .metric strong { font-size:22px; }
+    figure { margin:22px 0; }
+    figure img { width:100%; border:1px solid var(--line); border-radius:12px; background:white; }
+    figcaption { color:var(--muted); font-size:13px; margin-top:8px; }
+    .table-wrap { overflow-x:auto; border:1px solid var(--line); border-radius:12px; }
+    table { border-collapse:collapse; width:100%; background:white; font-size:13px; }
+    th,td { border-bottom:1px solid var(--line); padding:9px 11px; text-align:left; }
+    th { color:var(--blue); background:#f4f7fd; }
+    code { background:#f2f4f7; padding:2px 5px; border-radius:4px; }
+  </style>
+</head>
+<body><main data-report-audience="technical">
+  <header data-contract-section="title">
+    <h1>Phase 4A.3 Real RBI Corpus Validation</h1>
+  </header>
+
+  <section data-contract-section="technical-summary">
+    <h2>Technical Summary</h2>
+    <div class="status"><strong>Real RBI corpus unavailable; synthetic fixture mode used only for pipeline validation.</strong><br>RBI macro sentiment remains a confirmation layer until real-document coverage is sufficient and out-of-sample validation supports promotion.</div>
+    <div class="metric-grid">
+      <div class="metric"><span>Corpus type</span><strong>synthetic_fixture</strong></div>
+      <div class="metric"><span>Real documents</span><strong>0</strong></div>
+      <div class="metric"><span>Decision coverage</span><strong>19.2%</strong></div>
+      <div class="metric"><span>Scorer</span><strong>lexicon</strong></div>
+    </div>
+  </section>
+
+  <section data-contract-section="key-findings">
+    <h2>No empirical conclusion is available without a real corpus</h2>
+    <p>The active documents are synthetic fixtures. The composition chart is therefore a pipeline audit, not a description of RBI communication coverage.</p>
+    <figure>
+      <img src="charts/document_type_distribution.png" alt="Document type distribution">
+      <figcaption>Active corpus by document type. Corpus type: synthetic_fixture.</figcaption>
+    </figure>
+    <p>Agreement and coverage rates confirm that alignment and comparison code runs end-to-end. They do not establish predictive or empirical validity.</p>
+    <figure>
+      <img src="charts/agreement_and_coverage.png" alt="Agreement and coverage rates">
+      <figcaption>Synthetic fixture agreement, stress confirmation, and decision coverage.</figcaption>
+    </figure>
+  </section>
+
+  <section data-contract-section="scope-data-and-metric-definitions">
+    <h2>Scope, Data, and Metric Definitions</h2>
+    <p>The real manifest contains 0 valid documents covering Unavailable. The active corpus contains 4 documents and 16 scored sentences. Decision coverage is the share of market sessions with a non-insufficient lagged macro label.</p>
+    <div class="table-wrap"><table class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>document_type</th>
+      <th>document_count</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>mpc_minutes</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <td>monetary_policy_statement</td>
+      <td>2</td>
+    </tr>
+  </tbody>
+</table></div>
+    <h3>Macro-risk label distribution</h3>
+    <div class="table-wrap"><table class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>macro_label</th>
+      <th>session_count</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>insufficient_macro_data</td>
+      <td>941</td>
+    </tr>
+    <tr>
+      <td>risk_off_macro</td>
+      <td>126</td>
+    </tr>
+    <tr>
+      <td>risk_on_macro</td>
+      <td>98</td>
+    </tr>
+  </tbody>
+</table></div>
+  </section>
+
+  <section data-contract-section="methodology">
+    <h2>Methodology and Look-Ahead Controls</h2>
+    <p>Documents are validated locally, segmented into stable sentences, and scored for stance, certainty, and time orientation. Publication dates map to the first market session on or after publication. The rolling macro label is shifted by 1 session before comparison with rule-based and HMM walk-forward regimes.</p>
+    <pre>net_stance_score = hawkish_share - dovish_share
+macro_risk_score = net_stance_score + uncertainty_share
+decision_macro_label[t] = macro_label[t - 1]</pre>
+    <h3>Required validation questions</h3>
+    <div class="table-wrap"><table class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>question</th>
+      <th>answer</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1. How many real RBI documents were ingested?</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <td>2. What date range does the corpus cover?</td>
+      <td>Unavailable</td>
+    </tr>
+    <tr>
+      <td>3. Which document types are included?</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <td>4. What scoring method was used?</td>
+      <td>lexicon</td>
+    </tr>
+    <tr>
+      <td>5. What is the sentence/document coverage?</td>
+      <td>16 sentences / 4 active documents; 19.2% decision-session coverage</td>
+    </tr>
+    <tr>
+      <td>6. How was look-ahead avoided?</td>
+      <td>Publication dates were aligned to the first eligible market session and macro labels were shifted by 1 session.</td>
+    </tr>
+    <tr>
+      <td>7. What is the macro-risk label distribution?</td>
+      <td>insufficient_macro_data: 941 sessions, risk_off_macro: 126 sessions, risk_on_macro: 98 sessions</td>
+    </tr>
+    <tr>
+      <td>8. What is the agreement with HMM walk-forward regimes?</td>
+      <td>64.3%</td>
+    </tr>
+    <tr>
+      <td>9. What is the agreement with rule-based regimes?</td>
+      <td>39.1%</td>
+    </tr>
+    <tr>
+      <td>10. Does RBI macro risk-off confirm stress/crisis periods?</td>
+      <td>Rule-based: 39.1%; HMM walk-forward: 64.3%</td>
+    </tr>
+    <tr>
+      <td>11. Are there pre-stress macro warnings?</td>
+      <td>0 identified date(s); synthetic fallback results are pipeline diagnostics only.</td>
+    </tr>
+    <tr>
+      <td>12. Is coverage sufficient for empirical conclusions?</td>
+      <td>False</td>
+    </tr>
+    <tr>
+      <td>13. Should sentiment remain commentary-only?</td>
+      <td>Yes. RBI macro sentiment remains a confirmation layer until real-document coverage is sufficient and out-of-sample validation supports promotion.</td>
+    </tr>
+  </tbody>
+</table></div>
+  </section>
+
+  <section data-contract-section="limitations-uncertainty-and-robustness-checks">
+    <h2>Limitations, Uncertainty, and Robustness Checks</h2>
+    <p>No real RBI text is bundled, the active corpus is sparse and synthetic, transformer models are optional and unvalidated, and the report market history is deterministic synthetic data. Full-sample HMM is not used. Allocation, strategy scoring, evidence gates, confidence, and portfolio weights remain unchanged.</p>
+  </section>
+
+  <section data-contract-section="recommended-next-steps">
+    <h2>Populate the governed real corpus before empirical interpretation</h2>
+    <ol>
+      <li>Download public RBI documents using the manual guide.</li>
+      <li>Validate source URLs, publication dates, duplicates, and extracted text.</li>
+      <li>Run the empirical validation runner with real market returns and walk-forward regimes.</li>
+      <li>Require adequate coverage and out-of-sample stability before considering allocation research.</li>
+    </ol>
+  </section>
+
+  <section data-contract-section="further-questions">
+    <h2>Further Questions</h2>
+    <p>What minimum document count, time span, and decision-date coverage should govern empirical eligibility? Does performance remain stable across document types, scoring methods, lookback windows, and genuinely out-of-sample periods?</p>
+  </section>
+</main></body></html>

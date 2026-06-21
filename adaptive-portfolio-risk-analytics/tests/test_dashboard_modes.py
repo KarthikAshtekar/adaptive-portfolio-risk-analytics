@@ -31,9 +31,17 @@ def test_mode_sections_preserve_research_and_debug_capabilities() -> None:
     assert "Phase 3A — CPCV Robustness Validation" in RESEARCH_SECTIONS
     assert "Phase 3B — Regime Detection" in RESEARCH_SECTIONS
     assert "Raw HMM Diagnostics" in DEVELOPER_SECTIONS
+    assert "Raw RBI Documents" in DEVELOPER_SECTIONS
     assert "Raw CPCV Diagnostics" in DEVELOPER_SECTIONS
     assert "Net/Gross Reconciliation" in DEVELOPER_SECTIONS
     assert "Strategy Recommendation" in MANAGER_SECTIONS
+    assert "RBI Macro-Sentiment Confirmation" in MANAGER_SECTIONS
+    assert "NLP Risk Confirmation" in MANAGER_SECTIONS
+    assert (
+        "Phase 4A.5 — API-Based Ex-Ante NLP Risk Monitoring"
+        in RESEARCH_SECTIONS
+    )
+    assert "Composite NLP Risk Index" in DEVELOPER_SECTIONS
 
 
 def test_manager_default_overlay_is_hmm_conservative() -> None:

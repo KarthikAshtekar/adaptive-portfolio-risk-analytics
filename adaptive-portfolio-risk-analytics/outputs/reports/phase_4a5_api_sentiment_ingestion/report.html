@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phase 4A.5 API-Based Ex-Ante NLP Risk Monitoring</title>
+  <style>
+    :root { --ink:#1f2430; --muted:#6f768a; --line:#e6e8f0; --blue:#2e4780; --open:#eaf1fe; --bg:#fcfcfd; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink); font-family:Inter,"Segoe UI",Arial,sans-serif; }
+    main { max-width:980px; margin:auto; padding:42px 24px 72px; }
+    header,section { margin-bottom:34px; }
+    h1 { font-size:38px; margin:0 0 10px; }
+    h2 { font-size:25px; margin:0 0 12px; }
+    p,li { line-height:1.65; }
+    .status { border-left:4px solid var(--blue); background:var(--open); padding:16px 18px; border-radius:8px; }
+    .metric-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin:18px 0; }
+    .metric { background:white; border:1px solid var(--line); border-radius:12px; padding:16px; }
+    .metric span { display:block; color:var(--muted); font-size:12px; }
+    .metric strong { font-size:22px; }
+    figure { margin:22px 0; }
+    figure img { width:100%; border:1px solid var(--line); border-radius:12px; background:white; }
+    figcaption { color:var(--muted); font-size:13px; margin-top:8px; }
+    .table-wrap { overflow-x:auto; border:1px solid var(--line); border-radius:12px; }
+    table { border-collapse:collapse; width:100%; background:white; font-size:13px; }
+    th,td { border-bottom:1px solid var(--line); padding:9px 11px; text-align:left; }
+    th { color:var(--blue); background:#f4f7fd; }
+    code { background:#f2f4f7; padding:2px 5px; border-radius:4px; }
+  </style>
+</head>
+<body><main data-report-audience="technical">
+  <header data-contract-section="title">
+    <h1>Phase 4A.5 API-Based Ex-Ante NLP Risk Monitoring</h1>
+  </header>
+
+  <section data-contract-section="technical-summary">
+    <h2>Technical Summary</h2>
+    <div class="status"><strong>API-based NLP risk is a confirmation and monitoring layer only. It is not yet promoted to allocation or strategy scoring.</strong><br>Offline fixtures and local manifests were used. Live API access and API keys were not required.</div>
+    <div class="metric-grid">
+      <div class="metric"><span>Valid ex-ante records</span><strong>7</strong></div>
+      <div class="metric"><span>Providers with data</span><strong>2/4</strong></div>
+      <div class="metric"><span>Composite coverage</span><strong>4.2%</strong></div>
+      <div class="metric"><span>Reaction warnings</span><strong>1</strong></div>
+    </div>
+  </section>
+
+  <section data-contract-section="key-findings">
+    <h2>Provider plumbing works offline, but provenance gaps remain visible</h2>
+    <p>Earnings and GDELT fixtures returned provenance-valid records. Alpha Vantage skipped safely without a key. Synthetic RBI fixture rows lacking source URLs remain visible as invalid diagnostics instead of being silently promoted.</p>
+    <figure>
+      <img src="charts/provider_coverage.png" alt="Provider valid record coverage">
+      <figcaption>Valid normalized records after provider-level provenance checks.</figcaption>
+    </figure>
+    <p>The composite index is intentionally coverage-gated. Sparse periods remain insufficient, while covered periods demonstrate lagged calculation only; the distribution is not evidence of predictive value.</p>
+    <figure>
+      <img src="charts/composite_label_distribution.png" alt="Composite NLP label distribution">
+      <figcaption>Decision-lagged composite labels across deterministic comparison sessions.</figcaption>
+    </figure>
+  </section>
+
+  <section data-contract-section="scope-data-and-metric-definitions">
+    <h2>Scope, Data, and Metric Definitions</h2>
+    <p>Each external record stores provider, publication and retrieval timestamps, source URL, language, text, and raw metadata. Ex-ante validity requires both timestamps and publication no later than retrieval. Composite coverage is the fraction of RBI, earnings, and news components available on a session; fewer than two sources yields <code>insufficient_nlp_data</code>.</p>
+    <div class="table-wrap"><table class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>provider</th>
+      <th>status</th>
+      <th>cache_hit</th>
+      <th>raw_record_count</th>
+      <th>valid_record_count</th>
+      <th>invalid_record_count</th>
+      <th>fetch_error</th>
+      <th>provider_failures</th>
+      <th>fallback_used</th>
+      <th>source_kind</th>
+      <th>deduplicated_record_count</th>
+      <th>deduped_valid_record_count</th>
+      <th>provider_duplicates_removed</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>rbi</td>
+      <td>success</td>
+      <td>False</td>
+      <td>4</td>
+      <td>0</td>
+      <td>4</td>
+      <td></td>
+      <td></td>
+      <td>True</td>
+      <td></td>
+      <td>35</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <td>earnings_calls</td>
+      <td>success</td>
+      <td>False</td>
+      <td>2</td>
+      <td>2</td>
+      <td>0</td>
+      <td></td>
+      <td></td>
+      <td>False</td>
+      <td>local_transcript_manifest</td>
+      <td>0</td>
+      <td>2</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <td>gdelt</td>
+      <td>success</td>
+      <td>False</td>
+      <td>40</td>
+      <td>40</td>
+      <td>0</td>
+      <td></td>
+      <td></td>
+      <td>False</td>
+      <td>fixture</td>
+      <td>0</td>
+      <td>5</td>
+      <td>35</td>
+    </tr>
+    <tr>
+      <td>alpha_vantage_news</td>
+      <td>missing_api_key</td>
+      <td>False</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td></td>
+      <td></td>
+      <td>False</td>
+      <td></td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+  </tbody>
+</table></div>
+    <h3>Decision-lagged label distribution</h3>
+    <div class="table-wrap"><table class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>label</th>
+      <th>session_count</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>insufficient_nlp_data</td>
+      <td>1116</td>
+    </tr>
+    <tr>
+      <td>nlp_risk_on</td>
+      <td>28</td>
+    </tr>
+    <tr>
+      <td>nlp_risk_off</td>
+      <td>21</td>
+    </tr>
+  </tbody>
+</table></div>
+  </section>
+
+  <section data-contract-section="methodology">
+    <h2>Methodology and Ex-Ante Controls</h2>
+    <p>Providers fetch or load independently, normalize to one schema, retain row-level failures, and deduplicate by URL/title and publication minute. Reaction-oriented phrases are flagged rather than automatically deleted; flagged records are excluded from composite source scoring. FinBERT is local-only and falls back to the lexicon. The composite label is shifted by one day before comparison with lagged rule-based and HMM walk-forward regimes.</p>
+    <h3>Required validation questions</h3>
+    <div class="table-wrap"><table class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>question</th>
+      <th>answer</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1. Which providers were configured?</td>
+      <td>rbi, earnings_calls, gdelt, alpha_vantage_news</td>
+    </tr>
+    <tr>
+      <td>2. Which providers returned data?</td>
+      <td>earnings_calls, gdelt</td>
+    </tr>
+    <tr>
+      <td>3. Which records were ex-ante valid?</td>
+      <td>7 of 7 normalized, deduplicated records</td>
+    </tr>
+    <tr>
+      <td>4. Were possible reaction-data records flagged?</td>
+      <td>Yes; 1 record(s)</td>
+    </tr>
+    <tr>
+      <td>5. Was FinBERT used or did it fall back?</td>
+      <td>Lexicon fallback was recorded for 7 record(s)</td>
+    </tr>
+    <tr>
+      <td>6. What was the source coverage?</td>
+      <td>2 of 4 providers returned provenance-valid data; composite decision coverage was 4.2%</td>
+    </tr>
+    <tr>
+      <td>7. What was the composite NLP risk label distribution?</td>
+      <td>insufficient_nlp_data: 1116; nlp_risk_on: 28; nlp_risk_off: 21</td>
+    </tr>
+    <tr>
+      <td>8. How often did NLP agree with HMM regimes?</td>
+      <td>42.9%</td>
+    </tr>
+    <tr>
+      <td>9. How often did NLP agree with rule-based regimes?</td>
+      <td>65.3%</td>
+    </tr>
+    <tr>
+      <td>10. Did NLP show pre-stress warnings?</td>
+      <td>1 warning onset(s)</td>
+    </tr>
+    <tr>
+      <td>11. Is the signal suitable for allocation testing?</td>
+      <td>No. API-based NLP risk is a confirmation and monitoring layer only. It is not yet promoted to allocation or strategy scoring.</td>
+    </tr>
+  </tbody>
+</table></div>
+  </section>
+
+  <section data-contract-section="limitations-uncertainty-and-robustness-checks">
+    <h2>Fixtures validate behavior, not signal efficacy</h2>
+    <p>This report uses synthetic or fixture text and deterministic market history. Live API reliability, historical completeness, licensing, language coverage, provider revisions, model calibration, and publication-time governance remain unvalidated. Vendor sentiment is retained only as metadata. No future returns, price reactions, volatility, or drawdown values enter NLP scoring. Full-sample HMM is not used.</p>
+  </section>
+
+  <section data-contract-section="recommended-next-steps">
+    <h2>Run governed shadow monitoring before any allocation experiment</h2>
+    <ol>
+      <li>Enable one provider at a time with reviewed credentials, rate limits, and retention rules.</li>
+      <li>Measure stable source coverage and publication-time completeness over an out-of-sample shadow period.</li>
+      <li>Validate FinBERT and provider-sentiment calibration locally without future-return labels.</li>
+      <li>Define explicit eligibility thresholds before considering a separate allocation research phase.</li>
+    </ol>
+  </section>
+
+  <section data-contract-section="further-questions">
+    <h2>Further Questions</h2>
+    <p>What source mix, freshness threshold, and minimum coverage should make a composite label decision-eligible? How stable are false risk-off rates across providers, languages, sectors, and geopolitical-event types? What licensing and retention constraints govern transcript and news storage?</p>
+  </section>
+</main></body></html>
