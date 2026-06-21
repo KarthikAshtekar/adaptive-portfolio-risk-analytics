@@ -150,10 +150,13 @@ from src.sentiment import (
     build_current_sentiment_summary,
     build_daily_sentiment_signal,
     build_macro_stance_index,
+    calculate_nlp_coverage,
+    classify_data_provenance,
     compare_macro_to_regimes,
     compare_composite_nlp_to_regimes,
     compare_sentiment_to_regimes,
     load_local_sentiment_csv,
+    load_provider_config,
     load_real_rbi_corpus,
     load_rbi_documents,
     flag_reaction_data_leakage,
@@ -165,10 +168,12 @@ from src.sentiment import (
     plot_sentiment_regime_timeline,
     score_rbi_sentences,
     score_sentiment_records,
+    score_source_quality,
     score_with_finbert,
     split_rbi_sentences,
     run_sentiment_provider_ingestion,
     validate_ex_ante_records,
+    validate_nlp_corpus_intake,
     validate_rbi_manifest,
 )
 
@@ -207,6 +212,13 @@ DEFAULT_GDELT_FIXTURE = (
 )
 DEFAULT_API_NLP_OUTPUT_DIR = (
     project_root / "outputs" / "cache" / "dashboard_api_nlp"
+)
+INSUFFICIENT_REAL_NLP_CAVEAT = (
+    "NLP signal is monitoring-only due to insufficient real-data coverage."
+)
+NLP_INTAKE_INACTIVE_MESSAGE = (
+    "NLP monitoring is inactive or illustrative until real text coverage "
+    "is sufficient."
 )
 
 NLP_QUERY_PRESETS = {
@@ -1979,6 +1991,7 @@ def build_api_nlp_monitoring_results(
 ) -> dict[str, object]:
     """Build commentary-only API/provider NLP monitoring diagnostics."""
     try:
+        intake_status = validate_nlp_corpus_intake()
         ingestion = run_sentiment_provider_ingestion(
             providers,
             start_date,
@@ -1990,17 +2003,38 @@ def build_api_nlp_monitoring_results(
             },
             use_cache=True,
         )
-        normalized = ingestion["deduped_sentiment_records"]
+        normalized = classify_data_provenance(
+            ingestion["deduped_sentiment_records"]
+        )
         ex_ante = validate_ex_ante_records(normalized)
         ex_ante = flag_reaction_data_leakage(ex_ante)
         ex_ante = apply_publication_lag(
             ex_ante,
             lag_days=max(1, int(decision_lag)),
         )
+        ex_ante = score_source_quality(ex_ante)
+        real_records = ex_ante.loc[
+            ex_ante.get(
+                "is_real_provider_data",
+                pd.Series(False, index=ex_ante.index),
+            ).fillna(False)
+        ].copy()
+        scoring_records = real_records.loc[
+            real_records.get(
+                "is_ex_ante_valid",
+                pd.Series(False, index=real_records.index),
+            ).fillna(False)
+            & ~real_records.get(
+                "possible_reaction_data",
+                pd.Series(False, index=real_records.index),
+            ).fillna(False)
+        ].copy()
         if scoring_method == "finbert":
-            scores = score_with_finbert(ex_ante)
+            scores = score_with_finbert(scoring_records)
         else:
-            scores = score_sentiment_records(ex_ante, method="lexicon")
+            scores = score_sentiment_records(
+                scoring_records, method="lexicon"
+            )
             scores["finbert_label"] = pd.NA
             scores["finbert_score"] = np.nan
             scores["scoring_method_used"] = "lexicon"
@@ -2020,6 +2054,9 @@ def build_api_nlp_monitoring_results(
         rbi_macro_index = (
             (rbi_macro_payload or {}).get("macro_index")
             if rbi_macro_payload
+            and real_records.get(
+                "provider", pd.Series("", index=real_records.index)
+            ).astype(str).eq("rbi").any()
             else None
         )
         composite = build_composite_nlp_risk_index(
@@ -2046,7 +2083,8 @@ def build_api_nlp_monitoring_results(
         )
         current_row = composite.iloc[-1] if not composite.empty else pd.Series()
         provider_diagnostics = ingestion["provider_diagnostics"]
-        providers_with_data = (
+        provider_diagnostics["configured_enabled"] = True
+        providers_with_any_data = (
             provider_diagnostics.loc[
                 pd.to_numeric(
                     provider_diagnostics["deduped_valid_record_count"],
@@ -2057,33 +2095,52 @@ def build_api_nlp_monitoring_results(
             if not provider_diagnostics.empty
             else []
         )
-        publication_times = pd.to_datetime(
-            ex_ante.get("publication_time"), errors="coerce", utc=True
-        ).dropna()
-        freshness = (
-            publication_times.max()
-            if not publication_times.empty
-            else None
+        providers_with_data = (
+            sorted(
+                real_records.get(
+                    "provider", pd.Series(dtype="string")
+                ).dropna().astype(str).unique().tolist()
+            )
         )
-        coverage_score = float(
-            current_row.get("decision_coverage_score", 0.0) or 0.0
+        config = load_provider_config()
+        validation_settings = config.get("validation", {})
+        coverage = calculate_nlp_coverage(
+            real_records,
+            composite_index=composite,
+            provider_diagnostics=provider_diagnostics,
+            start_date=start_date,
+            end_date=end_date,
+            min_coverage_ratio=float(
+                validation_settings.get("min_coverage_ratio", 0.20)
+            ),
+            min_records=int(validation_settings.get("min_records", 50)),
+            min_distinct_dates=int(
+                validation_settings.get("min_distinct_dates", 20)
+            ),
         )
-        coverage_quality = (
-            "High"
-            if coverage_score >= 0.99
-            else "Moderate"
-            if coverage_score >= (2 / 3)
-            else "Low"
-            if coverage_score > 0
-            else "Insufficient"
+        coverage_score = float(coverage["decision_label_coverage"])
+        freshness = coverage["latest_record_date"]
+        coverage_quality = str(coverage["coverage_quality"]).title()
+        source_quality_distribution = (
+            real_records.get(
+                "source_quality_label", pd.Series(dtype="string")
+            )
+            .value_counts()
+            .reindex(["high", "medium", "low", "unknown"], fill_value=0)
+            .to_dict()
         )
         reaction_count = int(
-            ex_ante.get(
+            real_records.get(
                 "possible_reaction_data",
-                pd.Series(False, index=ex_ante.index),
+                pd.Series(False, index=real_records.index),
             )
             .fillna(False)
             .sum()
+        )
+        reaction_warning_rate = (
+            float(reaction_count / len(real_records))
+            if len(real_records)
+            else 0.0
         )
         fallback_count = int(
             scores.get(
@@ -2093,8 +2150,8 @@ def build_api_nlp_monitoring_results(
             .sum()
         )
         warnings = []
-        if not providers_with_data:
-            warnings.append("No configured NLP provider returned valid records.")
+        if coverage["coverage_quality"] != "sufficient":
+            warnings.append(INSUFFICIENT_REAL_NLP_CAVEAT)
         if reaction_count:
             warnings.append(
                 f"{reaction_count} possible market-reaction record(s) were "
@@ -2105,6 +2162,11 @@ def build_api_nlp_monitoring_results(
                 f"FinBERT fell back for {fallback_count} record(s)."
             )
         current = {
+            "nlp_data_status": (
+                "Real Data Available"
+                if len(real_records)
+                else "Real Data Unavailable"
+            ),
             "quantitative_regime": comparison[
                 "current_quantitative_regime"
             ],
@@ -2126,6 +2188,12 @@ def build_api_nlp_monitoring_results(
             "coverage_score": coverage_score,
             "coverage_quality": coverage_quality,
             "data_freshness": freshness,
+            "provider_mix": coverage["source_mix_dict"],
+            "reaction_warning_rate": reaction_warning_rate,
+            "source_quality_distribution": source_quality_distribution,
+            "caveat": warnings[0] if warnings else (
+                "NLP remains monitoring-only in v1.2.2."
+            ),
             "important_warning": " ".join(warnings)
             or (
                 "NLP risk is monitoring commentary only and is not used for "
@@ -2138,6 +2206,8 @@ def build_api_nlp_monitoring_results(
                 provider.provider_name for provider in providers
             ],
             "providers_with_data": providers_with_data,
+            "providers_with_any_data": providers_with_any_data,
+            "provider_config_status": config["_validation"],
             "scoring_method": scoring_method,
             "decision_lag": max(1, int(decision_lag)),
             "query_terms": query_terms or [],
@@ -2145,6 +2215,8 @@ def build_api_nlp_monitoring_results(
             "normalized_records": normalized,
             "provider_diagnostics": provider_diagnostics,
             "ex_ante_validation": ex_ante,
+            "source_quality": ex_ante,
+            "coverage": coverage,
             "finbert_scores": scores,
             "composite_index": composite,
             "comparison": comparison,
@@ -2155,6 +2227,7 @@ def build_api_nlp_monitoring_results(
                     pd.Series(False, index=ex_ante.index),
                 ).fillna(False)
             ].copy(),
+            "intake_status": intake_status,
             "error": None,
         }
     except Exception as exc:
@@ -2165,16 +2238,25 @@ def build_api_nlp_monitoring_results(
                 for provider in providers
             ],
             "providers_with_data": [],
+            "providers_with_any_data": [],
+            "provider_config_status": {},
             "scoring_method": scoring_method,
             "decision_lag": max(1, int(decision_lag)),
             "raw_provider_records": [],
             "normalized_records": pd.DataFrame(),
             "provider_diagnostics": pd.DataFrame(),
             "ex_ante_validation": pd.DataFrame(),
+            "source_quality": pd.DataFrame(),
+            "coverage": {
+                "coverage_quality": "insufficient",
+                "source_mix_dict": {},
+                "latest_record_date": None,
+            },
             "finbert_scores": pd.DataFrame(),
             "composite_index": pd.DataFrame(index=market_index),
             "comparison": {},
             "current": {
+                "nlp_data_status": "Real Data Unavailable",
                 "quantitative_regime": regime_payload.get(
                     "current_decision_regime", "Unknown"
                 ),
@@ -2186,9 +2268,21 @@ def build_api_nlp_monitoring_results(
                 "coverage_score": 0.0,
                 "coverage_quality": "Insufficient",
                 "data_freshness": None,
+                "provider_mix": {},
+                "reaction_warning_rate": 0.0,
+                "source_quality_distribution": {
+                    "high": 0,
+                    "medium": 0,
+                    "low": 0,
+                    "unknown": 0,
+                },
+                "caveat": (
+                    INSUFFICIENT_REAL_NLP_CAVEAT
+                ),
                 "important_warning": f"NLP monitoring unavailable: {exc}",
             },
             "reaction_data_warnings": pd.DataFrame(),
+            "intake_status": validate_nlp_corpus_intake(),
             "error": str(exc),
         }
 
@@ -4066,11 +4160,34 @@ def render_api_nlp_research_content(
     nlp_payload: dict[str, object] | None,
 ) -> None:
     """Render provider, ex-ante, and composite NLP monitoring diagnostics."""
-    st.header("Phase 4A.5 — API-Based Ex-Ante NLP Risk Monitoring")
+    st.header("Phase 4A.7 — Real NLP Data Intake Workflow")
     st.info(
         "Only publication-timestamped, decision-lagged textual signals enter "
         "this monitoring view. Price movement, volatility, drawdown, and "
         "post-event returns are not NLP inputs."
+    )
+    intake = (
+        nlp_payload.get("intake_status")
+        if nlp_payload is not None
+        else validate_nlp_corpus_intake()
+    )
+    st.subheader("Real NLP Data Intake Status")
+    intake_table = (
+        intake.get("intake_status", pd.DataFrame())
+        if isinstance(intake, dict)
+        else pd.DataFrame()
+    )
+    st.dataframe(intake_table, use_container_width=True, hide_index=True)
+    if isinstance(intake, dict) and intake.get("manual_action_required"):
+        st.warning(
+            "Manual action required. Add reviewed real records using "
+            "docs/nlp_real_data_acquisition_guide.md and the corpus "
+            "manifest templates."
+        )
+    st.caption(
+        "Intake paths: data/sentiment/rbi_real/manifest.csv · "
+        "data/sentiment/earnings_calls/manifest.csv · "
+        "data/sentiment/news_real/manifest.csv"
     )
     if nlp_payload is None:
         st.info(
@@ -4100,10 +4217,14 @@ def render_api_nlp_research_content(
     )
     freshness = current.get("data_freshness")
     col4.metric(
-        "Data Freshness",
+        "Latest Text Date",
         pd.Timestamp(freshness).date().isoformat()
         if freshness is not None and pd.notna(freshness)
         else "Unavailable",
+    )
+    st.caption(
+        f"Provider config status: "
+        f"{'Valid' if (nlp_payload.get('provider_config_status') or {}).get('is_valid') else 'Invalid'}"
     )
     st.caption(
         f"Providers configured: {', '.join(nlp_payload.get('providers_configured', [])) or 'None'} · "
@@ -4115,8 +4236,50 @@ def render_api_nlp_research_content(
         st.warning(str(current["important_warning"]))
 
     diagnostics = nlp_payload.get("provider_diagnostics", pd.DataFrame())
-    st.subheader("Provider Diagnostics and Source Coverage")
+    st.subheader("Provider Configuration and API Diagnostics")
     st.dataframe(diagnostics, use_container_width=True, hide_index=True)
+    st.subheader("Coverage and Freshness")
+    st.dataframe(
+        pd.DataFrame(
+            [
+                {
+                    key: value
+                    for key, value in (
+                        nlp_payload.get("coverage") or {}
+                    ).items()
+                    if key != "source_mix_dict"
+                }
+            ]
+        ),
+        use_container_width=True,
+        hide_index=True,
+    )
+    source_quality = nlp_payload.get("source_quality", pd.DataFrame())
+    st.subheader("Source Quality")
+    if isinstance(source_quality, pd.DataFrame) and not source_quality.empty:
+        st.dataframe(
+            source_quality[
+                [
+                    column
+                    for column in [
+                        "provider",
+                        "source_quality_score",
+                        "source_quality_label",
+                        "source_quality_warning",
+                        "data_provenance",
+                    ]
+                    if column in source_quality
+                ]
+            ],
+            use_container_width=True,
+            hide_index=True,
+        )
+    else:
+        st.caption("No real provider records are available for source-quality scoring.")
+    st.metric(
+        "Reaction Warning Rate",
+        format_percent(current.get("reaction_warning_rate")),
+    )
     if isinstance(diagnostics, pd.DataFrame) and not diagnostics.empty:
         coverage_fig = go.Figure(
             go.Bar(
@@ -4239,6 +4402,17 @@ def render_api_nlp_research_content(
         f"Possible reaction-data warnings: "
         f"{len(warnings) if isinstance(warnings, pd.DataFrame) else 0}. "
         "Agreement is descriptive and does not establish predictiveness."
+    )
+    st.subheader("Pre-Stress Warning Diagnostics")
+    st.write(
+        {
+            "pre_stress_warning_count": comparison.get(
+                "pre_stress_warning_count", 0
+            ),
+            "predictiveness_claim": comparison.get(
+                "predictiveness_claim", False
+            ),
+        }
     )
 
 
@@ -5141,7 +5315,7 @@ def render_manager_view(
         "ranking, gates, confidence, allocation, or portfolio weights."
     )
 
-    st.header("NLP Risk Confirmation")
+    st.header("NLP Data Status")
     nlp_current = (
         (portfolio_payload.get("api_nlp_results") or {}).get("current", {})
         if portfolio_payload is not None
@@ -5149,43 +5323,47 @@ def render_manager_view(
     )
     nlp_col1, nlp_col2, nlp_col3, nlp_col4 = st.columns(4)
     nlp_col1.metric(
-        "Current Quant Regime",
-        nlp_current.get("quantitative_regime", "Unknown"),
+        "NLP Data Status",
+        nlp_current.get("nlp_data_status", "Real Data Unavailable"),
     )
     nlp_col2.metric(
-        "RBI Macro Signal",
-        nlp_current.get("rbi_macro_signal", "Insufficient"),
-    )
-    nlp_col3.metric(
-        "Earnings / Sector",
-        nlp_current.get("earnings_sector_signal", "Insufficient"),
-    )
-    nlp_col4.metric(
-        "News / Geopolitics",
-        nlp_current.get("news_geopolitical_signal", "Insufficient"),
-    )
-    nlp_summary_col1, nlp_summary_col2, nlp_summary_col3 = st.columns(3)
-    nlp_summary_col1.metric(
         "Composite NLP Confirmation",
         recommendation.nlp_confirmation_status,
     )
-    nlp_summary_col2.metric(
+    nlp_col3.metric(
         "Coverage Quality",
         nlp_current.get("coverage_quality", "Insufficient"),
     )
     freshness = nlp_current.get("data_freshness")
-    nlp_summary_col3.metric(
-        "Data Freshness",
+    nlp_col4.metric(
+        "Latest Text Date",
         pd.Timestamp(freshness).date().isoformat()
         if freshness is not None and pd.notna(freshness)
         else "Unavailable",
     )
-    if nlp_current.get("important_warning"):
-        st.warning(str(nlp_current["important_warning"]))
+    provider_mix = nlp_current.get("provider_mix") or {}
     st.caption(
-        "API-based NLP risk is a monitoring and confirmation layer only. "
-        "Provider keys, raw records, transcripts, and model internals are "
-        "not exposed in Manager View."
+        "Provider Mix: "
+        + (
+            ", ".join(f"{key}={value}" for key, value in provider_mix.items())
+            if provider_mix
+            else "None"
+        )
+    )
+    st.warning(
+        str(
+            nlp_current.get(
+                "caveat",
+                INSUFFICIENT_REAL_NLP_CAVEAT,
+            )
+        )
+    )
+    if nlp_current.get("coverage_quality", "Insufficient") != "Sufficient":
+        st.caption(NLP_INTAKE_INACTIVE_MESSAGE)
+    st.caption(
+        "Caveat: NLP remains a monitoring and confirmation layer only. "
+        "Low-quality record details, provider keys, raw records, transcripts, "
+        "and model internals are not exposed in Manager View."
     )
 
     st.header("Tradeoff Table")
@@ -5392,6 +5570,22 @@ def render_developer_view(
         if api_nlp_results is None:
             st.caption("No API/provider NLP payload is available.")
         else:
+            st.write("Real NLP corpus intake validation diagnostics")
+            intake = api_nlp_results.get(
+                "intake_status", validate_nlp_corpus_intake()
+            )
+            st.dataframe(
+                intake.get("intake_status", pd.DataFrame()),
+                use_container_width=True,
+            )
+            for corpus in ("rbi", "earnings", "news"):
+                st.write(f"{corpus.title()} intake rows")
+                st.dataframe(
+                    intake.get("row_diagnostics", {}).get(
+                        corpus, pd.DataFrame()
+                    ),
+                    use_container_width=True,
+                )
             st.write("Raw provider records")
             st.json(api_nlp_results.get("raw_provider_records", [])[:50])
             st.write("Normalized and deduplicated records")
@@ -5404,6 +5598,34 @@ def render_developer_view(
                 api_nlp_results.get(
                     "provider_diagnostics", pd.DataFrame()
                 ),
+                use_container_width=True,
+            )
+            st.write("Source-quality components and data provenance")
+            source_quality = api_nlp_results.get(
+                "source_quality", pd.DataFrame()
+            )
+            quality_columns = [
+                column
+                for column in [
+                    "record_id",
+                    "provider",
+                    "official_source",
+                    "known_financial_source",
+                    "has_publication_time",
+                    "has_url",
+                    "has_entity_or_topic",
+                    "language_supported",
+                    "duplicate_risk",
+                    "reaction_data_warning",
+                    "source_quality_score",
+                    "source_quality_label",
+                    "source_quality_warning",
+                    "data_provenance",
+                ]
+                if column in source_quality
+            ]
+            st.dataframe(
+                source_quality.loc[:, quality_columns],
                 use_container_width=True,
             )
             st.write("Ex-ante validation and timestamp alignment checks")

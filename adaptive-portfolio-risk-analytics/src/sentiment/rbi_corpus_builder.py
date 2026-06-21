@@ -8,6 +8,7 @@ import re
 
 import pandas as pd
 
+from .corpus_intake import is_explicit_placeholder
 from .rbi_processing import split_rbi_documents_into_sentences
 
 
@@ -213,6 +214,8 @@ def validate_rbi_manifest(
     for row_number, row in frame.iterrows():
         values = {column: str(row[column]).strip() for column in frame.columns}
         errors: list[str] = []
+        if is_explicit_placeholder(values):
+            errors.append("placeholder excluded")
         missing_fields = [
             column for column in required_nonempty if not values[column]
         ]

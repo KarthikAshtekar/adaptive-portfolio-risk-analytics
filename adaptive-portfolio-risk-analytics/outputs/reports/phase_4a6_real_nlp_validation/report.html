@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phase 4A.6 Real NLP Signal Validation</title>
+  <style>
+    :root { --ink:#1f2430; --muted:#6f768a; --line:#e6e8f0; --blue:#2e4780; --open:#eaf1fe; --bg:#fcfcfd; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink); font-family:Inter,"Segoe UI",Arial,sans-serif; }
+    main { max-width:980px; margin:auto; padding:42px 24px 72px; }
+    header,section { margin-bottom:34px; }
+    h1 { font-size:38px; margin:0 0 10px; }
+    h2 { font-size:25px; margin:0 0 12px; }
+    p,li { line-height:1.65; }
+    .status { border-left:4px solid var(--blue); background:var(--open); padding:16px 18px; border-radius:8px; }
+    .metric-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin:18px 0; }
+    .metric { background:white; border:1px solid var(--line); border-radius:12px; padding:16px; }
+    .metric span { display:block; color:var(--muted); font-size:12px; }
+    .metric strong { font-size:22px; }
+    figure { margin:22px 0; }
+    figure img { width:100%; border:1px solid var(--line); border-radius:12px; background:white; }
+    figcaption { color:var(--muted); font-size:13px; margin-top:8px; }
+    .table-wrap { overflow-x:auto; border:1px solid var(--line); border-radius:12px; }
+    table { border-collapse:collapse; width:100%; background:white; font-size:13px; }
+    th,td { border-bottom:1px solid var(--line); padding:9px 11px; text-align:left; }
+    th { color:var(--blue); background:#f4f7fd; }
+  </style>
+</head>
+<body><main data-report-audience="technical">
+  <header data-contract-section="title">
+    <h1>Phase 4A.6 Real NLP Signal Validation</h1>
+  </header>
+  <section data-contract-section="technical-summary">
+    <h2>Technical Summary</h2>
+    <div class="status"><strong>C. Insufficient real-data coverage</strong><br>NLP signal is monitoring-only due to insufficient real-data coverage.</div>
+    <div class="metric-grid">
+      <div class="metric"><span>Real records</span><strong>0</strong></div>
+      <div class="metric"><span>Coverage quality</span><strong>Insufficient</strong></div>
+      <div class="metric"><span>Reaction warnings</span><strong>0.0%</strong></div>
+      <div class="metric"><span>Decision coverage</span><strong>0.0%</strong></div>
+    </div>
+  </section>
+  <section data-contract-section="key-findings">
+    <h2>Real-data thresholds are not yet met</h2>
+    <p>The harness found 0 real provider records. Fixture and placeholder rows were retained for diagnostics but excluded from empirical coverage, source-quality distributions, composite validation, and regime-agreement claims.</p>
+    <p>The chart shows each evidence dimension relative to its configured minimum. Values below the reference line are not decision-eligible.</p>
+    <figure>
+      <img src="charts/coverage_threshold_attainment.png" alt="NLP validation threshold attainment">
+      <figcaption>Real-data evidence relative to the configured minimum validation thresholds.</figcaption>
+    </figure>
+  </section>
+  <section data-contract-section="scope-data-and-metric-definitions">
+    <h2>Scope, Data, and Metric Definitions</h2>
+    <p>Real evidence excludes rows marked by explicit fixture metadata, placeholder domains, or synthetic-test notes. Coverage uses real records only. Decision-label coverage is the share of market sessions with a coverage-gated composite label; source quality evaluates provenance and timestamp fields without market outcomes.</p>
+    <div class="table-wrap"><table class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>metric</th>
+      <th>actual</th>
+      <th>threshold</th>
+      <th>passes</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>record_count</td>
+      <td>0.0</td>
+      <td>50.00</td>
+      <td>False</td>
+    </tr>
+    <tr>
+      <td>distinct_publication_dates</td>
+      <td>0.0</td>
+      <td>20.00</td>
+      <td>False</td>
+    </tr>
+    <tr>
+      <td>decision_label_coverage</td>
+      <td>0.0</td>
+      <td>0.20</td>
+      <td>False</td>
+    </tr>
+    <tr>
+      <td>provider_coverage</td>
+      <td>0.0</td>
+      <td>1.00</td>
+      <td>False</td>
+    </tr>
+    <tr>
+      <td>reaction_warning_rate</td>
+      <td>0.0</td>
+      <td>0.25</td>
+      <td>True</td>
+    </tr>
+  </tbody>
+</table></div>
+  </section>
+  <section data-contract-section="methodology">
+    <h2>Ex-Ante Scoring and Validation Method</h2>
+    <p>Records are timestamp-validated, reaction-oriented language is flagged, publication availability is lagged, and scoring uses the configured local method. The composite combines RBI, earnings, and news risk components only after filtering invalid or reaction-warning rows. Quantitative comparison uses lagged rule-based regimes and HMM walk-forward only; full-sample HMM is never used.</p>
+    <h3>Required validation questions</h3>
+    <div class="table-wrap"><table class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>question</th>
+      <th>answer</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1. Which real providers were enabled?</td>
+      <td>earnings</td>
+    </tr>
+    <tr>
+      <td>2. Which providers returned real data?</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <td>3. How many records were collected?</td>
+      <td>2 input record(s); 0 classified as real provider data</td>
+    </tr>
+    <tr>
+      <td>4. What is the date range?</td>
+      <td>Unavailable</td>
+    </tr>
+    <tr>
+      <td>5. What is the source-quality distribution?</td>
+      <td>{"high": 0, "low": 0, "medium": 0, "unknown": 0}</td>
+    </tr>
+    <tr>
+      <td>6. What share of records passed ex-ante validation?</td>
+      <td>0.0%</td>
+    </tr>
+    <tr>
+      <td>7. What share were flagged as possible reaction data?</td>
+      <td>0.0%</td>
+    </tr>
+    <tr>
+      <td>8. Was FinBERT used or did scoring fall back?</td>
+      <td>Lexicon configured; FinBERT not used</td>
+    </tr>
+    <tr>
+      <td>9. What is the coverage ratio?</td>
+      <td>0.0%</td>
+    </tr>
+    <tr>
+      <td>10. What is the composite NLP risk label distribution?</td>
+      <td>{"insufficient_nlp_data": 1688}</td>
+    </tr>
+    <tr>
+      <td>11. What is agreement with HMM regimes?</td>
+      <td>N/A</td>
+    </tr>
+    <tr>
+      <td>12. What is agreement with rule-based regimes?</td>
+      <td>N/A</td>
+    </tr>
+    <tr>
+      <td>13. Did NLP produce pre-stress warnings?</td>
+      <td>0 warning(s); not interpreted when coverage is insufficient</td>
+    </tr>
+    <tr>
+      <td>14. Is evidence sufficient for future allocation testing?</td>
+      <td>C. Insufficient real-data coverage</td>
+    </tr>
+  </tbody>
+</table></div>
+  </section>
+  <section data-contract-section="limitations-uncertainty-and-robustness-checks">
+    <h2>Insufficient records prevent empirical claims</h2>
+    <p>The bundled transcripts and news fixtures validate software behavior, not real signal efficacy. The quantitative comparison history is deterministic and synthetic, used only to exercise safe lagged interfaces. No return, volatility, drawdown, or post-event market reaction is used as an NLP feature. Agreement and pre-stress statistics are withheld when real coverage is insufficient.</p>
+  </section>
+  <section data-contract-section="recommended-next-steps">
+    <h2>Collect governed real text before allocation research</h2>
+    <ol>
+      <li>Populate reviewed RBI and earnings manifests with genuine publication timestamps and source URLs.</li>
+      <li>Enable one cached API provider at a time under documented rate, licensing, and retention rules.</li>
+      <li>Re-run shadow monitoring until volume, freshness, source quality, and reaction-warning thresholds are stable.</li>
+      <li>Keep NLP commentary-only until a separate future allocation-testing phase is explicitly approved.</li>
+    </ol>
+  </section>
+  <section data-contract-section="further-questions">
+    <h2>Further Questions</h2>
+    <p>Which provider mix can sustain the minimum daily coverage? How should source-quality thresholds vary by provider type? What out-of-sample period is long enough to evaluate false risk-off warnings without optimizing on future returns?</p>
+  </section>
+</main></body></html>

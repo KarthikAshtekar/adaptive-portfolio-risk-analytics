@@ -87,12 +87,13 @@ def run_sentiment_provider_ingestion(
     output_dir,
     query_config=None,
     use_cache: bool = True,
+    cache_dir=None,
 ) -> dict[str, object]:
     """Fetch, normalize, validate, deduplicate, and persist provider records."""
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
-    cache_dir = output / "cache"
-    cache_dir.mkdir(parents=True, exist_ok=True)
+    cache_root = Path(cache_dir) if cache_dir is not None else output / "cache"
+    cache_root.mkdir(parents=True, exist_ok=True)
 
     raw_rows: list[dict[str, object]] = []
     normalized_parts: list[pd.DataFrame] = []
@@ -102,7 +103,7 @@ def run_sentiment_provider_ingestion(
     for provider in list(providers):
         options = _provider_options(provider, query_config)
         cache_path = _cache_path(
-            cache_dir,
+            cache_root,
             provider.provider_name,
             start_date,
             end_date,
@@ -167,6 +168,7 @@ def run_sentiment_provider_ingestion(
                     "fallback_used", False
                 ),
                 "source_kind": provider_diagnostics.get("source_kind", ""),
+                "cache_path": str(cache_path),
             }
         )
 
@@ -195,6 +197,7 @@ def run_sentiment_provider_ingestion(
                 "provider_failures",
                 "fallback_used",
                 "source_kind",
+                "cache_path",
             ]
         )
     diagnostics_frame["deduplicated_record_count"] = 0

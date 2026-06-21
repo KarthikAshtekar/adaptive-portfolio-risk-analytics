@@ -1,0 +1,2 @@
+document_id,company,ticker,sector,quarter,publication_date,title,local_path,source_url,retrieval_date,language,notes
+DO_NOT_USE_PLACEHOLDER_EARNINGS,DO_NOT_USE_PLACEHOLDER,PLACEHOLDER.NS,Banking,Q1 FY2020,2020-01-01,DO_NOT_USE_PLACEHOLDER,raw/DO_NOT_USE_PLACEHOLDER.txt,https://example.com/DO_NOT_USE_PLACEHOLDER,2026-06-21,en,DO_NOT_USE_PLACEHOLDER example only; not real data.

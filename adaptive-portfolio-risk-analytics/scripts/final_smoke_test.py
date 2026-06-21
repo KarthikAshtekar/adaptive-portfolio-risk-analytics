@@ -1,4 +1,4 @@
-"""Lightweight v1.2.0 project-freeze smoke checks."""
+"""Lightweight v1.2.2 project-freeze smoke checks."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-VERSION_LABEL = "v1.2.0 — API-Based Ex-Ante NLP Risk Monitoring"
+VERSION_LABEL = "v1.2.2 — Real NLP Data Intake Workflow"
 REQUIRED_MODULES = (
     "src.analytics",
     "src.backtesting",
@@ -71,9 +71,9 @@ def main() -> int:
     readme_path = REPO_ROOT / "README.md"
     readme = readme_path.read_text(encoding="utf-8") if readme_path.is_file() else ""
     if VERSION_LABEL not in readme:
-        failures.append("README does not contain the v1.2.0 label")
+        failures.append("README does not contain the v1.2.2 label")
     else:
-        print("PASS README contains v1.2.0 label")
+        print("PASS README contains v1.2.2 label")
 
     phase4a_dir = (
         REPO_ROOT
@@ -172,6 +172,69 @@ def main() -> int:
         for item in failures
     ):
         print("PASS Phase 4A.5 report artifacts exist")
+
+    phase4a6_dir = (
+        REPO_ROOT
+        / "outputs"
+        / "reports"
+        / "phase_4a6_real_nlp_validation"
+    )
+    for filename in (
+        "report.html",
+        "summary.md",
+        "raw_provider_records.jsonl",
+        "normalized_sentiment_records.csv",
+        "deduped_sentiment_records.csv",
+        "provider_diagnostics.csv",
+        "ex_ante_validation.csv",
+        "collection_summary.json",
+        "scored_records.csv",
+        "composite_nlp_risk_index.csv",
+        "nlp_regime_comparison.csv",
+        "coverage_diagnostics.csv",
+        "reaction_data_warnings.csv",
+        "source_quality.csv",
+        "source_notes.md",
+    ):
+        if not (phase4a6_dir / filename).is_file():
+            failures.append(f"missing Phase 4A.6 report artifact: {filename}")
+    if not any(
+        item.startswith("missing Phase 4A.6 report artifact:")
+        for item in failures
+    ):
+        print("PASS Phase 4A.6 report artifacts exist")
+
+    intake_dir = (
+        REPO_ROOT
+        / "outputs"
+        / "reports"
+        / "nlp_corpus_intake_validation"
+    )
+    for filename in (
+        "intake_status.csv",
+        "rbi_status.csv",
+        "earnings_status.csv",
+        "news_status.csv",
+        "summary.md",
+    ):
+        if not (intake_dir / filename).is_file():
+            failures.append(f"missing NLP intake artifact: {filename}")
+    intake_paths = (
+        "docs/nlp_real_data_acquisition_guide.md",
+        "data/sentiment/rbi_real/manifest_template.csv",
+        "data/sentiment/rbi_real/intake_notes.md",
+        "data/sentiment/earnings_calls/manifest_template.csv",
+        "data/sentiment/earnings_calls/intake_notes.md",
+        "data/sentiment/news_real/manifest_template.csv",
+        "data/sentiment/news_real/intake_notes.md",
+    )
+    for relative in intake_paths:
+        if not (REPO_ROOT / relative).is_file():
+            failures.append(f"missing NLP intake file: {relative}")
+    if not any(
+        item.startswith("missing NLP intake") for item in failures
+    ):
+        print("PASS Phase 4A.7 intake workflow artifacts exist")
 
     if failures:
         print("\nSmoke test failed:")

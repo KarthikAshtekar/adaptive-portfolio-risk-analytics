@@ -36,12 +36,14 @@ def test_mode_sections_preserve_research_and_debug_capabilities() -> None:
     assert "Net/Gross Reconciliation" in DEVELOPER_SECTIONS
     assert "Strategy Recommendation" in MANAGER_SECTIONS
     assert "RBI Macro-Sentiment Confirmation" in MANAGER_SECTIONS
-    assert "NLP Risk Confirmation" in MANAGER_SECTIONS
+    assert "NLP Data Status" in MANAGER_SECTIONS
     assert (
-        "Phase 4A.5 — API-Based Ex-Ante NLP Risk Monitoring"
+        "Phase 4A.7 — Real NLP Data Intake Workflow"
         in RESEARCH_SECTIONS
     )
     assert "Composite NLP Risk Index" in DEVELOPER_SECTIONS
+    assert "Source Quality Components" in DEVELOPER_SECTIONS
+    assert "Real NLP Corpus Intake Diagnostics" in DEVELOPER_SECTIONS
 
 
 def test_manager_default_overlay_is_hmm_conservative() -> None:

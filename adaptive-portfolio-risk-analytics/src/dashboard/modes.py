@@ -121,7 +121,7 @@ MANAGER_SECTIONS = (
     "Why This Recommendation",
     "Sentiment Confirmation",
     "RBI Macro-Sentiment Confirmation",
-    "NLP Risk Confirmation",
+    "NLP Data Status",
     "Warnings and Assumptions",
 )
 
@@ -132,7 +132,7 @@ RESEARCH_SECTIONS = (
     "Phase 3C — Adaptive Allocation Policy",
     "Phase 4A — Sentiment Confirmation",
     "Phase 4A.3 — Real RBI Corpus Validation",
-    "Phase 4A.5 — API-Based Ex-Ante NLP Risk Monitoring",
+    "Phase 4A.7 — Real NLP Data Intake Workflow",
     "Experiment Sensitivity",
     "Phase 3A — CPCV Robustness Validation",
     "Regime Attribution",
@@ -156,6 +156,8 @@ DEVELOPER_SECTIONS = (
     "Ex-Ante Validation",
     "Possible Reaction-Data Records",
     "FinBERT Fallback Metadata",
+    "Source Quality Components",
+    "Real NLP Corpus Intake Diagnostics",
     "Composite NLP Risk Index",
     "Raw CPCV Diagnostics",
     "Full Adaptive Decision Log",

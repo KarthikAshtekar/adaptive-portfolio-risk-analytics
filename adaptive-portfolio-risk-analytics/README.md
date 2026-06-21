@@ -1,6 +1,6 @@
 # Regime-Aware Portfolio Risk Analytics Platform
 
-**v1.2.0 — API-Based Ex-Ante NLP Risk Monitoring**
+**v1.2.2 — Real NLP Data Intake Workflow**
 
 An evidence-gated portfolio research platform that combines hierarchical risk allocation, FRM risk diagnostics, regime-aware adaptive overlays, timestamped market-news and RBI macro-sentiment confirmation, CPCV-style robustness validation, and a simplified manager-facing decision interface.
 
@@ -8,7 +8,7 @@ An evidence-gated portfolio research platform that combines hierarchical risk al
 
 This project is a Python research platform for portfolio construction, historical backtesting, risk diagnostics, regime analysis, adaptive risk control, sentiment confirmation, and evidence-gated strategy selection. It combines fixed allocation methods with lagged rule-based and HMM walk-forward regime decisions, evaluates net-of-cost outcomes, and exposes the results through a Streamlit decision-support dashboard.
 
-The platform is designed to answer a practical question: should a regime-aware strategy replace a strong fixed portfolio, or should it be used selectively for risk control? The validated strategic conclusion remains role-based rather than winner-takes-all. Phase 4A through Phase 4A.5 add sentiment and NLP only as timestamped confirmation, monitoring, and explanation layers.
+The platform is designed to answer a practical question: should a regime-aware strategy replace a strong fixed portfolio, or should it be used selectively for risk control? The validated strategic conclusion remains role-based rather than winner-takes-all. Phase 4A through Phase 4A.7 add sentiment and NLP only as timestamped confirmation, monitoring, and explanation layers.
 
 ## 2. Final strategic conclusion
 
@@ -64,10 +64,12 @@ Implementation is organized under `src/` by data pipeline, covariance, clusterin
 - **Phase 4A.2 — RBI Macro-Sentiment Confirmation:** manifest-driven local RBI document ingestion, sentence-level stance/certainty/time scoring, optional Hugging Face adapters with deterministic fallback, a lagged macro stance index, quantitative-regime comparison, and dashboard commentary.
 - **Phase 4A.3 — Real RBI Corpus Validation:** governed real-document directory and manifest contracts, validation diagnostics, invalid-row isolation, real-versus-synthetic dashboard provenance, coverage thresholds, and a corpus-typed empirical validation report.
 - **Phase 4A.5 — API-Based Ex-Ante Sentiment Ingestion:** optional RBI, earnings-call, GDELT/news, and Alpha Vantage providers; provenance-preserving normalization; ex-ante timestamp validation; reaction-data warnings; optional local FinBERT scoring; and a decision-lagged composite NLP risk monitor.
+- **Phase 4A.6 — Real Provider Data Collection and NLP Signal Validation:** YAML provider configuration, offline-safe collection and caching, real-versus-fixture provenance, source-quality scoring, coverage/freshness thresholds, and a conservative empirical-validation report.
+- **Phase 4A.7 — Real NLP Data Acquisition Workflow:** governed RBI, earnings-call, and news intake templates; legal/provenance guidance; placeholder exclusion; corpus validation; and dashboard intake readiness.
 
 ### Phase 4A — Sentiment Regime Confirmation Layer
 
-Sentiment is used only as a regime-confirmation and explanation layer. It does not directly change portfolio weights in v1.2.0.
+Sentiment is used only as a regime-confirmation and explanation layer. It does not directly change portfolio weights in v1.2.2.
 
 The default implementation uses a local CSV and dependency-light lexicon scorer. It produces observed and lagged decision sentiment, compares sentiment with rule-based and HMM walk-forward regimes, reports coverage and disagreement, and exposes timestamp/look-ahead checks. It does not claim that sentiment predicts returns.
 
@@ -103,6 +105,77 @@ Ex-ante validation rejects missing or inconsistent timestamps, applies a publica
 The composite NLP index combines available RBI macro, earnings-sector, and news/geopolitical textual risk components, requires adequate source coverage, aligns to the trading calendar, and is decision-lagged before comparison with rule-based and HMM walk-forward regimes. Provider sentiment is retained as metadata and is not blindly trusted.
 
 **NLP remains commentary-only and does not affect allocation, portfolio weights, strategy scoring, evidence gates, recommendation confidence, or backtests.**
+
+### Phase 4A.6 — Real Provider Data Collection and NLP Signal Validation
+
+Provider settings are defined in
+[`config/nlp_providers.example.yaml`](config/nlp_providers.example.yaml). Copy
+that file for local changes and keep credentials in environment variables; API
+key values are never stored in configuration or diagnostics. Enabled local
+providers validate their manifests, and Alpha Vantage requires its configured
+environment variable only when that provider is enabled.
+
+The collection command writes raw provider responses to the cache under
+`data/sentiment/cache/` and normalized evidence to
+`outputs/reports/phase_4a6_real_nlp_validation/`. `--no-live` hard-disables
+network calls and allows only local manifests or existing cached responses.
+Bundled synthetic transcripts and placeholder domains remain useful for
+deterministic tests, but the provenance classifier excludes them from real
+record counts and empirical claims.
+
+```bash
+python scripts/collect_real_nlp_data.py --config config/nlp_providers.example.yaml --start-date 2020-01-01 --end-date 2026-06-21 --no-live
+python scripts/validate_real_nlp_signal.py --input-records outputs/reports/phase_4a6_real_nlp_validation/deduped_sentiment_records.csv
+```
+
+Validation scores official/known sources, publication time, URL, entity/topic,
+language support, duplicate risk, and reaction-data warnings. The default
+eligibility thresholds are 50 real records, 20 publication dates, 20%
+decision-label coverage, and at most a 25% reaction-warning rate. Sparse or
+missing real data produces verdict **C. Insufficient real-data coverage** and
+the exact Manager caveat: **NLP signal is monitoring-only due to insufficient
+real-data coverage.**
+
+The composite remains decision-lagged and monitoring-only. Phase 4A.6 does not
+change allocation, strategy scores, evidence gates, recommendation confidence,
+or any backtest.
+
+### Phase 4A.7 — Real NLP Data Acquisition Workflow
+
+The [real-data acquisition guide](docs/nlp_real_data_acquisition_guide.md)
+documents legally cautious intake for three channels:
+
+- RBI documents under `data/sentiment/rbi_real/raw/`, with metadata in
+  `data/sentiment/rbi_real/manifest.csv`.
+- Private or legally available earnings transcripts under
+  `data/sentiment/earnings_calls/raw/`, with metadata in
+  `data/sentiment/earnings_calls/manifest.csv`.
+- Permitted news summaries or exports under `data/sentiment/news_real/raw/`,
+  with normalized metadata in `data/sentiment/news_real/manifest.csv`.
+
+Each directory contains a `manifest_template.csv`, `intake_notes.md`, and an
+explicit `DO_NOT_USE_PLACEHOLDER` example. Raw directories are ignored by Git
+to reduce accidental commits of private, large, paid, or copyrighted material.
+Placeholder and bundled fixture rows never count as real evidence.
+
+Validate intake before collection:
+
+```bash
+python scripts/validate_nlp_corpus_intake.py
+python scripts/collect_real_nlp_data.py --config config/nlp_providers.example.yaml --start-date 2020-01-01 --end-date 2026-06-21 --no-live
+python scripts/validate_real_nlp_signal.py --input-records outputs/reports/phase_4a6_real_nlp_validation/deduped_sentiment_records.csv
+```
+
+The validator writes `intake_status.csv` plus RBI, earnings, and news row
+diagnostics under `outputs/reports/nlp_corpus_intake_validation/`. Missing
+manifests, invalid files, duplicate IDs, bad timestamps, or zero valid real
+records are reported as manual action required rather than treated as failures.
+
+The dashboard Research View exposes corpus readiness and valid-real counts;
+Developer View exposes row-level intake diagnostics. Manager View states that
+NLP monitoring is inactive or illustrative until real text coverage is
+sufficient. This workflow adds no model and does not change allocation,
+strategy scoring, evidence gates, recommendation confidence, or backtests.
 
 ## 5. Dashboard modes
 
@@ -159,7 +232,7 @@ python scripts/final_smoke_test.py
 
 The dashboard is also launched headlessly and checked through Streamlit's health endpoint. Exact freeze results are recorded in the [final validation checklist](outputs/final_project_pack/final_validation_checklist.md).
 
-Verified on June 21, 2026: **418 passed, 1 skipped, 64% statement coverage, Phase 4A.5 report generated, smoke test passed, dashboard root and health HTTP 200**.
+Verified on June 21, 2026: **434 passed, 1 skipped, 65% statement coverage, Phase 4A.7 intake validation plus Phase 4A.6 no-live collection and signal validation completed, smoke test passed, dashboard root and health HTTP 200**.
 
 ## 9. Reports and artifacts
 
@@ -168,6 +241,8 @@ Verified on June 21, 2026: **418 passed, 1 skipped, 64% statement coverage, Phas
 - [Phase 4A.2 RBI macro-sentiment report](outputs/reports/phase_4a2_rbi_macro_sentiment/report.html)
 - [Phase 4A.3 real RBI corpus validation report](outputs/reports/phase_4a3_real_rbi_macro_validation/report.html)
 - [Phase 4A.5 API-based ex-ante NLP monitoring report](outputs/reports/phase_4a5_api_sentiment_ingestion/report.html)
+- [Phase 4A.6 real NLP signal validation report](outputs/reports/phase_4a6_real_nlp_validation/report.html)
+- [Phase 4A.7 NLP corpus intake validation](outputs/reports/nlp_corpus_intake_validation/summary.md)
 - [Phase 3F strategy-selection report](outputs/reports/phase_3f_strategy_selection/report.html)
 - [Phase 3E replication report](outputs/reports/phase_3e_replication/report.html)
 - [Post-P0 adaptive validation report](outputs/reports/post_p0_adaptive_validation/report.html)
@@ -223,6 +298,8 @@ The application opens in Manager View. Market-data retrieval uses Yahoo Finance,
 - External APIs are optional, may require credentials, and can revise or limit historical responses.
 - Market-reaction language is flagged and is not treated as a pure ex-ante signal.
 - Current Phase 4A.5 report data are offline fixtures and do not establish predictive or allocation value.
+- The default Phase 4A.6 no-live run finds no real provider records because the bundled earnings transcripts are explicit synthetic fixtures; its insufficiency verdict is intentional.
+- Phase 4A.7 reports manual action required until reviewed RBI, earnings-call, and news manifests contain valid real records; templates and placeholders are not empirical data.
 
 ## 12. Future work
 

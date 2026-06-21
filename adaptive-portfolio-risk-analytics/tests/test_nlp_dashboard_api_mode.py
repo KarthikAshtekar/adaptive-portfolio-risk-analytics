@@ -25,13 +25,12 @@ def _function_source(name: str, next_name: str) -> str:
 def test_manager_view_is_compact_and_does_not_expose_raw_provider_data() -> None:
     manager = _function_source("render_manager_view", "render_developer_view")
 
-    assert 'st.header("NLP Risk Confirmation")' in manager
-    assert "RBI Macro Signal" in manager
-    assert "Earnings / Sector" in manager
-    assert "News / Geopolitics" in manager
+    assert 'st.header("NLP Data Status")' in manager
+    assert "NLP Data Status" in manager
     assert "Composite NLP Confirmation" in manager
     assert "Coverage Quality" in manager
-    assert "Data Freshness" in manager
+    assert "Latest Text Date" in manager
+    assert "Provider Mix" in manager
     assert "raw_provider_records" not in manager
     assert "normalized_records" not in manager
     assert "fallback_reason" not in manager
@@ -40,7 +39,10 @@ def test_manager_view_is_compact_and_does_not_expose_raw_provider_data() -> None
 def test_research_and_developer_views_expose_nlp_diagnostics() -> None:
     assert "NLP Provider Selector" in APP_SOURCE
     assert "NLP Query Preset" in APP_SOURCE
-    assert "Provider Diagnostics and Source Coverage" in APP_SOURCE
+    assert "Provider Configuration and API Diagnostics" in APP_SOURCE
+    assert "Coverage and Freshness" in APP_SOURCE
+    assert "Source Quality" in APP_SOURCE
+    assert "Reaction Warning Rate" in APP_SOURCE
     assert "Decision-Lagged Composite NLP Risk Index" in APP_SOURCE
     assert "Raw API / Ex-Ante NLP Diagnostics" in APP_SOURCE
     assert "Possible reaction-data records" in APP_SOURCE
@@ -83,7 +85,13 @@ def test_dashboard_nlp_builder_runs_offline_with_fixture_providers(
     )
 
     assert payload["error"] is None
-    assert set(payload["providers_with_data"]) == {"earnings_calls", "gdelt"}
+    assert payload["providers_with_data"] == []
+    assert set(payload["providers_with_any_data"]) == {
+        "earnings_calls",
+        "gdelt",
+    }
+    assert payload["current"]["nlp_data_status"] == "Real Data Unavailable"
+    assert payload["current"]["coverage_quality"] == "Insufficient"
     assert payload["ex_ante_validation"]["is_ex_ante_valid"].all()
     assert payload["reaction_data_warnings"].shape[0] == 1
     assert payload["composite_index"]["decision_lag"].eq(1).all()

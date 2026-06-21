@@ -203,4 +203,8 @@ def run_rbi_empirical_validation(
         "scoring_method": scoring_method,
         "decision_lag": int(decision_lag),
         "lookback_window": int(lookback_window),
+        "corpus_sufficiency_status": (
+            "ready" if not documents.empty else "manual_action_required"
+        ),
+        "manual_action_required": bool(documents.empty),
     }

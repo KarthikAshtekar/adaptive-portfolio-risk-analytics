@@ -7,6 +7,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from src.sentiment.corpus_intake import is_explicit_placeholder
+
 from .base import SentimentProvider, normalized_frame, stable_record_id
 
 
@@ -67,6 +69,11 @@ class EarningsCallProvider(SentimentProvider):
             return []
         records: list[dict[str, object]] = []
         for row in manifest.to_dict("records"):
+            if is_explicit_placeholder(row):
+                failures.append(
+                    f"{row.get('document_id', 'unknown')}: placeholder excluded"
+                )
+                continue
             local_path = (self.manifest_path.parent / row["local_path"]).resolve()
             try:
                 text = local_path.read_text(encoding="utf-8").strip()
