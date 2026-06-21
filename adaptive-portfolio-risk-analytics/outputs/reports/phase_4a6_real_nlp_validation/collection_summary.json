@@ -1,0 +1,33 @@
+{
+  "status": "success",
+  "warning": "Real provider data unavailable; collection completed with configuration, cache, fixture, and provenance diagnostics only.",
+  "config_path": "D:\\PGDBA\\MyNotes\\SEM-3\\Part-1\\FRM\\Project\\adaptive-portfolio-risk-analytics\\config\\nlp_providers.example.yaml",
+  "config_valid": true,
+  "config_errors": [],
+  "config_warnings": [],
+  "no_live": true,
+  "network_calls_allowed": false,
+  "cache_enabled": true,
+  "cache_dir": "D:\\PGDBA\\MyNotes\\SEM-3\\Part-1\\FRM\\Project\\adaptive-portfolio-risk-analytics\\data\\sentiment\\cache",
+  "start_date": "2020-01-01",
+  "end_date": "2026-06-21",
+  "providers_enabled": [
+    "earnings"
+  ],
+  "providers_initialized": [
+    "earnings_calls"
+  ],
+  "collected_record_count": 2,
+  "real_record_count": 0,
+  "fixture_or_placeholder_count": 2,
+  "ex_ante_valid_count": 2,
+  "reaction_warning_count": 0,
+  "intake_manual_action_required": true,
+  "valid_real_records_by_corpus": {
+    "rbi": 0,
+    "earnings": 0,
+    "news": 0
+  },
+  "corpus_sufficiency_status": "manual_action_required",
+  "output_dir": "D:\\PGDBA\\MyNotes\\SEM-3\\Part-1\\FRM\\Project\\adaptive-portfolio-risk-analytics\\outputs\\reports\\phase_4a6_real_nlp_validation"
+}

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import pandas as pd
 
-
 OBJECTIVE_DIRECTIONS = {
     "cagr": False,
     "sharpe": False,
@@ -72,6 +71,9 @@ def compute_parameter_sensitivity(
 
     parameter_columns = [
         "strategy",
+        "strategy_type",
+        "regime_source",
+        "policy_preset",
         "covariance_method",
         "rebalance_mode",
         "threshold",

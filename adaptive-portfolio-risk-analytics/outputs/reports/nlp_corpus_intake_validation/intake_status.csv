@@ -1,0 +1,4 @@
+corpus,manifest_path,manifest_exists,manifest_row_count,valid_record_count,invalid_record_count,placeholder_record_count,corpus_status,manual_action_required,status_message
+rbi,D:\PGDBA\MyNotes\SEM-3\Part-1\FRM\Project\adaptive-portfolio-risk-analytics\data\sentiment\rbi_real\manifest.csv,True,0,0,0,0,manual_action_required,True,"manual action required: 0 valid, 0 invalid, 0 placeholder/fixture record(s)"
+earnings,D:\PGDBA\MyNotes\SEM-3\Part-1\FRM\Project\adaptive-portfolio-risk-analytics\data\sentiment\earnings_calls\manifest.csv,True,2,0,0,2,manual_action_required,True,"manual action required: 0 valid, 0 invalid, 2 placeholder/fixture record(s)"
+news,D:\PGDBA\MyNotes\SEM-3\Part-1\FRM\Project\adaptive-portfolio-risk-analytics\data\sentiment\news_real\manifest.csv,False,0,0,0,0,manual_action_required,True,manifest not found: D:\PGDBA\MyNotes\SEM-3\Part-1\FRM\Project\adaptive-portfolio-risk-analytics\data\sentiment\news_real\manifest.csv; manual action required

@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phase 4A.2 RBI Macro-Sentiment Confirmation</title>
+  <style>
+    :root { --ink:#1f2937; --muted:#667085; --line:#e4e7ec; --blue:#294a7a; --bg:#f7f8fb; --open:#eaf1fe; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink); font-family:Inter,"Segoe UI",Arial,sans-serif; line-height:1.55; }
+    main { max-width:1080px; margin:auto; padding:44px 24px 72px; }
+    header { background:linear-gradient(135deg,#1f2c4d,#31588f); color:white; padding:38px; border-radius:20px; }
+    header p { color:#dce7f8; max-width:850px; }
+    h1 { margin:8px 0; font-size:38px; }
+    h2 { margin-top:38px; }
+    .eyebrow { text-transform:uppercase; letter-spacing:.11em; font-size:12px; font-weight:700; }
+    .callout { margin-top:24px; border-left:4px solid var(--blue); background:var(--open); padding:16px 18px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:12px; }
+    .card,.panel { background:white; border:1px solid var(--line); border-radius:14px; padding:18px; }
+    .card span { display:block; color:var(--muted); font-size:12px; }
+    .card strong { font-size:23px; }
+    table { border-collapse:collapse; width:100%; background:white; font-size:13px; }
+    th,td { border-bottom:1px solid var(--line); padding:9px; text-align:left; }
+    th { color:var(--blue); background:#f4f7fd; }
+    .table-wrap { overflow-x:auto; border:1px solid var(--line); border-radius:14px; }
+    footer { margin-top:36px; color:var(--muted); font-size:12px; }
+  </style>
+</head>
+<body><main>
+  <header>
+    <div class="eyebrow">Adaptive Portfolio Risk Analytics · v1.1.1</div>
+    <h1>Phase 4A.2 — RBI Macro-Sentiment Confirmation</h1>
+    <p>Locally stored documents are ingested, split, scored for stance/certainty/time orientation, aligned to market dates, lagged, and compared with trading-safe quantitative regimes.</p>
+  </header>
+  <div class="callout"><strong>Corpus type:</strong> <code>synthetic_fixture</code>. This report is pipeline validation, not empirical RBI evidence.</div>
+  <div class="callout"><strong>Conclusion:</strong> RBI macro-sentiment is now a real/reproducible confirmation layer, but it remains commentary-only until validated out of sample.</div>
+  <h2>Current fixture state</h2>
+  <section class="grid">
+    <div class="card"><span>Quantitative regime</span><strong>Risk-Off</strong></div>
+    <div class="card"><span>Macro label</span><strong>Risk On Macro</strong></div>
+    <div class="card"><span>Confirmation</span><strong>Quant-Macro Disagreement</strong></div>
+    <div class="card"><span>Sentence coverage</span><strong>1</strong></div>
+  </section>
+  <h2>Agreement and coverage</h2>
+  <div class="table-wrap"><table class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>Comparison</th>
+      <th>Agreement</th>
+      <th>Stress/crisis risk-off confirmation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Rule-based decision regime</td>
+      <td>39.1%</td>
+      <td>39.1%</td>
+    </tr>
+    <tr>
+      <td>HMM walk-forward decision regime</td>
+      <td>65.3%</td>
+      <td>64.9%</td>
+    </tr>
+  </tbody>
+</table></div>
+  <div class="grid" style="margin-top:12px">
+    <div class="card"><span>Decision-label coverage</span><strong>19.2%</strong></div>
+    <div class="card"><span>Loaded documents</span><strong>4/4</strong></div>
+    <div class="card"><span>Scored sentences</span><strong>16</strong></div>
+    <div class="card"><span>Transformer fallbacks</span><strong>0</strong></div>
+  </div>
+  <h2>Document ingestion audit</h2>
+  <div class="table-wrap"><table class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>document_id</th>
+      <th>publication_date</th>
+      <th>document_type</th>
+      <th>local_path</th>
+      <th>source_url</th>
+      <th>load_status</th>
+      <th>error</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>rbi_mpc_20220210</td>
+      <td>2022-02-10</td>
+      <td>mpc_minutes</td>
+      <td>sample_mpc_minutes_20220210.txt</td>
+      <td>NaN</td>
+      <td>loaded</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <td>rbi_policy_20220805</td>
+      <td>2022-08-05</td>
+      <td>monetary_policy_statement</td>
+      <td>sample_policy_statement_20220805.txt</td>
+      <td>NaN</td>
+      <td>loaded</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <td>rbi_mpc_20240405</td>
+      <td>2024-04-05</td>
+      <td>mpc_minutes</td>
+      <td>sample_mpc_minutes_20240405.txt</td>
+      <td>NaN</td>
+      <td>loaded</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <td>rbi_policy_20260501</td>
+      <td>2026-05-01</td>
+      <td>monetary_policy_statement</td>
+      <td>sample_policy_statement_20260501.txt</td>
+      <td>NaN</td>
+      <td>loaded</td>
+      <td>None</td>
+    </tr>
+  </tbody>
+</table></div>
+  <h2>Major disagreement dates</h2>
+  <p>Disagreements are descriptive. They do not modify strategy selection or allocation.</p>
+  <div class="table-wrap"><table class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>date</th>
+      <th>macro_label</th>
+      <th>rule_based_regime</th>
+      <th>hmm_walk_forward_regime</th>
+      <th>sentence_count</th>
+      <th>agreement_rule_based</th>
+      <th>agreement_hmm</th>
+      <th>corpus_type</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>2022-08-08</td>
+      <td>risk_on_macro</td>
+      <td>Crisis</td>
+      <td>Unknown</td>
+      <td>4</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>synthetic_fixture</td>
+    </tr>
+    <tr>
+      <td>2022-08-09</td>
+      <td>risk_on_macro</td>
+      <td>Crisis</td>
+      <td>Unknown</td>
+      <td>4</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>synthetic_fixture</td>
+    </tr>
+    <tr>
+      <td>2022-08-10</td>
+      <td>risk_on_macro</td>
+      <td>Crisis</td>
+      <td>Unknown</td>
+      <td>4</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>synthetic_fixture</td>
+    </tr>
+    <tr>
+      <td>2022-08-11</td>
+      <td>risk_on_macro</td>
+      <td>Crisis</td>
+      <td>Unknown</td>
+      <td>4</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>synthetic_fixture</td>
+    </tr>
+    <tr>
+      <td>2022-08-12</td>
+      <td>risk_on_macro</td>
+      <td>Crisis</td>
+      <td>Unknown</td>
+      <td>4</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>synthetic_fixture</td>
+    </tr>
+    <tr>
+      <td>2022-08-15</td>
+      <td>risk_on_macro</td>
+      <td>Crisis</td>
+      <td>Unknown</td>
+      <td>4</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>synthetic_fixture</td>
+    </tr>
+    <tr>
+      <td>2022-08-16</td>
+      <td>risk_on_macro</td>
+      <td>Crisis</td>
+      <td>Unknown</td>
+      <td>4</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>synthetic_fixture</td>
+    </tr>
+    <tr>
+      <td>2022-08-17</td>
+      <td>risk_on_macro</td>
+      <td>Crisis</td>
+      <td>Unknown</td>
+      <td>4</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>synthetic_fixture</td>
+    </tr>
+    <tr>
+      <td>2022-08-18</td>
+      <td>risk_on_macro</td>
+      <td>Crisis</td>
+      <td>Unknown</td>
+      <td>4</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>synthetic_fixture</td>
+    </tr>
+    <tr>
+      <td>2022-08-19</td>
+      <td>risk_on_macro</td>
+      <td>Crisis</td>
+      <td>Unknown</td>
+      <td>4</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>synthetic_fixture</td>
+    </tr>
+    <tr>
+      <td>2022-08-22</td>
+      <td>risk_on_macro</td>
+      <td>Crisis</td>
+      <td>Unknown</td>
+      <td>4</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>synthetic_fixture</td>
+    </tr>
+    <tr>
+      <td>2022-08-23</td>
+      <td>risk_on_macro</td>
+      <td>Crisis</td>
+      <td>Unknown</td>
+      <td>4</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>synthetic_fixture</td>
+    </tr>
+    <tr>
+      <td>2022-08-24</td>
+      <td>risk_on_macro</td>
+      <td>Crisis</td>
+      <td>Unknown</td>
+      <td>4</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>synthetic_fixture</td>
+    </tr>
+    <tr>
+      <td>2022-08-25</td>
+      <td>risk_on_macro</td>
+      <td>Crisis</td>
+      <td>Unknown</td>
+      <td>4</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>synthetic_fixture</td>
+    </tr>
+    <tr>
+      <td>2022-08-26</td>
+      <td>risk_on_macro</td>
+      <td>Crisis</td>
+      <td>Unknown</td>
+      <td>4</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>synthetic_fixture</td>
+    </tr>
+    <tr>
+      <td>2022-08-29</td>
+      <td>risk_on_macro</td>
+      <td>Crisis</td>
+      <td>Unknown</td>
+      <td>4</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>synthetic_fixture</td>
+    </tr>
+    <tr>
+      <td>2022-08-30</td>
+      <td>risk_on_macro</td>
+      <td>Crisis</td>
+      <td>Unknown</td>
+      <td>4</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>synthetic_fixture</td>
+    </tr>
+    <tr>
+      <td>2022-08-31</td>
+      <td>risk_on_macro</td>
+      <td>Crisis</td>
+      <td>Unknown</td>
+      <td>4</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>synthetic_fixture</td>
+    </tr>
+    <tr>
+      <td>2022-09-01</td>
+      <td>risk_on_macro</td>
+      <td>Crisis</td>
+      <td>Unknown</td>
+      <td>4</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>synthetic_fixture</td>
+    </tr>
+    <tr>
+      <td>2022-09-02</td>
+      <td>risk_on_macro</td>
+      <td>Crisis</td>
+      <td>Unknown</td>
+      <td>4</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>synthetic_fixture</td>
+    </tr>
+  </tbody>
+</table></div>
+  <h2>Required questions answered</h2>
+  <div class="panel">
+    <ol>
+      <li><strong>Documents:</strong> Four local synthetic RBI-style MPC-minute and policy-statement fixtures; see the ingestion audit and <code>rbi_documents.csv</code>.</li>
+      <li><strong>Sentence scoring:</strong> Stable ordered sentences scored for stance, certainty, and time orientation using phrase dictionaries.</li>
+      <li><strong>Scorer:</strong> <code>rbi_macro_lexicon</code> version 1.0. Transformer models were optional and not used for this report.</li>
+      <li><strong>Look-ahead:</strong> Publication-to-market alignment followed by a one-market-session decision lag.</li>
+      <li><strong>Index:</strong> 63-session rolling shares with net stance equal to hawkish minus dovish share and macro risk equal to net stance plus uncertainty share.</li>
+      <li><strong>HMM confirmation:</strong> 65.3% agreement and 64.9% stress/risk-off confirmation.</li>
+      <li><strong>Rule-based confirmation:</strong> 39.1% agreement and 39.1% stress/crisis risk-off confirmation.</li>
+      <li><strong>Pre-stress evidence:</strong> 0 macro risk-off alignments occurred within the configured lead window before quantitative stress onsets.</li>
+      <li><strong>Coverage:</strong> Insufficient for empirical or allocation conclusions because the bundled corpus is synthetic, sparse, and covers only 19.2% of decision dates.</li>
+      <li><strong>Allocation decision:</strong> Remain commentary-only until a governed real-document corpus is validated out of sample.</li>
+    </ol>
+  </div>
+  <h2>Governance boundary</h2>
+  <div class="panel">
+    The corpus and market history in this report are synthetic fixtures. The
+    implementation is reproducible, but no predictive or live-data claim is
+    made. Out-of-sample validation and governed real-source coverage are
+    required before any allocation experiment.
+  </div>
+  <footer>Generated 2026-06-21 · Commentary-only research layer</footer>
+</main></body></html>

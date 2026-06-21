@@ -1,0 +1,49 @@
+{
+  "articles": [
+    {
+      "url": "https://example.com/india-inflation-outlook-2024",
+      "title": "India inflation outlook faces renewed upside risk",
+      "seendate": "20240405T083000Z",
+      "domain": "example.com",
+      "sourcecountry": "India",
+      "language": "English",
+      "text": "Analysts expect food inflation and oil price shock risks to remain elevated."
+    },
+    {
+      "url": "https://example.com/banking-liquidity-2024",
+      "title": "Banking liquidity may tighten as external headwinds build",
+      "seendate": "20240918T101500Z",
+      "domain": "example.com",
+      "sourcecountry": "India",
+      "language": "English",
+      "text": "Funding conditions could tighten and banking stress risks remain uncertain."
+    },
+    {
+      "url": "https://example.com/supply-chain-2025",
+      "title": "Supply chain disruption threatens regional growth outlook",
+      "seendate": "20250311T070000Z",
+      "domain": "example.com",
+      "sourcecountry": "India",
+      "language": "English",
+      "text": "War escalation and supply chain disruption may weaken demand."
+    },
+    {
+      "url": "https://example.com/market-reaction-2025",
+      "title": "Nifty dropped after policy announcement",
+      "seendate": "20250807T110000Z",
+      "domain": "example.com",
+      "sourcecountry": "India",
+      "language": "English",
+      "text": "Shares rallied after an initial selloff and volatility spiked."
+    },
+    {
+      "url": "https://example.com/recovery-2026",
+      "title": "Growth recovery expected as liquidity support improves",
+      "seendate": "20260410T093000Z",
+      "domain": "example.com",
+      "sourcecountry": "India",
+      "language": "English",
+      "text": "A soft landing and stabilization are expected over the coming months."
+    }
+  ]
+}

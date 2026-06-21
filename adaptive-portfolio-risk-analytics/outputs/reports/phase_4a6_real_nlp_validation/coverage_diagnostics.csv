@@ -1,0 +1,6 @@
+metric,actual,threshold,passes
+record_count,0.0,50.0,False
+distinct_publication_dates,0.0,20.0,False
+decision_label_coverage,0.0,0.2,False
+provider_coverage,0.0,1.0,False
+reaction_warning_rate,0.0,0.25,True

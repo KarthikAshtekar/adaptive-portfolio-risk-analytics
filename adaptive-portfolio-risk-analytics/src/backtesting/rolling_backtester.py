@@ -214,7 +214,8 @@ class RollingBacktester(BaseBacktester):
         previous_target_update_date: pd.Timestamp | None = None
 
         returns_idx: list[pd.Timestamp] = []
-        portfolio_returns: list[float] = []
+        net_portfolio_returns: list[float] = []
+        gross_portfolio_returns: list[float] = []
         values_idx: list[pd.Timestamp] = [clean.index[self.train_window - 1]]
         gross_values: list[float] = [gross_portfolio_value]
         net_values: list[float] = [net_portfolio_value]
@@ -247,14 +248,14 @@ class RollingBacktester(BaseBacktester):
                 should_rebalance = True
                 rebalance_reason = "initial"
 
+            net_value_before_cost = net_portfolio_value
             if should_rebalance:
                 portfolio_volatility = float(train_slice.std().mean())
                 turnover = float(0.5 * np.abs(target_weights - current_weights).sum())
-                portfolio_value_before_cost = net_portfolio_value
                 transaction_cost = self._estimate_transaction_cost(
                     current_weights=current_weights,
                     target_weights=target_weights,
-                    portfolio_value=portfolio_value_before_cost,
+                    portfolio_value=net_value_before_cost,
                     portfolio_volatility=portfolio_volatility,
                 )
                 net_portfolio_value = max(0.0, net_portfolio_value - transaction_cost)
@@ -272,7 +273,7 @@ class RollingBacktester(BaseBacktester):
                             "rebalance_reason": str(rebalance_reason),
                             "turnover": turnover,
                             "transaction_cost": transaction_cost,
-                            "portfolio_value_before_cost": portfolio_value_before_cost,
+                            "portfolio_value_before_cost": net_value_before_cost,
                             "portfolio_value_after_cost": net_portfolio_value,
                             "max_weight_drift": max_weight_drift,
                         }
@@ -280,27 +281,38 @@ class RollingBacktester(BaseBacktester):
 
             next_asset_returns = clean.iloc[t + 1].values.astype(float)
             gross_next_return = float(np.dot(current_weights, next_asset_returns))
-            net_next_return = float(np.dot(current_weights, next_asset_returns))
 
             gross_portfolio_value *= 1.0 + gross_next_return
-            net_portfolio_value *= 1.0 + net_next_return
+            net_value_after_return = net_portfolio_value * (1.0 + gross_next_return)
+            net_next_return = (
+                net_value_after_return / net_value_before_cost - 1.0
+                if net_value_before_cost > 0.0
+                else 0.0
+            )
+            net_portfolio_value = net_value_after_return
 
             current_weights = self._post_return_weights(
                 current_weights=current_weights,
                 asset_returns=next_asset_returns,
-                portfolio_return=net_next_return,
+                portfolio_return=gross_next_return,
             )
 
             returns_idx.append(clean.index[t + 1])
-            portfolio_returns.append(net_next_return)
+            net_portfolio_returns.append(net_next_return)
+            gross_portfolio_returns.append(gross_next_return)
             values_idx.append(clean.index[t + 1])
             gross_values.append(gross_portfolio_value)
             net_values.append(net_portfolio_value)
 
         portfolio_returns_s = pd.Series(
-            portfolio_returns,
+            net_portfolio_returns,
             index=returns_idx,
             name="portfolio_return",
+        )
+        gross_portfolio_returns_s = pd.Series(
+            gross_portfolio_returns,
+            index=returns_idx,
+            name="gross_portfolio_return",
         )
         gross_portfolio_values_s = pd.Series(
             gross_values,
@@ -349,6 +361,7 @@ class RollingBacktester(BaseBacktester):
 
         return {
             "portfolio_returns": portfolio_returns_s,
+            "gross_portfolio_returns": gross_portfolio_returns_s,
             "portfolio_values": portfolio_values_s,
             "gross_portfolio_values": gross_portfolio_values_s,
             "drawdown": drawdown,

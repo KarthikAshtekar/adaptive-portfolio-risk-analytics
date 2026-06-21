@@ -11,10 +11,10 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 
 setup(
     name="adaptive-portfolio-risk-analytics",
-    version="0.1.0",
+    version="1.2.2",
     author="Quantitative Finance Team",
     author_email="team@example.com",
-    description="Institutional-style quantitative portfolio optimization and risk analytics platform",
+    description="Evidence-gated portfolio research and risk analytics platform",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/yourusername/adaptive-portfolio-risk-analytics",

@@ -1,0 +1,5 @@
+provider,status,cache_hit,raw_record_count,valid_record_count,invalid_record_count,fetch_error,provider_failures,fallback_used,source_kind,deduplicated_record_count,deduped_valid_record_count,provider_duplicates_removed
+rbi,success,False,4,0,4,,,True,,35,0,0
+earnings_calls,success,False,2,2,0,,,False,local_transcript_manifest,0,2,0
+gdelt,success,False,40,40,0,,,False,fixture,0,5,35
+alpha_vantage_news,missing_api_key,False,0,0,0,,,False,,0,0,0

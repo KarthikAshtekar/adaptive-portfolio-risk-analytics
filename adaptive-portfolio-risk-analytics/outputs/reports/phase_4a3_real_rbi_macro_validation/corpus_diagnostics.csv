@@ -1,0 +1,16 @@
+,metric,category,value,corpus_type,scoring_method,decision_lag,lookback_window
+0,manifest_row_count,,0,synthetic_fixture,lexicon,1,63
+1,valid_document_count,,0,synthetic_fixture,lexicon,1,63
+2,invalid_document_count,,0,synthetic_fixture,lexicon,1,63
+3,date_start,,,synthetic_fixture,lexicon,1,63
+4,date_end,,,synthetic_fixture,lexicon,1,63
+5,missing_field_count,,0,synthetic_fixture,lexicon,1,63
+6,invalid_file_count,,0,synthetic_fixture,lexicon,1,63
+7,duplicate_record_count,,0,synthetic_fixture,lexicon,1,63
+8,total_word_count,,0,synthetic_fixture,lexicon,1,63
+9,total_sentence_count,,0,synthetic_fixture,lexicon,1,63
+10,active_corpus_type,,synthetic_fixture,synthetic_fixture,lexicon,1,63
+11,active_document_count,,4,synthetic_fixture,lexicon,1,63
+12,active_sentence_count,,16,synthetic_fixture,lexicon,1,63
+13,active_document_types,,"monetary_policy_statement, mpc_minutes",synthetic_fixture,lexicon,1,63
+14,fallback_reason,,Real RBI corpus unavailable; synthetic fixture mode used only for pipeline validation.,synthetic_fixture,lexicon,1,63

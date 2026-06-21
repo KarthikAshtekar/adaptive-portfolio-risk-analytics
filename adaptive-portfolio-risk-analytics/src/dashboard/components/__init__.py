@@ -5,6 +5,8 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
+from src.dashboard.modes import net_metric_label
+
 
 def render_metric_card(
     title: str,
@@ -36,7 +38,7 @@ def render_portfolio_summary(
     ):
         with col:
             st.metric(
-                metric.replace("_", " ").title(),
+                net_metric_label(metric),
                 value,
             )
 

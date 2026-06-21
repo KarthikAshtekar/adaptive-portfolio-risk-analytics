@@ -4,6 +4,7 @@ import warnings
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from src.backtesting import (
     RollingBacktester,
@@ -363,16 +364,27 @@ def test_rebalance_log_records_required_fields() -> None:
 
 def test_transaction_costs_reduce_portfolio_value() -> None:
     returns = _returns()
+    initial_capital = 1_000_000.0
     results = RollingBacktester(
-        allocator=EqualWeightAllocator(),
+        allocator=InverseVolatilityAllocator(),
         train_window=60,
         rebalance_mode="calendar",
         rebalance_frequency="M",
+        initial_capital=initial_capital,
         transaction_cost_model=TransactionCostModel(base_bps=50.0, slippage_bps=50.0),
     ).run(returns)
 
     assert (results["gross_portfolio_values"] >= results["portfolio_values"]).all()
-    assert results["performance_metrics"]["total_transaction_cost"] >= 0.0
+    assert results["performance_metrics"]["total_transaction_cost"] > 0.0
+    return_gap = results["gross_portfolio_returns"] - results["portfolio_returns"]
+    assert (return_gap >= -1e-12).all()
+    assert (return_gap > 1e-12).any()
+    assert initial_capital * (1.0 + results["portfolio_returns"]).prod() == pytest.approx(
+        results["portfolio_values"].iloc[-1]
+    )
+    assert initial_capital * (
+        1.0 + results["gross_portfolio_returns"]
+    ).prod() == pytest.approx(results["gross_portfolio_values"].iloc[-1])
 
 
 def test_existing_result_keys_remain_present() -> None:
@@ -393,6 +405,7 @@ def test_existing_result_keys_remain_present() -> None:
         assert key in results
 
     for new_key in (
+        "gross_portfolio_returns",
         "gross_portfolio_values",
         "rebalance_log",
         "turnover_summary",

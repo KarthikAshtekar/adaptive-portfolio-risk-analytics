@@ -6,9 +6,6 @@ from typing import Iterable
 
 import pandas as pd
 
-from .ingest import YahooFinanceProvider
-
-
 def get_defensive_asset_returns(
     start_date,
     end_date,
@@ -16,7 +13,10 @@ def get_defensive_asset_returns(
     fallback_tickers: Iterable[str] | None = None,
     synthetic_annual_rate: float = 0.04,
 ) -> tuple[pd.Series, dict[str, object]]:
-    """Fetch defensive asset returns or fall back to a synthetic risk-free series."""
+    """Compatibility wrapper around the central defensive-return utility."""
+    from src.adaptive.defensive import get_defensive_returns
+    from .ingest import YahooFinanceProvider
+
     start_ts = pd.Timestamp(start_date)
     end_ts = pd.Timestamp(end_date)
     if start_ts >= end_ts:
@@ -36,6 +36,7 @@ def get_defensive_asset_returns(
         if ticker and ticker.strip()
     )
 
+    target_index = pd.date_range(start=start_ts, end=end_ts, freq="B")
     provider = YahooFinanceProvider()
     errors: list[str] = []
 
@@ -46,36 +47,44 @@ def get_defensive_asset_returns(
                 start_date=start_ts.date().isoformat(),
                 end_date=end_ts.date().isoformat(),
             )
-            prices = _extract_defensive_prices(market_data.raw_data, ticker, market_data.price_field)
+            prices = _extract_defensive_prices(
+                market_data.raw_data,
+                ticker,
+                market_data.price_field,
+            )
             missing_before = int(prices.isna().sum())
-            cleaned_prices = prices.ffill().bfill()
-            missing_after = int(cleaned_prices.isna().sum())
-            if cleaned_prices.dropna().shape[0] < 2:
-                raise ValueError("defensive asset prices must contain at least two valid observations")
-
-            defensive_returns = cleaned_prices.pct_change().dropna()
-            defensive_returns.name = ticker
-            return defensive_returns, {
+            result = get_defensive_returns(
+                index=target_index,
+                source="ticker",
+                annual_rate=synthetic_annual_rate,
+                defensive_ticker=ticker,
+                prices=prices,
+                fallback="synthetic",
+            )
+        except Exception as exc:  # external availability is recoverable
+            errors.append(f"{ticker}: {exc}")
+            continue
+        if result.source_used == "ticker":
+            metadata = {
                 "selected_mode": "ticker",
                 "selected_ticker": ticker,
                 "synthetic_annual_rate": float(synthetic_annual_rate),
                 "missing_before": missing_before,
-                "missing_after": missing_after,
+                "missing_after": 0,
                 "fallback_used": idx > 0,
                 "errors": errors,
+                **result.metadata,
             }
-        except Exception as exc:  # pragma: no cover - exercised via fallback tests
-            errors.append(f"{ticker}: {exc}")
+            defensive_returns = result.returns.rename(ticker)
+            return defensive_returns, metadata
+        errors.append(f"{ticker}: {result.notes}")
 
-    synthetic_index = pd.date_range(start=start_ts, end=end_ts, freq="B")
-    synthetic_daily_rate = float(synthetic_annual_rate) / 252.0
-    defensive_returns = pd.Series(
-        synthetic_daily_rate,
-        index=synthetic_index,
-        dtype=float,
-        name="Synthetic Risk-Free",
+    result = get_defensive_returns(
+        index=target_index,
+        source="synthetic",
+        annual_rate=synthetic_annual_rate,
     )
-    return defensive_returns, {
+    return result.returns.rename("Synthetic Risk-Free"), {
         "selected_mode": "synthetic",
         "selected_ticker": None,
         "synthetic_annual_rate": float(synthetic_annual_rate),
@@ -83,6 +92,11 @@ def get_defensive_asset_returns(
         "missing_after": 0,
         "fallback_used": bool(candidates),
         "errors": errors,
+        **{
+            **result.metadata,
+            "defensive_source_requested": "ticker" if candidates else "synthetic",
+            "defensive_fallback_used": bool(candidates),
+        },
     }
 
 

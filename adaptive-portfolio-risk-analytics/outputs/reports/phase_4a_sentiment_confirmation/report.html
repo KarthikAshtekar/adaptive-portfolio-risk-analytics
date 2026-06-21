@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phase 4A Sentiment Regime Confirmation</title>
+  <style>
+    :root { --ink:#1F2430; --muted:#697086; --line:#E5E8F0; --blue:#2E4780; --open:#EAF1FE; --bg:#F7F8FB; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink); font-family:Inter,"Segoe UI",Arial,sans-serif; line-height:1.55; }
+    main { max-width:1080px; margin:auto; padding:44px 24px 72px; }
+    header { background:linear-gradient(135deg,#1F2C4D,#2E4780); color:white; padding:38px; border-radius:20px; }
+    header p { color:#DDE7FF; max-width:800px; }
+    h1 { margin:8px 0; font-size:38px; }
+    h2 { margin-top:38px; }
+    .eyebrow { text-transform:uppercase; letter-spacing:.11em; font-size:12px; font-weight:700; }
+    .callout { margin-top:24px; border-left:4px solid var(--blue); background:var(--open); padding:16px 18px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:12px; }
+    .card,.panel { background:white; border:1px solid var(--line); border-radius:14px; padding:18px; }
+    .card span { display:block; color:var(--muted); font-size:12px; }
+    .card strong { font-size:24px; }
+    table { border-collapse:collapse; width:100%; background:white; font-size:13px; }
+    th,td { border-bottom:1px solid var(--line); padding:9px; text-align:left; }
+    th { color:var(--blue); background:#F4F7FD; }
+    .table-wrap { overflow-x:auto; border:1px solid var(--line); border-radius:14px; }
+    footer { margin-top:36px; color:var(--muted); font-size:12px; }
+  </style>
+</head>
+<body><main>
+  <header>
+    <div class="eyebrow">Adaptive Portfolio Risk Analytics · v1.1</div>
+    <h1>Phase 4A — Sentiment Regime Confirmation</h1>
+    <p>Timestamped, lagged sentiment is compared with rule-based and HMM walk-forward regimes. It remains a commentary layer and does not control allocation.</p>
+  </header>
+  <div class="callout"><strong>Conclusion:</strong> Sentiment is an auxiliary confirmation layer. It is not yet used for allocation.</div>
+
+  <h2>Agreement summary</h2>
+  <section class="grid">
+    <div class="card"><span>Rule-based agreement</span><strong>26.5%</strong></div>
+    <div class="card"><span>HMM walk-forward agreement</span><strong>56.1%</strong></div>
+    <div class="card"><span>Article-day coverage</span><strong>2.7%</strong></div>
+    <div class="card"><span>Current confirmation</span><strong>Quant-Sentiment Disagreement</strong></div>
+  </section>
+
+  <h2>What source and scorer were used?</h2>
+  <section class="panel">
+    <p>The report uses 32 synthetic headlines from the bundled local CSV and the dependency-light <code>phase4a_lexicon</code> scorer. Positive terms map toward risk-on, negative terms toward risk-off, and near-zero scores toward neutral.</p>
+  </section>
+
+  <h2>How was look-ahead avoided?</h2>
+  <section class="panel">
+    <p>Records are timestamped and assigned to an observed market date. The rolling observed label is shifted by one market session. The decision-source timestamp must precede the decision date.</p>
+  </section>
+  <div class="table-wrap"><table class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>check</th>
+      <th>passed</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>valid_input_timestamps</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <td>signal_index_matches_market_index</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <td>decision_labels_match_configured_lag</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <td>decision_sources_precede_decision_date</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <td>records_do_not_exceed_market_index</td>
+      <td>True</td>
+    </tr>
+  </tbody>
+</table></div>
+
+  <h2>Does sentiment confirm stress periods?</h2>
+  <section class="grid">
+    <div class="card"><span>Rule stress/crisis confirmation</span><strong>26.5%</strong></div>
+    <div class="card"><span>HMM risk-off confirmation</span><strong>35.7%</strong></div>
+  </section>
+
+  <h2>Sentiment distribution</h2>
+  <div class="table-wrap"><table class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>sentiment_label</th>
+      <th>number_of_days</th>
+      <th>percentage_of_days</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>risk_on</td>
+      <td>97</td>
+      <td>0.617834</td>
+    </tr>
+    <tr>
+      <td>risk_off</td>
+      <td>55</td>
+      <td>0.350318</td>
+    </tr>
+    <tr>
+      <td>neutral</td>
+      <td>5</td>
+      <td>0.031847</td>
+    </tr>
+  </tbody>
+</table></div>
+
+  <h2>Where does sentiment disagree?</h2>
+  <div class="table-wrap"><table class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>date</th>
+      <th>sentiment_label</th>
+      <th>rule_based_regime</th>
+      <th>hmm_regime</th>
+      <th>article_count</th>
+      <th>decision_article_count</th>
+      <th>agreement_rule_based</th>
+      <th>agreement_hmm</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>2022-08-23</td>
+      <td>risk_on</td>
+      <td>Crisis</td>
+      <td>Unknown</td>
+      <td>0</td>
+      <td>1</td>
+      <td>False</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <td>2022-08-24</td>
+      <td>risk_on</td>
+      <td>Crisis</td>
+      <td>Unknown</td>
+      <td>0</td>
+      <td>1</td>
+      <td>False</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <td>2022-08-25</td>
+      <td>risk_on</td>
+      <td>Crisis</td>
+      <td>Unknown</td>
+      <td>0</td>
+      <td>1</td>
+      <td>False</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <td>2022-08-26</td>
+      <td>risk_on</td>
+      <td>Crisis</td>
+      <td>Unknown</td>
+      <td>0</td>
+      <td>1</td>
+      <td>False</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <td>2022-08-29</td>
+      <td>risk_on</td>
+      <td>Crisis</td>
+      <td>Unknown</td>
+      <td>0</td>
+      <td>1</td>
+      <td>False</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <td>2022-10-11</td>
+      <td>risk_on</td>
+      <td>Crisis</td>
+      <td>Unknown</td>
+      <td>0</td>
+      <td>1</td>
+      <td>False</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <td>2022-10-12</td>
+      <td>risk_on</td>
+      <td>Crisis</td>
+      <td>Unknown</td>
+      <td>0</td>
+      <td>1</td>
+      <td>False</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <td>2022-10-13</td>
+      <td>risk_on</td>
+      <td>Crisis</td>
+      <td>Unknown</td>
+      <td>0</td>
+      <td>1</td>
+      <td>False</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <td>2022-10-14</td>
+      <td>risk_on</td>
+      <td>Crisis</td>
+      <td>Unknown</td>
+      <td>0</td>
+      <td>1</td>
+      <td>False</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <td>2022-10-17</td>
+      <td>risk_on</td>
+      <td>Crisis</td>
+      <td>Unknown</td>
+      <td>0</td>
+      <td>1</td>
+      <td>False</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <td>2023-01-17</td>
+      <td>risk_on</td>
+      <td>Crisis</td>
+      <td>Unknown</td>
+      <td>0</td>
+      <td>1</td>
+      <td>False</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <td>2023-01-18</td>
+      <td>risk_on</td>
+      <td>Crisis</td>
+      <td>Unknown</td>
+      <td>0</td>
+      <td>1</td>
+      <td>False</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <td>2023-01-19</td>
+      <td>risk_on</td>
+      <td>Crisis</td>
+      <td>Unknown</td>
+      <td>0</td>
+      <td>1</td>
+      <td>False</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <td>2023-01-20</td>
+      <td>risk_on</td>
+      <td>Crisis</td>
+      <td>Unknown</td>
+      <td>0</td>
+      <td>1</td>
+      <td>False</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <td>2023-01-23</td>
+      <td>risk_on</td>
+      <td>Crisis</td>
+      <td>Unknown</td>
+      <td>0</td>
+      <td>1</td>
+      <td>False</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <td>2023-03-07</td>
+      <td>risk_on</td>
+      <td>Crisis</td>
+      <td>Unknown</td>
+      <td>0</td>
+      <td>1</td>
+      <td>False</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <td>2023-03-08</td>
+      <td>risk_on</td>
+      <td>Crisis</td>
+      <td>Unknown</td>
+      <td>0</td>
+      <td>1</td>
+      <td>False</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <td>2023-03-09</td>
+      <td>risk_on</td>
+      <td>Crisis</td>
+      <td>Unknown</td>
+      <td>0</td>
+      <td>1</td>
+      <td>False</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <td>2023-03-10</td>
+      <td>risk_on</td>
+      <td>Crisis</td>
+      <td>Unknown</td>
+      <td>0</td>
+      <td>1</td>
+      <td>False</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <td>2023-03-13</td>
+      <td>risk_on</td>
+      <td>Crisis</td>
+      <td>Unknown</td>
+      <td>0</td>
+      <td>1</td>
+      <td>False</td>
+      <td>NaN</td>
+    </tr>
+  </tbody>
+</table></div>
+
+  <h2>Should sentiment become an allocation signal?</h2>
+  <section class="panel">
+    <p><strong>Not in Phase 4A.</strong> These synthetic-fixture results validate plumbing and timing controls, not predictive value. Promotion requires governed real-source data and out-of-sample Phase 4B testing.</p>
+  </section>
+  <footer>Generated 2026-06-21. See source_notes.md for provenance and limitations.</footer>
+</main></body></html>

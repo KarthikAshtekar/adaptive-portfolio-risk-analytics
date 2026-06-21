@@ -1,0 +1,5 @@
+document_id,publication_date,document_type,title,local_path,source_url,language,source
+rbi_mpc_20220210,2022-02-10,mpc_minutes,Synthetic MPC Minutes February 2022,sample_mpc_minutes_20220210.txt,,en,Synthetic RBI-style fixture
+rbi_policy_20220805,2022-08-05,monetary_policy_statement,Synthetic Monetary Policy Statement August 2022,sample_policy_statement_20220805.txt,,en,Synthetic RBI-style fixture
+rbi_mpc_20240405,2024-04-05,mpc_minutes,Synthetic MPC Minutes April 2024,sample_mpc_minutes_20240405.txt,,en,Synthetic RBI-style fixture
+rbi_policy_20260501,2026-05-01,monetary_policy_statement,Synthetic Monetary Policy Statement May 2026,sample_policy_statement_20260501.txt,,en,Synthetic RBI-style fixture

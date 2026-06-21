@@ -71,9 +71,47 @@ data/interim/*
 !data/interim/.gitkeep
 data/external/*
 !data/external/.gitkeep
+data/sentiment/cache/*
+!data/sentiment/cache/.gitkeep
 
 outputs/*
 !outputs/.gitkeep
+!outputs/final_project_pack/
+!outputs/final_project_pack/**
+!outputs/reports/
+outputs/reports/*
+!outputs/reports/phase_4a_sentiment_confirmation/
+!outputs/reports/phase_4a_sentiment_confirmation/**
+!outputs/reports/phase_4a2_rbi_macro_sentiment/
+!outputs/reports/phase_4a2_rbi_macro_sentiment/**
+!outputs/reports/phase_4a3_real_rbi_macro_validation/
+!outputs/reports/phase_4a3_real_rbi_macro_validation/**
+!outputs/reports/phase_4a5_api_sentiment_ingestion/
+!outputs/reports/phase_4a5_api_sentiment_ingestion/**
+!outputs/reports/phase_4a6_real_nlp_validation/
+!outputs/reports/phase_4a6_real_nlp_validation/**
+!outputs/reports/nlp_corpus_intake_validation/
+!outputs/reports/nlp_corpus_intake_validation/**
+
+# Real/private/copyrighted NLP source documents remain local.
+data/sentiment/rbi_real/raw/*
+!data/sentiment/rbi_real/raw/.gitkeep
+!data/sentiment/rbi_real/README.md
+!data/sentiment/rbi_real/intake_notes.md
+!data/sentiment/rbi_real/manifest_template.csv
+!data/sentiment/rbi_real/example_manifest.csv
+data/sentiment/earnings_calls/raw/*
+!data/sentiment/earnings_calls/raw/.gitkeep
+!data/sentiment/earnings_calls/README.md
+!data/sentiment/earnings_calls/intake_notes.md
+!data/sentiment/earnings_calls/manifest_template.csv
+!data/sentiment/earnings_calls/example_manifest.csv
+data/sentiment/news_real/raw/*
+!data/sentiment/news_real/raw/.gitkeep
+!data/sentiment/news_real/README.md
+!data/sentiment/news_real/intake_notes.md
+!data/sentiment/news_real/manifest_template.csv
+!data/sentiment/news_real/example_manifest.csv
 
 # Logs
 logs/

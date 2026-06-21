@@ -1,0 +1,2 @@
+corpus,manifest_path,manifest_exists,row_number,record_id,is_placeholder,validation_status,valid_real_record,validation_errors,resolved_path
+news,D:\PGDBA\MyNotes\SEM-3\Part-1\FRM\Project\adaptive-portfolio-risk-analytics\data\sentiment\news_real\manifest.csv,False,,,False,manual_action_required,False,manifest not found: D:\PGDBA\MyNotes\SEM-3\Part-1\FRM\Project\adaptive-portfolio-risk-analytics\data\sentiment\news_real\manifest.csv; manual action required,

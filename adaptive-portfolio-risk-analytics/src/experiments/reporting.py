@@ -21,6 +21,9 @@ def build_experiment_summary_table(
 
     columns = [
         "strategy",
+        "strategy_type",
+        "regime_source",
+        "policy_preset",
         "covariance_method",
         "rebalance_mode",
         "threshold",
@@ -31,7 +34,18 @@ def build_experiment_summary_table(
         "volatility",
         "max_drawdown",
         "calmar",
+        "var_95",
+        "cvar_95",
         "final_value",
+        "total_turnover",
+        "total_transaction_cost",
+        "number_of_rebalances",
+        "max_drawdown_duration",
+        "defensive_source_requested",
+        "defensive_source_used",
+        "defensive_annual_rate",
+        "defensive_ticker",
+        "defensive_fallback_used",
         "status",
     ]
     selected = [column for column in columns if column in experiment_results_df.columns]

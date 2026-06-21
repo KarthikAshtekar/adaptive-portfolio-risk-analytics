@@ -1,0 +1,7 @@
+,metric,value,corpus_type,scoring_method,decision_lag,lookback_window
+0,decision_coverage_ratio,0.192274678111588,synthetic_fixture,lexicon,1,63
+1,minimum_coverage_threshold,0.1,synthetic_fixture,lexicon,1,63
+2,minimum_real_documents,5,synthetic_fixture,lexicon,1,63
+3,coverage_sufficient,False,synthetic_fixture,lexicon,1,63
+4,real_document_count,0,synthetic_fixture,lexicon,1,63
+5,active_sentence_count,16,synthetic_fixture,lexicon,1,63
