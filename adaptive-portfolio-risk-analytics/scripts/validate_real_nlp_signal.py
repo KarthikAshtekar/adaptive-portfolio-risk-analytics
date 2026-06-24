@@ -23,6 +23,9 @@ os.environ.setdefault(
     "MPLCONFIGDIR",
     str(Path(tempfile.gettempdir()) / "apra_matplotlib"),
 )
+import matplotlib  # noqa: E402
+
+matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt  # noqa: E402
 import seaborn as sns  # noqa: E402
@@ -34,29 +37,48 @@ from src.regime import (  # noqa: E402
     lag_regime_labels,
 )
 from src.sentiment import (  # noqa: E402
+    VALID_COMPOSITE_NLP_LABELS,
     apply_publication_lag,
     build_composite_nlp_risk_index,
+    build_daily_nlp_signal,
+    build_macro_stance_index,
     calculate_nlp_coverage,
     compare_composite_nlp_to_regimes,
     flag_reaction_data_leakage,
+    load_real_rbi_corpus,
     load_provider_config,
+    score_rbi_sentences,
     score_sentiment_records,
     score_source_quality,
     score_with_finbert,
+    split_rbi_sentences,
     validate_ex_ante_records,
     validate_nlp_corpus_intake,
+    validate_rbi_manifest,
 )
+from scripts.check_rbi_corpus_status import build_rbi_corpus_status  # noqa: E402
 
 
 DEFAULT_OUTPUT_DIR = (
     REPO_ROOT / "outputs" / "reports" / "phase_4a6_real_nlp_validation"
 )
+DEFAULT_MULTI_SOURCE_OUTPUT_DIR = (
+    REPO_ROOT
+    / "outputs"
+    / "reports"
+    / "phase_4a8_multisource_nlp_monitoring"
+)
+DEFAULT_RBI_MANIFEST = REPO_ROOT / "data" / "sentiment" / "rbi_real" / "manifest.csv"
 DEFAULT_INPUT = DEFAULT_OUTPUT_DIR / "deduped_sentiment_records.csv"
 VERDICT_A = "A. Sufficient for future allocation testing"
 VERDICT_B = "B. Useful for monitoring only"
 VERDICT_C = "C. Insufficient real-data coverage"
 MONITORING_CAVEAT = (
     "NLP signal is monitoring-only due to insufficient real-data coverage."
+)
+MONITORING_ONLY_CAVEAT = (
+    "GDELT/news-only NLP is a real news monitoring signal, not an "
+    "allocation signal. Allocation impact: None."
 )
 
 TOKENS = {
@@ -138,6 +160,97 @@ def _rbi_component(
     return daily.reindex(market_index).rolling(21, min_periods=1).mean().to_frame()
 
 
+def _build_real_rbi_macro_payload(
+    *,
+    manifest_path: str | Path | None,
+    market_index: pd.DatetimeIndex,
+    decision_lag: int,
+) -> dict[str, object]:
+    """Build a decision-lagged real-RBI macro component when local docs exist."""
+    path = Path(manifest_path) if manifest_path else DEFAULT_RBI_MANIFEST
+    validation = validate_rbi_manifest(path)
+    documents = load_real_rbi_corpus(path)
+    if documents.empty:
+        return {
+            "manifest_path": path,
+            "manifest_validation": validation,
+            "documents": documents,
+            "sentences": pd.DataFrame(),
+            "scored_sentences": pd.DataFrame(),
+            "macro_index": pd.DataFrame(index=market_index),
+            "available": False,
+        }
+    sentences = split_rbi_sentences(documents)
+    scored_sentences = score_rbi_sentences(sentences, method="lexicon")
+    macro_index = build_macro_stance_index(
+        scored_sentences,
+        market_index,
+        lookback_window=63,
+        decision_lag=max(1, int(decision_lag)),
+    )
+    return {
+        "manifest_path": path,
+        "manifest_validation": validation,
+        "documents": documents,
+        "sentences": sentences,
+        "scored_sentences": scored_sentences,
+        "macro_index": macro_index,
+        "available": not macro_index.empty,
+    }
+
+
+def _component_label_from_score(value: object) -> str:
+    score = pd.to_numeric(pd.Series([value]), errors="coerce").iloc[0]
+    if pd.isna(score):
+        return "insufficient_nlp_data"
+    if float(score) >= 0.15:
+        return "nlp_risk_off"
+    if float(score) <= -0.15:
+        return "nlp_risk_on"
+    return "nlp_neutral"
+
+
+def _source_mix_diagnostics(composite: pd.DataFrame) -> pd.DataFrame:
+    if composite.empty:
+        return pd.DataFrame(
+            columns=[
+                "date",
+                "source_mix",
+                "composite_nlp_label",
+                "rbi_macro_label",
+                "news_geopolitical_label",
+                "rbi_news_agree",
+            ]
+        )
+    frame = pd.DataFrame(index=composite.index)
+    frame.index.name = "date"
+    frame["source_mix"] = (
+        composite.get("decision_source_mix", pd.Series(index=composite.index))
+        .fillna("none")
+        .astype(str)
+    )
+    frame["composite_nlp_label"] = composite[
+        "decision_composite_nlp_label"
+    ].fillna("insufficient_nlp_data")
+    frame["rbi_macro_score"] = composite.get("decision_rbi_macro_risk_score")
+    frame["news_geopolitical_score"] = composite.get(
+        "decision_news_geopolitical_risk_score"
+    )
+    frame["rbi_macro_label"] = [
+        _component_label_from_score(value) for value in frame["rbi_macro_score"]
+    ]
+    frame["news_geopolitical_label"] = [
+        _component_label_from_score(value)
+        for value in frame["news_geopolitical_score"]
+    ]
+    frame["rbi_news_agree"] = np.where(
+        frame["source_mix"].eq("rbi_and_news"),
+        frame["rbi_macro_label"].eq(frame["news_geopolitical_label"]),
+        np.nan,
+    )
+    return frame.reset_index()
+
+
 def _score_records(
     records: pd.DataFrame,
     scoring_config: dict[str, object],
@@ -184,6 +297,7 @@ def _diagnostic_rows(
     *,
     reaction_rate: float,
     max_reaction_rate: float,
+    valid_decision_label_dates: int = 0,
 ) -> pd.DataFrame:
     rows = [
         {
@@ -219,8 +333,104 @@ def _diagnostic_rows(
             "threshold": max_reaction_rate,
             "passes": reaction_rate <= max_reaction_rate,
         },
+        {
+            "metric": "valid_decision_label_dates",
+            "actual": int(valid_decision_label_dates),
+            "threshold": 1,
+            "passes": int(valid_decision_label_dates) > 0,
+        },
+        {
+            "metric": "source_family_count",
+            "actual": coverage.get("source_family_count", 0),
+            "threshold": 2,
+            "passes": int(coverage.get("source_family_count", 0) or 0) >= 2,
+        },
     ]
     return pd.DataFrame(rows)
+
+
+def _signal_construction_diagnostics(
+    *,
+    eligible_records: pd.DataFrame,
+    scored_records: pd.DataFrame,
+    composite_records: pd.DataFrame,
+    daily_signal: pd.DataFrame,
+) -> pd.DataFrame:
+    sentiment_scores = pd.to_numeric(
+        scored_records.get(
+            "sentiment_score",
+            pd.Series(np.nan, index=scored_records.index),
+        ),
+        errors="coerce",
+    )
+    valid_labels = (
+        daily_signal.get(
+            "decision_nlp_label",
+            pd.Series(dtype="string"),
+        )
+        .fillna("insufficient_nlp_data")
+        .astype(str)
+        .isin(VALID_COMPOSITE_NLP_LABELS)
+    )
+    raw_valid_labels = (
+        daily_signal.get("raw_nlp_label", pd.Series(dtype="string"))
+        .fillna("insufficient_nlp_data")
+        .astype(str)
+        .isin(VALID_COMPOSITE_NLP_LABELS)
+    )
+    rolling = pd.to_numeric(
+        daily_signal.get(
+            "rolling_article_day_coverage",
+            pd.Series(dtype=float),
+        ),
+        errors="coerce",
+    )
+    reason_counts = (
+        daily_signal.get(
+            "insufficient_reason",
+            pd.Series(dtype="string"),
+        )
+        .replace("", pd.NA)
+        .dropna()
+        .astype(str)
+        .value_counts()
+        .to_dict()
+    )
+    rows = [
+        ("records_entering_scoring", int(len(eligible_records))),
+        ("records_with_sentiment_scores", int(sentiment_scores.notna().sum())),
+        ("records_entering_composite_index", int(len(composite_records))),
+        (
+            "article_days_with_at_least_one_valid_record",
+            int(
+                pd.to_numeric(
+                    daily_signal.get(
+                        "valid_record_count",
+                        pd.Series(dtype=float),
+                    ),
+                    errors="coerce",
+                )
+                .fillna(0)
+                .gt(0)
+                .sum()
+            ),
+        ),
+        (
+            "rolling_coverage_by_day_mean",
+            float(rolling.mean()) if not rolling.dropna().empty else 0.0,
+        ),
+        (
+            "rolling_coverage_by_day_max",
+            float(rolling.max()) if not rolling.dropna().empty else 0.0,
+        ),
+        ("raw_daily_nlp_label_count", int(raw_valid_labels.sum())),
+        ("decision_lagged_nlp_label_count", int(valid_labels.sum())),
+        (
+            "insufficient_reason_counts",
+            json.dumps(reason_counts, sort_keys=True),
+        ),
+    ]
+    return pd.DataFrame(rows, columns=["diagnostic", "value"])
 
 
 def _render_coverage_chart(
@@ -243,6 +453,8 @@ def _render_coverage_chart(
             "distinct_publication_dates": "Publication dates",
             "decision_label_coverage": "Decision coverage",
             "provider_coverage": "Enabled provider coverage",
+            "valid_decision_label_dates": "Valid decision-label dates",
+            "source_family_count": "Source families",
         }
     )
     plot_df = plot_df.sort_values("threshold_attainment")
@@ -337,9 +549,12 @@ def _build_report(
     ).to_html(index=False, border=0, escape=True)
     diagnostic_table = diagnostics.to_html(index=False, border=0)
     insufficient = summary["verdict"] == VERDICT_C
+    monitoring_only = summary["verdict"] == VERDICT_B
     findings_heading = (
         "Real-data thresholds are not yet met"
         if insufficient
+        else "Real news monitoring signal is active"
+        if monitoring_only
         else "Real-data evidence meets the configured coverage gate"
     )
     findings_text = (
@@ -348,6 +563,11 @@ def _build_report(
         "composite validation, and regime-agreement claims."
         if insufficient
         else (
+            "Valid decision-lagged news labels are available for monitoring, "
+            "but source diversity and allocation-testing evidence remain limited."
+        )
+        if monitoring_only
+        else (
             "Only records that passed real-data provenance, ex-ante timestamp, "
             "and reaction-warning filters entered composite validation."
         )
@@ -355,6 +575,8 @@ def _build_report(
     limitation_heading = (
         "Insufficient records prevent empirical claims"
         if insufficient
+        else "Monitoring signal is not allocation evidence"
+        if monitoring_only
         else "Passing thresholds does not establish predictiveness"
     )
     report = f"""<!doctype html>
@@ -398,11 +620,14 @@ def _build_report(
       <div class="metric"><span>Coverage quality</span><strong>{escape(str(summary["coverage_quality"]).title())}</strong></div>
       <div class="metric"><span>Reaction warnings</span><strong>{_percentage(summary["reaction_warning_rate"])}</strong></div>
       <div class="metric"><span>Decision coverage</span><strong>{_percentage(summary["coverage_ratio"])}</strong></div>
+      <div class="metric"><span>Valid label dates</span><strong>{summary["valid_decision_label_dates"]}</strong></div>
+      <div class="metric"><span>Allocation impact</span><strong>None</strong></div>
     </div>
   </section>
   <section data-contract-section="key-findings">
     <h2>{escape(findings_heading)}</h2>
     <p>The harness found {summary["real_record_count"]} real provider records. {escape(findings_text)}</p>
+    <p>GDELT-only NLP is a real news monitoring signal, not an allocation signal. Source mix: {escape(json.dumps(summary.get("source_mix", {}), sort_keys=True))}. Insufficient reasons: {escape(json.dumps(summary.get("insufficient_reason_counts", {}), sort_keys=True))}.</p>
     <p>The chart shows each evidence dimension relative to its configured minimum. Values below the reference line are not decision-eligible.</p>
     <figure>
       <img src="charts/coverage_threshold_attainment.png" alt="NLP validation threshold attainment">
@@ -416,13 +641,13 @@ def _build_report(
   </section>
   <section data-contract-section="methodology">
     <h2>Ex-Ante Scoring and Validation Method</h2>
-    <p>Records are timestamp-validated, reaction-oriented language is flagged, publication availability is lagged, and scoring uses the configured local method. The composite combines RBI, earnings, and news risk components only after filtering invalid or reaction-warning rows. Quantitative comparison uses lagged rule-based regimes and HMM walk-forward only; full-sample HMM is never used.</p>
+    <p>Records are timestamp-validated, reaction-oriented language is flagged, publication availability is lagged, and scoring uses the configured local method. The composite combines available RBI, earnings, and news risk components only after filtering invalid or reaction-warning rows. News-only composite labels are permitted for monitoring, with source diversity marked limited. Quantitative comparison uses lagged rule-based regimes and HMM walk-forward only; full-sample HMM is never used.</p>
     <h3>Required validation questions</h3>
     <div class="table-wrap">{question_table}</div>
   </section>
   <section data-contract-section="limitations-uncertainty-and-robustness-checks">
     <h2>{escape(limitation_heading)}</h2>
-    <p>The bundled transcripts and news fixtures validate software behavior, not real signal efficacy. The quantitative comparison history is deterministic and synthetic, used only to exercise safe lagged interfaces. No return, volatility, drawdown, or post-event market reaction is used as an NLP feature. Agreement and pre-stress statistics are withheld when real coverage is insufficient.</p>
+    <p>The bundled transcripts and news fixtures validate software behavior, not real signal efficacy. The quantitative comparison history is deterministic and synthetic, used only to exercise safe lagged interfaces. No return, volatility, drawdown, or post-event market reaction is used as an NLP feature. Agreement and pre-stress statistics are exploratory monitoring diagnostics when coverage or source diversity is limited.</p>
   </section>
   <section data-contract-section="recommended-next-steps">
     <h2>Collect governed real text before allocation research</h2>
@@ -447,12 +672,22 @@ def validate_real_nlp_signal(
     start_date="2020-01-01",
     end_date="2026-06-21",
     output_dir: str | Path = DEFAULT_OUTPUT_DIR,
+    multi_source_output_dir: str | Path | None = None,
+    rbi_manifest_path: str | Path | None = None,
     decision_lag_days: int | None = None,
     min_coverage_ratio: float | None = None,
 ) -> dict[str, object]:
     """Build a conservative empirical-validation or insufficiency report."""
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
+    multi_output = (
+        Path(multi_source_output_dir)
+        if multi_source_output_dir is not None
+        else DEFAULT_MULTI_SOURCE_OUTPUT_DIR
+        if output.resolve() == DEFAULT_OUTPUT_DIR.resolve()
+        else output.parent / "phase_4a8_multisource_nlp_monitoring"
+    )
+    multi_output.mkdir(parents=True, exist_ok=True)
     config = load_provider_config()
     intake = validate_nlp_corpus_intake()
     validation_config = dict(config.get("validation", {}))
@@ -508,16 +743,50 @@ def validate_real_nlp_signal(
     provider = scored.get("provider", pd.Series("", index=scored.index)).astype(
         str
     )
-    earnings = scored.loc[provider.eq("earnings_calls")].copy()
-    news = scored.loc[
-        provider.isin({"gdelt", "alpha_vantage_news"})
+    document_type = scored.get(
+        "document_type", pd.Series("", index=scored.index)
+    ).astype(str)
+    earnings = scored.loc[
+        provider.isin({"earnings", "earnings_calls"})
+        | document_type.eq("earnings_call")
     ].copy()
+    news = scored.loc[
+        provider.isin({"gdelt", "alpha_vantage", "alpha_vantage_news"})
+        | document_type.isin({"financial_news", "news"})
+    ].copy()
+    daily_nlp_signal = build_daily_nlp_signal(
+        news,
+        market_index,
+        decision_lag=max(1, lag_days),
+    )
+    configured_rbi_manifest = (
+        rbi_manifest_path
+        or config.get("rbi", {}).get("local_manifest_path")
+        or DEFAULT_RBI_MANIFEST
+    )
+    configured_rbi_manifest = Path(configured_rbi_manifest)
+    if not configured_rbi_manifest.is_absolute():
+        configured_rbi_manifest = (REPO_ROOT / configured_rbi_manifest).resolve()
+    rbi_payload = _build_real_rbi_macro_payload(
+        manifest_path=configured_rbi_manifest,
+        market_index=market_index,
+        decision_lag=max(1, lag_days),
+    )
+    rbi_macro_index = (
+        rbi_payload["macro_index"]
+        if bool(rbi_payload.get("available"))
+        else _rbi_component(scored, market_index)
+    )
     composite = build_composite_nlp_risk_index(
-        rbi_macro_index=_rbi_component(scored, market_index),
+        rbi_macro_index=rbi_macro_index,
         earnings_sentiment=earnings,
         news_sentiment=news,
         market_index=market_index,
         decision_lag=max(1, lag_days),
+    )
+    source_mix_diagnostics = _source_mix_diagnostics(composite)
+    rbi_status, rbi_status_diagnostics = build_rbi_corpus_status(
+        configured_rbi_manifest
     )
 
     enabled_rows = pd.DataFrame(config["_validation"]["providers"])
@@ -537,12 +806,17 @@ def validate_real_nlp_signal(
         if len(source_quality)
         else 0.0
     )
-    sufficient_for_comparison = (
-        coverage["coverage_quality"] == "sufficient"
+    decision_labels = composite["decision_composite_nlp_label"].fillna(
+        "insufficient_nlp_data"
+    ).astype(str)
+    valid_decision_mask = decision_labels.isin(VALID_COMPOSITE_NLP_LABELS)
+    valid_decision_label_dates = int(valid_decision_mask.sum())
+    comparison_allowed = (
+        valid_decision_label_dates > 0
         and reaction_rate <= max_reaction_rate
     )
     comparison: dict[str, object]
-    if sufficient_for_comparison:
+    if comparison_allowed:
         features = calculate_regime_features(returns)
         rule = lag_regime_labels(
             classify_rule_based_regime(features), lag=1
@@ -562,21 +836,27 @@ def validate_real_nlp_signal(
         comparison = compare_composite_nlp_to_regimes(
             composite, rule, hmm
         )
+        comparison["exploratory_monitoring_only"] = (
+            coverage["coverage_quality"] != "sufficient"
+            or bool(coverage.get("source_diversity_limited", True))
+        )
     else:
         comparison_table = pd.DataFrame(
-            {
-                "composite_nlp_label": composite[
-                    "decision_composite_nlp_label"
-                ],
-                "coverage_score": composite["decision_coverage_score"],
-                "rule_based_regime": "Not evaluated: insufficient real data",
-                "hmm_walk_forward_regime": (
-                    "Not evaluated: insufficient real data"
-                ),
-            },
-            index=market_index,
+            columns=[
+                "composite_nlp_label",
+                "composite_nlp_risk_score",
+                "coverage_score",
+                "rule_based_regime",
+                "hmm_walk_forward_regime",
+                "agreement_rule_based",
+                "agreement_hmm",
+                "comparison_note",
+            ],
         )
         comparison_table.index.name = "date"
+        comparison_table["comparison_note"] = (
+            "No empirical comparison: zero valid decision-lagged NLP labels."
+        )
         comparison = {
             "comparison_table": comparison_table,
             "agreement_with_rule_based": np.nan,
@@ -584,6 +864,7 @@ def validate_real_nlp_signal(
             "pre_stress_warning_count": 0,
             "coverage_ratio": coverage["decision_label_coverage"],
             "predictiveness_claim": False,
+            "exploratory_monitoring_only": False,
         }
 
     quality_distribution = (
@@ -603,29 +884,63 @@ def validate_real_nlp_signal(
         if len(source_quality)
         else 0.0
     )
-    if not sufficient_for_comparison:
-        verdict = VERDICT_C
-    elif acceptable_quality_share < 0.80:
+    source_mix_distribution = (
+        composite.get("decision_source_mix", pd.Series(dtype="string"))
+        .fillna("none")
+        .astype(str)
+        .value_counts()
+        .to_dict()
+    )
+    multi_source_monitoring = bool(
+        source_mix_distribution.get("rbi_and_news", 0)
+    )
+    records_pass = int(coverage["record_count"]) >= int(min_records)
+    dates_pass = int(coverage["distinct_publication_dates"]) >= int(min_dates)
+    decision_coverage = float(coverage["decision_label_coverage"])
+    decision_ratio_pass = decision_coverage >= float(minimum_coverage)
+    decision_positive = decision_coverage > 0
+    reaction_ok = reaction_rate <= max_reaction_rate
+    if records_pass and dates_pass and decision_positive and reaction_ok:
         verdict = VERDICT_B
     else:
-        verdict = VERDICT_A
+        verdict = VERDICT_C
     caveat = (
         MONITORING_CAVEAT
         if verdict == VERDICT_C
         else (
-            "NLP remains monitoring-only in v1.2.2; allocation testing "
-            "requires a separate approved research phase."
+            "RBI + news NLP is useful for multi-source monitoring only. "
+            "Allocation impact: None."
         )
+        if multi_source_monitoring
+        else MONITORING_ONLY_CAVEAT
     )
 
     diagnostics = _diagnostic_rows(
         coverage,
         reaction_rate=reaction_rate,
         max_reaction_rate=max_reaction_rate,
+        valid_decision_label_dates=valid_decision_label_dates,
+    )
+    signal_diagnostics = _signal_construction_diagnostics(
+        eligible_records=eligible,
+        scored_records=scored,
+        composite_records=pd.concat(
+            [earnings, news],
+            ignore_index=True,
+            sort=False,
+        )
+        if not earnings.empty or not news.empty
+        else pd.DataFrame(),
+        daily_signal=daily_nlp_signal,
     )
     chart_path = output / "charts" / "coverage_threshold_attainment.png"
     _render_coverage_chart(diagnostics, chart_path)
     scored.to_csv(output / "scored_records.csv", index=False)
+    daily_nlp_signal.to_csv(output / "daily_nlp_signal.csv", index=False)
+    signal_diagnostics.to_csv(
+        output / "signal_construction_diagnostics.csv",
+        index=False,
+    )
     composite.to_csv(output / "composite_nlp_risk_index.csv", index=True)
     comparison["comparison_table"].to_csv(
         output / "nlp_regime_comparison.csv", index=True
@@ -661,6 +976,31 @@ def validate_real_nlp_signal(
         .value_counts()
         .to_dict()
     )
+    daily_insufficient_reason_counts = (
+        daily_nlp_signal.get(
+            "insufficient_reason",
+            pd.Series(dtype="string"),
+        )
+        .replace("", pd.NA)
+        .dropna()
+        .astype(str)
+        .value_counts()
+        .to_dict()
+    )
+    rbi_news_rows = source_mix_diagnostics.loc[
+        source_mix_diagnostics.get(
+            "source_mix",
+            pd.Series(dtype="string"),
+        )
+        .astype(str)
+        .eq("rbi_and_news")
+    ].copy()
+    rbi_news_agreement = (
+        float(rbi_news_rows["rbi_news_agree"].dropna().astype(bool).mean())
+        if not rbi_news_rows.empty
+        and not rbi_news_rows["rbi_news_agree"].dropna().empty
+        else np.nan
+    )
     ex_ante_share = (
         float(source_quality["is_ex_ante_valid"].mean())
         if len(source_quality)
@@ -681,10 +1021,13 @@ def validate_real_nlp_signal(
         ("8. Was FinBERT used or did scoring fall back?", finbert_status),
         ("9. What is the coverage ratio?", _percentage(coverage["decision_label_coverage"])),
         ("10. What is the composite NLP risk label distribution?", json.dumps(label_distribution, sort_keys=True)),
-        ("11. What is agreement with HMM regimes?", _percentage(comparison["agreement_with_hmm_walk_forward"])),
-        ("12. What is agreement with rule-based regimes?", _percentage(comparison["agreement_with_rule_based"])),
-        ("13. Did NLP produce pre-stress warnings?", f"{comparison['pre_stress_warning_count']} warning(s); not interpreted when coverage is insufficient"),
-        ("14. Is evidence sufficient for future allocation testing?", verdict),
+        ("11. What is the source mix?", json.dumps(source_mix_distribution, sort_keys=True)),
+        ("12. How many valid decision-label dates exist?", str(valid_decision_label_dates)),
+        ("13. What are the insufficient reasons?", json.dumps(daily_insufficient_reason_counts, sort_keys=True)),
+        ("14. What is agreement with HMM regimes?", _percentage(comparison["agreement_with_hmm_walk_forward"])),
+        ("15. What is agreement with rule-based regimes?", _percentage(comparison["agreement_with_rule_based"])),
+        ("16. Did NLP produce pre-stress warnings?", f"{comparison['pre_stress_warning_count']} warning(s); exploratory monitoring only"),
+        ("17. Is evidence sufficient for future allocation testing?", verdict),
     ]
     summary = {
         "generated": date.today().isoformat(),
@@ -693,6 +1036,21 @@ def validate_real_nlp_signal(
         "real_record_count": int(len(source_quality)),
         "coverage_quality": coverage["coverage_quality"],
         "coverage_ratio": coverage["decision_label_coverage"],
+        "valid_decision_label_dates": valid_decision_label_dates,
+        "source_mix": source_mix_distribution,
+        "source_families": coverage.get("source_families", []),
+        "source_family_count": coverage.get("source_family_count", 0),
+        "source_diversity_limited": coverage.get(
+            "source_diversity_limited", True
+        ),
+        "multi_source_monitoring": multi_source_monitoring,
+        "real_rbi_document_count": int(rbi_status["valid_document_count"]),
+        "real_news_record_count": int(len(news)),
+        "rbi_manual_action_required": bool(
+            rbi_status["manual_action_required"]
+        ),
+        "rbi_news_agreement": rbi_news_agreement,
+        "insufficient_reason_counts": daily_insufficient_reason_counts,
         "source_quality_distribution": quality_distribution,
         "reaction_warning_rate": reaction_rate,
         "finbert_status": finbert_status,
@@ -710,6 +1068,9 @@ def validate_real_nlp_signal(
         ],
         "predictiveness_claim": False,
         "allocation_impact": False,
+        "exploratory_monitoring_only": bool(
+            comparison.get("exploratory_monitoring_only", False)
+        ),
         "intake_manual_action_required": bool(
             intake["manual_action_required"]
         ),
@@ -743,8 +1104,17 @@ Generated: {summary["generated"]}
 {caveat}
 
 - Real provider records: {summary["real_record_count"]}.
+- Real RBI documents: {summary["real_rbi_document_count"]}.
+- Real GDELT/news records: {summary["real_news_record_count"]}.
 - Coverage quality: {summary["coverage_quality"]}.
 - Decision-label coverage: {_percentage(summary["coverage_ratio"])}.
+- Valid decision-label dates: {summary["valid_decision_label_dates"]}.
+- Source mix: `{json.dumps(summary["source_mix"], sort_keys=True)}`.
+- Source families: `{json.dumps(summary["source_families"], sort_keys=True)}`.
+- RBI/news agreement: {_percentage(summary["rbi_news_agreement"])}.
+- Multi-source monitoring active: {'Yes' if summary["multi_source_monitoring"] else 'No'}.
+- RBI manual action required: {'Yes' if summary["rbi_manual_action_required"] else 'No'}.
+- Insufficient reasons: `{json.dumps(summary["insufficient_reason_counts"], sort_keys=True)}`.
 - Source-quality distribution: `{json.dumps(quality_distribution, sort_keys=True)}`.
 - Reaction-warning rate: {_percentage(reaction_rate)}.
 - Scoring status: {finbert_status}.
@@ -754,6 +1124,8 @@ Generated: {summary["generated"]}
 - Manual intake action required: {'Yes' if summary["intake_manual_action_required"] else 'No'}.
 
 {availability_statement}
+
+GDELT-only NLP is a real news monitoring signal, not an allocation signal.
 """
     (output / "summary.md").write_text(summary_md, encoding="utf-8")
     omitted_visuals = (
@@ -779,6 +1151,10 @@ Generated: {summary["generated"]}
 - Market reaction inputs: prohibited; warning phrases are filtered before composite scoring.
 - Allocation, scoring, gates, confidence, and backtest impact: none.
 - Corpus intake manual action required: {summary["intake_manual_action_required"]}.
+- Daily NLP signal: `daily_nlp_signal.csv`.
+- Scored records: `scored_records.csv`.
+- Construction diagnostics: `signal_construction_diagnostics.csv`.
+- GDELT/news-only interpretation: real monitoring signal only; not allocation-ready evidence.
 
 ## Chart map
 
@@ -805,16 +1181,136 @@ Generated: {summary["generated"]}
         question_rows=question_rows,
         diagnostics=diagnostics,
     )
+    rbi_status_diagnostics.to_csv(
+        multi_output / "rbi_corpus_status.csv",
+        index=False,
+    )
+    rbi_payload["scored_sentences"].to_csv(
+        multi_output / "rbi_sentence_scores.csv",
+        index=False,
+    )
+    rbi_payload["macro_index"].to_csv(
+        multi_output / "rbi_macro_index.csv",
+        index=True,
+    )
+    news.to_csv(multi_output / "scored_news_records.csv", index=False)
+    daily_nlp_signal.to_csv(multi_output / "daily_nlp_signal.csv", index=False)
+    source_mix_diagnostics.to_csv(
+        multi_output / "source_mix_diagnostics.csv",
+        index=False,
+    )
+    comparison["comparison_table"].to_csv(
+        multi_output / "multi_source_nlp_comparison.csv",
+        index=True,
+    )
+    phase48_questions = [
+        ("1. How many real RBI documents are available?", str(summary["real_rbi_document_count"])),
+        ("2. How many real GDELT/news records are available?", str(summary["real_news_record_count"])),
+        ("3. What source mix is active?", json.dumps(summary["source_mix"], sort_keys=True)),
+        (
+            "4. What is the RBI macro stance signal?",
+            "Available in rbi_macro_index.csv"
+            if summary["real_rbi_document_count"]
+            else "Unavailable: no valid real RBI documents",
+        ),
+        (
+            "5. What is the news/geopolitical signal?",
+            "Available in daily_nlp_signal.csv",
+        ),
+        ("6. How often do RBI and news agree?", _percentage(summary["rbi_news_agreement"])),
+        ("7. How much decision-label coverage exists?", _percentage(summary["coverage_ratio"])),
+        ("8. Is the NLP layer monitoring-only or allocation-ready?", "Monitoring-only; allocation impact is None."),
+    ]
+    phase48_table = pd.DataFrame(
+        phase48_questions,
+        columns=["question", "answer"],
+    ).to_html(index=False, border=0, escape=True)
+    phase48_summary = f"""# Phase 4A.8 Real RBI + News Multi-Source NLP Monitoring
+
+Generated: {summary["generated"]}
+
+## Technical summary
+
+**{summary["verdict"]}**
+
+{summary["caveat"]}
+
+- Real RBI documents: {summary["real_rbi_document_count"]}.
+- Real GDELT/news records: {summary["real_news_record_count"]}.
+- Source mix: `{json.dumps(summary["source_mix"], sort_keys=True)}`.
+- Decision-label coverage: {_percentage(summary["coverage_ratio"])}.
+- Valid decision-label dates: {summary["valid_decision_label_dates"]}.
+- RBI/news agreement: {_percentage(summary["rbi_news_agreement"])}.
+- Multi-source monitoring active: {'Yes' if summary["multi_source_monitoring"] else 'No'}.
+- Allocation impact: None.
+
+The NLP layer is useful for multi-source monitoring if RBI and news are both
+present, but it still does not affect allocation.
+"""
+    (multi_output / "summary.md").write_text(phase48_summary, encoding="utf-8")
+    phase48_report = f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Phase 4A.8 Multi-Source NLP Monitoring</title>
+  <style>
+    body {{ font-family: "Segoe UI", Arial, sans-serif; margin: 40px auto; max-width: 960px; color: #1f2430; }}
+    .status {{ border-left: 4px solid #2e4780; background: #eaf1fe; padding: 14px 18px; border-radius: 8px; }}
+    table {{ border-collapse: collapse; width: 100%; margin-top: 18px; }}
+    th, td {{ border-bottom: 1px solid #e6e8f0; padding: 9px 11px; text-align: left; }}
+    th {{ background: #f4f7fd; color: #2e4780; }}
+  </style>
+</head>
+<body>
+  <h1>Phase 4A.8 Real RBI + News Multi-Source NLP Monitoring</h1>
+  <div class="status"><strong>{escape(str(summary["verdict"]))}</strong><br>{escape(str(summary["caveat"]))}</div>
+  <p>The NLP layer is useful for multi-source monitoring if RBI and news are both present, but it still does not affect allocation.</p>
+  {phase48_table}
+  <h2>Artifacts</h2>
+  <ul>
+    <li>rbi_corpus_status.csv</li>
+    <li>rbi_sentence_scores.csv</li>
+    <li>rbi_macro_index.csv</li>
+    <li>scored_news_records.csv</li>
+    <li>daily_nlp_signal.csv</li>
+    <li>source_mix_diagnostics.csv</li>
+    <li>multi_source_nlp_comparison.csv</li>
+  </ul>
+</body>
+</html>"""
+    (multi_output / "report.html").write_text(phase48_report, encoding="utf-8")
+    phase48_notes = f"""# Phase 4A.8 Source Notes
+
+Generated: {summary["generated"]}
+
+- RBI corpus manifest: `{configured_rbi_manifest}`.
+- RBI manual action required: {summary["rbi_manual_action_required"]}.
+- Real GDELT/news input: `{input_records}`.
+- NLP remains monitoring/commentary only.
+- Allocation, strategy scoring, evidence gates, confidence, and backtests are unchanged.
+- No web content is fetched by the RBI bootstrap/import/status tooling.
+"""
+    (multi_output / "source_notes.md").write_text(
+        phase48_notes,
+        encoding="utf-8",
+    )
     return {
         "summary": summary,
         "coverage": coverage,
         "coverage_diagnostics": diagnostics,
+        "signal_construction_diagnostics": signal_diagnostics,
+        "rbi_corpus_status": rbi_status,
+        "rbi_corpus_status_diagnostics": rbi_status_diagnostics,
+        "rbi_macro_payload": rbi_payload,
         "source_quality": source_quality,
         "scored_records": scored,
+        "daily_nlp_signal": daily_nlp_signal,
+        "source_mix_diagnostics": source_mix_diagnostics,
         "composite_index": composite,
         "comparison": comparison,
         "reaction_data_warnings": reaction_warnings,
         "report_path": output / "report.html",
+        "multi_source_report_path": multi_output / "report.html",
     }
 
 
@@ -826,6 +1322,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--start-date", default="2020-01-01")
     parser.add_argument("--end-date", default="2026-06-21")
     parser.add_argument("--output-dir", default=str(DEFAULT_OUTPUT_DIR))
+    parser.add_argument("--multi-source-output-dir", default=None)
+    parser.add_argument("--rbi-manifest-path", default=None)
     parser.add_argument("--decision-lag-days", type=int, default=None)
     parser.add_argument("--min-coverage-ratio", type=float, default=None)
     return parser
@@ -838,6 +1336,8 @@ def main(argv: list[str] | None = None) -> int:
         start_date=args.start_date,
         end_date=args.end_date,
         output_dir=args.output_dir,
+        multi_source_output_dir=args.multi_source_output_dir,
+        rbi_manifest_path=args.rbi_manifest_path,
         decision_lag_days=args.decision_lag_days,
         min_coverage_ratio=args.min_coverage_ratio,
     )
@@ -845,7 +1345,10 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Validation verdict: {summary['verdict']}")
     print(f"Real records: {summary['real_record_count']}")
     print(f"Coverage quality: {summary['coverage_quality']}")
+    print(f"Decision-label coverage: {summary['coverage_ratio']:.1%}")
+    print(f"Valid decision-label dates: {summary['valid_decision_label_dates']}")
     print(f"Report: {result['report_path'].resolve()}")
+    print(f"Phase 4A.8 report: {result['multi_source_report_path'].resolve()}")
     return 0
 
 

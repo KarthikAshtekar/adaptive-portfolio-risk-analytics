@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 import os
 from pathlib import Path
@@ -28,6 +29,7 @@ from src.sentiment import (  # noqa: E402
     score_source_quality,
     validate_ex_ante_records,
     validate_nlp_corpus_intake,
+    validate_provider_config,
 )
 
 
@@ -87,13 +89,23 @@ def initialize_providers(
     if "gdelt" in valid_enabled:
         settings = dict(config.get("gdelt", {}))
         providers.append(
-            GDELTProvider(enabled=not no_live)
+            GDELTProvider(
+                enabled=not no_live,
+                request_delay_seconds=float(
+                    settings.get("request_delay_seconds", 6)
+                ),
+                retry_delay_seconds=float(
+                    settings.get("retry_delay_seconds", 10)
+                ),
+                max_retries=int(settings.get("max_retries", 3)),
+                timeout_seconds=float(settings.get("timeout_seconds", 30)),
+            )
         )
         queries = list(settings.get("queries", []) or [])
         per_query = int(settings.get("max_records_per_query", 50))
         query_config["gdelt"] = {
             "query": queries,
-            "limit": max(1, per_query * max(1, len(queries))),
+            "limit": max(1, per_query),
         }
     if "alpha_vantage" in valid_enabled:
         settings = dict(config.get("alpha_vantage", {}))
@@ -173,12 +185,23 @@ def _merge_provider_diagnostics(
         "invalid_record_count",
         "deduped_valid_record_count",
         "provider_duplicates_removed",
+        "retry_count",
     ):
         if column not in merged:
             merged[column] = 0
         merged[column] = pd.to_numeric(
             merged[column], errors="coerce"
         ).fillna(0).astype(int)
+    for column in (
+        "cache_hit",
+        "cache_written",
+        "cache_ignored",
+        "rate_limited",
+    ):
+        if column not in merged:
+            merged[column] = False
+        values = merged[column]
+        merged[column] = values.where(values.notna(), False).astype(bool)
     merged["status"] = merged.get("status", pd.Series(index=merged.index)).fillna(
         merged["config_status"]
     )
@@ -194,11 +217,29 @@ def collect_real_nlp_data(
     use_cache: bool = True,
     no_live: bool = False,
     cache_dir: str | Path = DEFAULT_CACHE_DIR,
+    ignore_cache: bool = False,
+    provider_filter: str | None = None,
+    sanity_query: str | None = None,
 ) -> dict[str, object]:
     """Run collection and persist diagnostics even when real data is absent."""
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
-    config = load_provider_config(config_path)
+    config = copy.deepcopy(load_provider_config(config_path))
+    if provider_filter:
+        aliases = {
+            "rbi": "rbi",
+            "earnings": "earnings",
+            "gdelt": "gdelt",
+            "alpha_vantage": "alpha_vantage",
+        }
+        selected = aliases[provider_filter]
+        for provider_name in aliases.values():
+            settings = config.get(provider_name)
+            if isinstance(settings, dict):
+                settings["enabled"] = provider_name == selected
+        config["_validation"] = validate_provider_config(config)
+    if sanity_query:
+        config.setdefault("gdelt", {})["queries"] = [sanity_query]
     rbi_path = str(config.get("rbi", {}).get("local_manifest_path", "")).strip()
     earnings_path = str(
         config.get("earnings", {}).get("local_manifest_path", "")
@@ -232,6 +273,17 @@ def collect_real_nlp_data(
         query_config=query_config,
         use_cache=bool(use_cache),
         cache_dir=cache_dir,
+        ignore_cache=bool(ignore_cache),
+    )
+    query_diagnostics = ingestion["provider_query_diagnostics"].copy()
+    gdelt_query_diagnostics = query_diagnostics.loc[
+        query_diagnostics.get(
+            "provider",
+            pd.Series("", index=query_diagnostics.index),
+        ).astype(str).eq("gdelt")
+    ].copy()
+    gdelt_query_diagnostics.to_csv(
+        output / "gdelt_query_diagnostics.csv", index=False
     )
 
     normalized = score_source_quality(
@@ -287,6 +339,7 @@ def collect_real_nlp_data(
         "no_live": bool(no_live),
         "network_calls_allowed": not bool(no_live),
         "cache_enabled": bool(use_cache),
+        "cache_ignored": bool(ignore_cache),
         "cache_dir": str(Path(cache_dir).resolve()),
         "start_date": pd.Timestamp(start_date).date().isoformat(),
         "end_date": pd.Timestamp(end_date).date().isoformat(),
@@ -310,6 +363,7 @@ def collect_real_nlp_data(
             ).fillna(False).sum()
         ),
         "reaction_warning_count": int(len(reaction_warnings)),
+        "gdelt_query_count": int(len(gdelt_query_diagnostics)),
         "intake_manual_action_required": bool(
             intake["manual_action_required"]
         ),
@@ -335,6 +389,7 @@ def collect_real_nlp_data(
         "deduped_records": deduped,
         "ex_ante_validation": ex_ante,
         "reaction_data_warnings": reaction_warnings,
+        "gdelt_query_diagnostics": gdelt_query_diagnostics,
         "intake": intake,
     }
 
@@ -352,6 +407,20 @@ def build_parser() -> argparse.ArgumentParser:
         action=argparse.BooleanOptionalAction,
         default=True,
     )
+    parser.add_argument(
+        "--no-cache",
+        action="store_true",
+        help=(
+            "Ignore an existing cache and force provider fetches; successful "
+            "responses may replace the cache."
+        ),
+    )
+    parser.add_argument(
+        "--provider",
+        choices=("rbi", "earnings", "gdelt", "alpha_vantage"),
+        default=None,
+    )
+    parser.add_argument("--sanity-query", default=None)
     parser.add_argument("--no-live", action="store_true")
     return parser
 
@@ -365,6 +434,9 @@ def main(argv: list[str] | None = None) -> int:
         output_dir=args.output_dir,
         use_cache=args.use_cache,
         no_live=args.no_live,
+        ignore_cache=args.no_cache,
+        provider_filter=args.provider,
+        sanity_query=args.sanity_query,
     )
     summary = result["summary"]
     print(

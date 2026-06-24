@@ -64,6 +64,44 @@ def _label_score(score: float, neutral_threshold: float) -> str:
     return "neutral"
 
 
+def _risk_label_from_score(score: float, neutral_threshold: float) -> str:
+    if not np.isfinite(score):
+        return "unknown"
+    if score > neutral_threshold:
+        return "risk_off"
+    if score < -neutral_threshold:
+        return "risk_on"
+    return "neutral"
+
+
+def add_risk_scores_from_sentiment(
+    scored_records: pd.DataFrame,
+    *,
+    neutral_threshold: float = 0.15,
+) -> pd.DataFrame:
+    """Attach the repository risk convention to scored text records.
+
+    Sentiment scores are positive for risk-on language and negative for
+    risk-off language. NLP risk scores use the opposite sign: positive values
+    indicate risk-off/news-geopolitical pressure and negative values indicate
+    risk-on/supportive language.
+    """
+    if not isinstance(scored_records, pd.DataFrame):
+        raise TypeError("scored_records must be a pandas DataFrame")
+    scored = scored_records.copy()
+    sentiment = pd.to_numeric(
+        scored.get("sentiment_score", pd.Series(np.nan, index=scored.index)),
+        errors="coerce",
+    )
+    risk_scores = -sentiment
+    scored["risk_score"] = risk_scores
+    scored["risk_label"] = [
+        _risk_label_from_score(score, neutral_threshold)
+        for score in risk_scores
+    ]
+    return scored
+
+
 def score_sentiment_records(
     records_df: pd.DataFrame,
     method: str = "lexicon",
@@ -102,7 +140,11 @@ def score_sentiment_records(
     scored["sentiment_label"] = [
         _label_score(score, neutral_threshold) for score in scores
     ]
+    scored = add_risk_scores_from_sentiment(
+        scored,
+        neutral_threshold=neutral_threshold,
+    )
+    scored["scoring_method_used"] = "lexicon"
     scored["model_name"] = LEXICON_MODEL_NAME
     scored["model_version"] = LEXICON_MODEL_VERSION
     return scored
-

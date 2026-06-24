@@ -133,3 +133,6 @@ dmypy.json
 
 # Mac
 .DS_Store
+
+# Local provider configuration may contain private paths or secret references.
+config/nlp_providers.local.yaml

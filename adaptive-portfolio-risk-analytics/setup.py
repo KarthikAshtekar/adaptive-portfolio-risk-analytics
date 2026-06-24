@@ -11,7 +11,7 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 
 setup(
     name="adaptive-portfolio-risk-analytics",
-    version="1.2.2",
+    version="1.2.5",
     author="Quantitative Finance Team",
     author_email="team@example.com",
     description="Evidence-gated portfolio research and risk analytics platform",

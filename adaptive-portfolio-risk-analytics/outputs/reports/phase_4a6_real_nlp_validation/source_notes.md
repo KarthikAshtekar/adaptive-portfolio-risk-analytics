@@ -1,6 +1,6 @@
 # Phase 4A.6 Source Notes
 
-Generated: 2026-06-21
+Generated: 2026-06-23
 
 ## Report contract
 
@@ -12,6 +12,10 @@ Generated: 2026-06-21
 - Market reaction inputs: prohibited; warning phrases are filtered before composite scoring.
 - Allocation, scoring, gates, confidence, and backtest impact: none.
 - Corpus intake manual action required: True.
+- Daily NLP signal: `daily_nlp_signal.csv`.
+- Scored records: `scored_records.csv`.
+- Construction diagnostics: `signal_construction_diagnostics.csv`.
+- GDELT/news-only interpretation: real monitoring signal only; not allocation-ready evidence.
 
 ## Chart map
 
@@ -29,4 +33,4 @@ Generated: 2026-06-21
 
 ## Omitted visuals
 
-- Source-quality distribution and regime-agreement charts were omitted because zero real records would make them analytically empty.
+- Additional distribution charts were omitted to keep the report focused on the configured evidence gate and exact audit tables.

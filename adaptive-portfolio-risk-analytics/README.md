@@ -1,6 +1,6 @@
 # Regime-Aware Portfolio Risk Analytics Platform
 
-**v1.2.2 — Real NLP Data Intake Workflow**
+**v1.2.5 — RBI + News Multi-Source NLP Monitoring**
 
 An evidence-gated portfolio research platform that combines hierarchical risk allocation, FRM risk diagnostics, regime-aware adaptive overlays, timestamped market-news and RBI macro-sentiment confirmation, CPCV-style robustness validation, and a simplified manager-facing decision interface.
 
@@ -8,7 +8,7 @@ An evidence-gated portfolio research platform that combines hierarchical risk al
 
 This project is a Python research platform for portfolio construction, historical backtesting, risk diagnostics, regime analysis, adaptive risk control, sentiment confirmation, and evidence-gated strategy selection. It combines fixed allocation methods with lagged rule-based and HMM walk-forward regime decisions, evaluates net-of-cost outcomes, and exposes the results through a Streamlit decision-support dashboard.
 
-The platform is designed to answer a practical question: should a regime-aware strategy replace a strong fixed portfolio, or should it be used selectively for risk control? The validated strategic conclusion remains role-based rather than winner-takes-all. Phase 4A through Phase 4A.7 add sentiment and NLP only as timestamped confirmation, monitoring, and explanation layers.
+The platform is designed to answer a practical question: should a regime-aware strategy replace a strong fixed portfolio, or should it be used selectively for risk control? The validated strategic conclusion remains role-based rather than winner-takes-all. Phase 4A through Phase 4A.8 add sentiment and NLP only as timestamped confirmation, monitoring, and explanation layers.
 
 ## 2. Final strategic conclusion
 
@@ -66,10 +66,11 @@ Implementation is organized under `src/` by data pipeline, covariance, clusterin
 - **Phase 4A.5 — API-Based Ex-Ante Sentiment Ingestion:** optional RBI, earnings-call, GDELT/news, and Alpha Vantage providers; provenance-preserving normalization; ex-ante timestamp validation; reaction-data warnings; optional local FinBERT scoring; and a decision-lagged composite NLP risk monitor.
 - **Phase 4A.6 — Real Provider Data Collection and NLP Signal Validation:** YAML provider configuration, offline-safe collection and caching, real-versus-fixture provenance, source-quality scoring, coverage/freshness thresholds, and a conservative empirical-validation report.
 - **Phase 4A.7 — Real NLP Data Acquisition Workflow:** governed RBI, earnings-call, and news intake templates; legal/provenance guidance; placeholder exclusion; corpus validation; and dashboard intake readiness.
+- **Phase 4A.8 — Real RBI + News Multi-Source NLP Monitoring:** local real-RBI bootstrap/import/status tooling, RBI macro-index integration with real GDELT/news monitoring, explicit `news_only`, `rbi_only`, and `rbi_and_news` source-mix diagnostics, and monitoring-only multi-source reports.
 
 ### Phase 4A — Sentiment Regime Confirmation Layer
 
-Sentiment is used only as a regime-confirmation and explanation layer. It does not directly change portfolio weights in v1.2.2.
+Sentiment is used only as a regime-confirmation and explanation layer. It does not directly change portfolio weights in v1.2.5.
 
 The default implementation uses a local CSV and dependency-light lexicon scorer. It produces observed and lagged decision sentiment, compares sentiment with rule-based and HMM walk-forward regimes, reports coverage and disagreement, and exposes timestamp/look-ahead checks. It does not claim that sentiment predicts returns.
 
@@ -123,8 +124,16 @@ Bundled synthetic transcripts and placeholder domains remain useful for
 deterministic tests, but the provenance classifier excludes them from real
 record counts and empirical claims.
 
+GDELT live collection may rate-limit requests. Start with a small query set;
+the default delay is six seconds between queries, and HTTP 429 responses use
+bounded retries with query-level diagnostics. After a failed live run, use
+`--no-cache` to ignore the existing cache and force a fresh provider request.
+Failed, rate-limited, or non-JSON responses are not written as successful
+cache entries.
+
 ```bash
 python scripts/collect_real_nlp_data.py --config config/nlp_providers.example.yaml --start-date 2020-01-01 --end-date 2026-06-21 --no-live
+python scripts/collect_real_nlp_data.py --config config/nlp_providers.local.yaml --start-date 2026-04-01 --end-date 2026-06-21 --no-cache
 python scripts/validate_real_nlp_signal.py --input-records outputs/reports/phase_4a6_real_nlp_validation/deduped_sentiment_records.csv
 ```
 
@@ -135,6 +144,14 @@ decision-label coverage, and at most a 25% reaction-warning rate. Sparse or
 missing real data produces verdict **C. Insufficient real-data coverage** and
 the exact Manager caveat: **NLP signal is monitoring-only due to insufficient
 real-data coverage.**
+
+The v1.2.5 validation pipeline converts real GDELT/news records into a
+decision-lagged daily monitoring signal when record/date thresholds are met.
+News-only data may produce `nlp_risk_on`, `nlp_neutral`, or `nlp_risk_off`
+labels with `source_mix = news_only`; this is intentionally marked as limited
+source diversity and is not allocation-ready evidence. The daily audit file is
+`daily_nlp_signal.csv`, and record-level scoring remains in
+`scored_records.csv`.
 
 The composite remains decision-lagged and monitoring-only. Phase 4A.6 does not
 change allocation, strategy scores, evidence gates, recommendation confidence,
@@ -176,6 +193,42 @@ Developer View exposes row-level intake diagnostics. Manager View states that
 NLP monitoring is inactive or illustrative until real text coverage is
 sufficient. This workflow adds no model and does not change allocation,
 strategy scoring, evidence gates, recommendation confidence, or backtests.
+GDELT and all other NLP inputs remain monitoring-only.
+
+### Phase 4A.8 — Real RBI + News Multi-Source NLP Monitoring
+
+Phase 4A.8 adds reproducible local RBI corpus population tools and combines
+valid real RBI macro-policy documents with real GDELT/news monitoring when both
+are present. The composite source mix is labeled as `news_only`, `rbi_only`,
+`rbi_and_news`, or `none` by decision date. RBI coverage can improve monitoring
+context, but it is not a hard allocation gate and does not make NLP
+allocation-ready.
+
+Bootstrap the governed local RBI corpus:
+
+```bash
+python scripts/bootstrap_rbi_real_corpus.py
+```
+
+Import one manually extracted public RBI text file:
+
+```bash
+python scripts/import_rbi_text_document.py --document-id RBI_MPC_MINUTES_2026_06 --publication-date 2026-06-06 --document-type mpc_minutes --title "Minutes of the Monetary Policy Committee Meeting June 2026" --source-url "https://..." --input-text-file path/to/local/extracted_text.txt --retrieval-date 2026-06-23
+```
+
+Check RBI sufficiency and rerun monitoring validation:
+
+```bash
+python scripts/check_rbi_corpus_status.py
+python scripts/validate_real_nlp_signal.py --input-records outputs/reports/phase_4a6_real_nlp_validation/deduped_sentiment_records.csv --start-date 2026-04-01 --end-date 2026-06-21
+```
+
+The Phase 4A.8 report is written under
+`outputs/reports/phase_4a8_multisource_nlp_monitoring/`. If no valid real RBI
+documents are present, RBI manual action is required and the current signal
+remains news-only monitoring.
+
+**NLP remains monitoring-only and does not affect allocation.**
 
 ## 5. Dashboard modes
 

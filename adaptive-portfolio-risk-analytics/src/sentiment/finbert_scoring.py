@@ -10,6 +10,7 @@ import pandas as pd
 from .scoring import (
     LEXICON_MODEL_NAME,
     LEXICON_MODEL_VERSION,
+    add_risk_scores_from_sentiment,
     score_sentiment_records,
 )
 
@@ -111,6 +112,7 @@ def score_with_finbert(
         scored["finbert_score"] = confidences
         scored["sentiment_score"] = sentiment_scores
         scored["sentiment_label"] = sentiment_labels
+        scored = add_risk_scores_from_sentiment(scored)
         scored["scoring_method_used"] = "finbert"
         scored["model_name"] = model_name
         scored["model_version"] = "local_huggingface"

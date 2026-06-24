@@ -33,17 +33,20 @@
   </header>
   <section data-contract-section="technical-summary">
     <h2>Technical Summary</h2>
-    <div class="status"><strong>C. Insufficient real-data coverage</strong><br>NLP signal is monitoring-only due to insufficient real-data coverage.</div>
+    <div class="status"><strong>B. Useful for monitoring only</strong><br>GDELT/news-only NLP is a real news monitoring signal, not an allocation signal. Allocation impact: None.</div>
     <div class="metric-grid">
-      <div class="metric"><span>Real records</span><strong>0</strong></div>
-      <div class="metric"><span>Coverage quality</span><strong>Insufficient</strong></div>
+      <div class="metric"><span>Real records</span><strong>50</strong></div>
+      <div class="metric"><span>Coverage quality</span><strong>Limited</strong></div>
       <div class="metric"><span>Reaction warnings</span><strong>0.0%</strong></div>
-      <div class="metric"><span>Decision coverage</span><strong>0.0%</strong></div>
+      <div class="metric"><span>Decision coverage</span><strong>93.1%</strong></div>
+      <div class="metric"><span>Valid label dates</span><strong>54</strong></div>
+      <div class="metric"><span>Allocation impact</span><strong>None</strong></div>
     </div>
   </section>
   <section data-contract-section="key-findings">
-    <h2>Real-data thresholds are not yet met</h2>
-    <p>The harness found 0 real provider records. Fixture and placeholder rows were retained for diagnostics but excluded from empirical coverage, source-quality distributions, composite validation, and regime-agreement claims.</p>
+    <h2>Real news monitoring signal is active</h2>
+    <p>The harness found 50 real provider records. Valid decision-lagged news labels are available for monitoring, but source diversity and allocation-testing evidence remain limited.</p>
+    <p>GDELT-only NLP is a real news monitoring signal, not an allocation signal. Source mix: {&quot;news_only&quot;: 54, &quot;none&quot;: 4}. Insufficient reasons: {&quot;decision_lag_no_prior_signal&quot;: 1, &quot;no_valid_nlp_source_in_rolling_window&quot;: 3}.</p>
     <p>The chart shows each evidence dimension relative to its configured minimum. Values below the reference line are not decision-eligible.</p>
     <figure>
       <img src="charts/coverage_threshold_attainment.png" alt="NLP validation threshold attainment">
@@ -65,40 +68,52 @@
   <tbody>
     <tr>
       <td>record_count</td>
-      <td>0.0</td>
+      <td>50.000000</td>
       <td>50.00</td>
-      <td>False</td>
+      <td>True</td>
     </tr>
     <tr>
       <td>distinct_publication_dates</td>
-      <td>0.0</td>
+      <td>25.000000</td>
       <td>20.00</td>
-      <td>False</td>
+      <td>True</td>
     </tr>
     <tr>
       <td>decision_label_coverage</td>
-      <td>0.0</td>
+      <td>0.931034</td>
       <td>0.20</td>
-      <td>False</td>
+      <td>True</td>
     </tr>
     <tr>
       <td>provider_coverage</td>
-      <td>0.0</td>
+      <td>1.000000</td>
       <td>1.00</td>
-      <td>False</td>
+      <td>True</td>
     </tr>
     <tr>
       <td>reaction_warning_rate</td>
-      <td>0.0</td>
+      <td>0.000000</td>
       <td>0.25</td>
       <td>True</td>
+    </tr>
+    <tr>
+      <td>valid_decision_label_dates</td>
+      <td>54.000000</td>
+      <td>1.00</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <td>source_family_count</td>
+      <td>1.000000</td>
+      <td>2.00</td>
+      <td>False</td>
     </tr>
   </tbody>
 </table></div>
   </section>
   <section data-contract-section="methodology">
     <h2>Ex-Ante Scoring and Validation Method</h2>
-    <p>Records are timestamp-validated, reaction-oriented language is flagged, publication availability is lagged, and scoring uses the configured local method. The composite combines RBI, earnings, and news risk components only after filtering invalid or reaction-warning rows. Quantitative comparison uses lagged rule-based regimes and HMM walk-forward only; full-sample HMM is never used.</p>
+    <p>Records are timestamp-validated, reaction-oriented language is flagged, publication availability is lagged, and scoring uses the configured local method. The composite combines available RBI, earnings, and news risk components only after filtering invalid or reaction-warning rows. News-only composite labels are permitted for monitoring, with source diversity marked limited. Quantitative comparison uses lagged rule-based regimes and HMM walk-forward only; full-sample HMM is never used.</p>
     <h3>Required validation questions</h3>
     <div class="table-wrap"><table class="dataframe">
   <thead>
@@ -114,23 +129,23 @@
     </tr>
     <tr>
       <td>2. Which providers returned real data?</td>
-      <td>None</td>
+      <td>gdelt</td>
     </tr>
     <tr>
       <td>3. How many records were collected?</td>
-      <td>2 input record(s); 0 classified as real provider data</td>
+      <td>50 input record(s); 50 classified as real provider data</td>
     </tr>
     <tr>
       <td>4. What is the date range?</td>
-      <td>Unavailable</td>
+      <td>2026-04-05 to 2026-06-11</td>
     </tr>
     <tr>
       <td>5. What is the source-quality distribution?</td>
-      <td>{"high": 0, "low": 0, "medium": 0, "unknown": 0}</td>
+      <td>{"high": 33, "low": 0, "medium": 17, "unknown": 0}</td>
     </tr>
     <tr>
       <td>6. What share of records passed ex-ante validation?</td>
-      <td>0.0%</td>
+      <td>100.0%</td>
     </tr>
     <tr>
       <td>7. What share were flagged as possible reaction data?</td>
@@ -142,34 +157,46 @@
     </tr>
     <tr>
       <td>9. What is the coverage ratio?</td>
-      <td>0.0%</td>
+      <td>93.1%</td>
     </tr>
     <tr>
       <td>10. What is the composite NLP risk label distribution?</td>
-      <td>{"insufficient_nlp_data": 1688}</td>
+      <td>{"insufficient_nlp_data": 4, "nlp_neutral": 46, "nlp_risk_on": 8}</td>
     </tr>
     <tr>
-      <td>11. What is agreement with HMM regimes?</td>
+      <td>11. What is the source mix?</td>
+      <td>{"news_only": 54, "none": 4}</td>
+    </tr>
+    <tr>
+      <td>12. How many valid decision-label dates exist?</td>
+      <td>54</td>
+    </tr>
+    <tr>
+      <td>13. What are the insufficient reasons?</td>
+      <td>{"decision_lag_no_prior_signal": 1, "no_valid_nlp_source_in_rolling_window": 3}</td>
+    </tr>
+    <tr>
+      <td>14. What is agreement with HMM regimes?</td>
       <td>N/A</td>
     </tr>
     <tr>
-      <td>12. What is agreement with rule-based regimes?</td>
+      <td>15. What is agreement with rule-based regimes?</td>
       <td>N/A</td>
     </tr>
     <tr>
-      <td>13. Did NLP produce pre-stress warnings?</td>
-      <td>0 warning(s); not interpreted when coverage is insufficient</td>
+      <td>16. Did NLP produce pre-stress warnings?</td>
+      <td>0 warning(s); exploratory monitoring only</td>
     </tr>
     <tr>
-      <td>14. Is evidence sufficient for future allocation testing?</td>
-      <td>C. Insufficient real-data coverage</td>
+      <td>17. Is evidence sufficient for future allocation testing?</td>
+      <td>B. Useful for monitoring only</td>
     </tr>
   </tbody>
 </table></div>
   </section>
   <section data-contract-section="limitations-uncertainty-and-robustness-checks">
-    <h2>Insufficient records prevent empirical claims</h2>
-    <p>The bundled transcripts and news fixtures validate software behavior, not real signal efficacy. The quantitative comparison history is deterministic and synthetic, used only to exercise safe lagged interfaces. No return, volatility, drawdown, or post-event market reaction is used as an NLP feature. Agreement and pre-stress statistics are withheld when real coverage is insufficient.</p>
+    <h2>Monitoring signal is not allocation evidence</h2>
+    <p>The bundled transcripts and news fixtures validate software behavior, not real signal efficacy. The quantitative comparison history is deterministic and synthetic, used only to exercise safe lagged interfaces. No return, volatility, drawdown, or post-event market reaction is used as an NLP feature. Agreement and pre-stress statistics are exploratory monitoring diagnostics when coverage or source diversity is limited.</p>
   </section>
   <section data-contract-section="recommended-next-steps">
     <h2>Collect governed real text before allocation research</h2>

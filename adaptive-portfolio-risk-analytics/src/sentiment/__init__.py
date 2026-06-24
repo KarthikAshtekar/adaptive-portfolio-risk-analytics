@@ -6,7 +6,9 @@ from src.sentiment.api_ingestion import (
 )
 from src.sentiment.composite_index import (
     COMPOSITE_NLP_LABELS,
+    VALID_COMPOSITE_NLP_LABELS,
     build_composite_nlp_risk_index,
+    build_daily_nlp_signal,
 )
 from src.sentiment.corpus_intake import (
     EARNINGS_MANIFEST_COLUMNS as INTAKE_EARNINGS_MANIFEST_COLUMNS,
@@ -147,6 +149,7 @@ __all__ = [
     "SentimentRecord",
     "AlphaVantageNewsProvider",
     "COMPOSITE_NLP_LABELS",
+    "VALID_COMPOSITE_NLP_LABELS",
     "DEFAULT_GDELT_QUERIES",
     "EARNINGS_MANIFEST_COLUMNS",
     "EarningsCallProvider",
@@ -164,6 +167,7 @@ __all__ = [
     "build_current_sentiment_summary",
     "build_current_macro_summary",
     "build_daily_sentiment_signal",
+    "build_daily_nlp_signal",
     "build_macro_stance_index",
     "build_composite_nlp_risk_index",
     "build_rbi_manifest_from_directory",

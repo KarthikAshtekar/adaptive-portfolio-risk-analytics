@@ -1,0 +1,4 @@
+provider,query,request_url,http_status,response_bytes,parsed_article_count,normalized_record_count,rate_limited,retry_count,success,error,warning
+gdelt,India inflation,https://api.gdeltproject.org/api/v2/doc/doc?query=India+inflation&mode=artlist&format=json&maxrecords=25&startdatetime=20260401000000&enddatetime=20260621235959,200,16899,25,25,True,1,True,,request succeeded after rate-limit retry
+gdelt,India interest rates,https://api.gdeltproject.org/api/v2/doc/doc?query=India+interest+rates&mode=artlist&format=json&maxrecords=25&startdatetime=20260401000000&enddatetime=20260621235959,429,102,0,0,True,3,False,HTTP Error 429: Too Many Requests,
+gdelt,India rupee,https://api.gdeltproject.org/api/v2/doc/doc?query=India+rupee&mode=artlist&format=json&maxrecords=25&startdatetime=20260401000000&enddatetime=20260621235959,200,15715,25,25,True,2,True,,request succeeded after rate-limit retry

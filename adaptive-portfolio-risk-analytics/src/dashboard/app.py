@@ -149,6 +149,7 @@ from src.sentiment import (
     build_current_macro_summary,
     build_current_sentiment_summary,
     build_daily_sentiment_signal,
+    build_daily_nlp_signal,
     build_macro_stance_index,
     calculate_nlp_coverage,
     classify_data_provenance,
@@ -215,6 +216,10 @@ DEFAULT_API_NLP_OUTPUT_DIR = (
 )
 INSUFFICIENT_REAL_NLP_CAVEAT = (
     "NLP signal is monitoring-only due to insufficient real-data coverage."
+)
+NEWS_ONLY_NLP_CAVEAT = (
+    "NLP signal: Real news monitoring active. Source mix: News only. "
+    "Coverage: Limited. Allocation impact: None."
 )
 NLP_INTAKE_INACTIVE_MESSAGE = (
     "NLP monitoring is inactive or illustrative until real text coverage "
@@ -2049,8 +2054,13 @@ def build_api_nlp_monitoring_results(
         news = scores.loc[
             scores.get(
                 "document_type", pd.Series("", index=scores.index)
-            ).astype(str).eq("financial_news")
+            ).astype(str).isin({"financial_news", "news"})
         ].copy()
+        daily_nlp_signal = build_daily_nlp_signal(
+            news,
+            market_index,
+            decision_lag=max(1, int(decision_lag)),
+        )
         rbi_macro_index = (
             (rbi_macro_payload or {}).get("macro_index")
             if rbi_macro_payload
@@ -2119,8 +2129,36 @@ def build_api_nlp_monitoring_results(
             ),
         )
         coverage_score = float(coverage["decision_label_coverage"])
+        valid_label_dates = int(
+            composite.get(
+                "decision_composite_nlp_label",
+                pd.Series(dtype="string"),
+            )
+            .fillna("insufficient_nlp_data")
+            .astype(str)
+            .isin({"nlp_risk_on", "nlp_neutral", "nlp_risk_off"})
+            .sum()
+        )
         freshness = coverage["latest_record_date"]
         coverage_quality = str(coverage["coverage_quality"]).title()
+        source_mix_distribution = (
+            composite.get("decision_source_mix", pd.Series(dtype="string"))
+            .fillna("none")
+            .astype(str)
+            .value_counts()
+            .to_dict()
+        )
+        insufficient_reason_counts = (
+            daily_nlp_signal.get(
+                "insufficient_reason",
+                pd.Series(dtype="string"),
+            )
+            .replace("", pd.NA)
+            .dropna()
+            .astype(str)
+            .value_counts()
+            .to_dict()
+        )
         source_quality_distribution = (
             real_records.get(
                 "source_quality_label", pd.Series(dtype="string")
@@ -2150,7 +2188,19 @@ def build_api_nlp_monitoring_results(
             .sum()
         )
         warnings = []
-        if coverage["coverage_quality"] != "sufficient":
+        news_only_active = (
+            bool(source_mix_distribution.get("news_only"))
+            and int(coverage.get("source_family_count", 0) or 0) == 1
+        )
+        multi_source_active = bool(source_mix_distribution.get("rbi_and_news"))
+        if multi_source_active:
+            warnings.append(
+                "NLP Monitoring: Active. Source mix: RBI + News. "
+                "Allocation impact: None."
+            )
+        elif news_only_active:
+            warnings.append(NEWS_ONLY_NLP_CAVEAT)
+        elif coverage["coverage_quality"] != "sufficient":
             warnings.append(INSUFFICIENT_REAL_NLP_CAVEAT)
         if reaction_count:
             warnings.append(
@@ -2163,7 +2213,9 @@ def build_api_nlp_monitoring_results(
             )
         current = {
             "nlp_data_status": (
-                "Real Data Available"
+                "Active"
+                if multi_source_active or news_only_active
+                else "Real Data Available"
                 if len(real_records)
                 else "Real Data Unavailable"
             ),
@@ -2187,12 +2239,21 @@ def build_api_nlp_monitoring_results(
             ],
             "coverage_score": coverage_score,
             "coverage_quality": coverage_quality,
+            "valid_decision_label_dates": valid_label_dates,
+            "source_mix": source_mix_distribution,
+            "multi_source_monitoring": multi_source_active,
+            "insufficient_reason_counts": insufficient_reason_counts,
             "data_freshness": freshness,
             "provider_mix": coverage["source_mix_dict"],
+            "source_families": coverage.get("source_families", []),
+            "source_diversity_limited": coverage.get(
+                "source_diversity_limited", True
+            ),
+            "allocation_impact": "None",
             "reaction_warning_rate": reaction_warning_rate,
             "source_quality_distribution": source_quality_distribution,
             "caveat": warnings[0] if warnings else (
-                "NLP remains monitoring-only in v1.2.2."
+                "NLP remains monitoring-only in v1.2.5."
             ),
             "important_warning": " ".join(warnings)
             or (
@@ -2218,6 +2279,8 @@ def build_api_nlp_monitoring_results(
             "source_quality": ex_ante,
             "coverage": coverage,
             "finbert_scores": scores,
+            "daily_nlp_signal": daily_nlp_signal,
+            "rbi_macro_payload": rbi_macro_payload or {},
             "composite_index": composite,
             "comparison": comparison,
             "current": current,
@@ -2253,6 +2316,8 @@ def build_api_nlp_monitoring_results(
                 "latest_record_date": None,
             },
             "finbert_scores": pd.DataFrame(),
+            "daily_nlp_signal": pd.DataFrame(),
+            "rbi_macro_payload": {},
             "composite_index": pd.DataFrame(index=market_index),
             "comparison": {},
             "current": {
@@ -2267,8 +2332,14 @@ def build_api_nlp_monitoring_results(
                 "composite_nlp_confirmation": "Insufficient NLP Data",
                 "coverage_score": 0.0,
                 "coverage_quality": "Insufficient",
+                "valid_decision_label_dates": 0,
+                "source_mix": {},
+                "insufficient_reason_counts": {},
                 "data_freshness": None,
                 "provider_mix": {},
+                "source_families": [],
+                "source_diversity_limited": True,
+                "allocation_impact": "None",
                 "reaction_warning_rate": 0.0,
                 "source_quality_distribution": {
                     "high": 0,
@@ -4254,6 +4325,36 @@ def render_api_nlp_research_content(
         use_container_width=True,
         hide_index=True,
     )
+    st.write(
+        {
+            "decision_label_coverage": current.get("coverage_score"),
+            "valid_decision_label_dates": current.get(
+                "valid_decision_label_dates", 0
+            ),
+            "source_mix": current.get("source_mix", {}),
+            "insufficient_reasons": current.get(
+                "insufficient_reason_counts", {}
+            ),
+            "allocation_impact": current.get("allocation_impact", "None"),
+        }
+    )
+    daily_nlp_signal = nlp_payload.get("daily_nlp_signal", pd.DataFrame())
+    st.subheader("Daily NLP Signal")
+    if isinstance(daily_nlp_signal, pd.DataFrame) and not daily_nlp_signal.empty:
+        st.dataframe(daily_nlp_signal.tail(252), use_container_width=True)
+    else:
+        st.caption("No daily NLP signal has been constructed.")
+    rbi_macro_payload = nlp_payload.get("rbi_macro_payload") or {}
+    rbi_macro_index = (
+        rbi_macro_payload.get("macro_index", pd.DataFrame())
+        if isinstance(rbi_macro_payload, dict)
+        else pd.DataFrame()
+    )
+    st.subheader("RBI Macro Stance Timeline")
+    if isinstance(rbi_macro_index, pd.DataFrame) and not rbi_macro_index.empty:
+        st.dataframe(rbi_macro_index.tail(252), use_container_width=True)
+    else:
+        st.caption("No real RBI macro stance timeline is active.")
     source_quality = nlp_payload.get("source_quality", pd.DataFrame())
     st.subheader("Source Quality")
     if isinstance(source_quality, pd.DataFrame) and not source_quality.empty:
@@ -4303,6 +4404,20 @@ def render_api_nlp_research_content(
     composite = nlp_payload.get("composite_index", pd.DataFrame())
     if isinstance(composite, pd.DataFrame) and not composite.empty:
         st.subheader("Composite and Source-Level NLP Risk")
+        source_mix_table = composite[
+            [
+                column
+                for column in [
+                    "decision_source_mix",
+                    "decision_composite_nlp_label",
+                    "decision_rbi_macro_risk_score",
+                    "decision_news_geopolitical_risk_score",
+                ]
+                if column in composite
+            ]
+        ].tail(252)
+        st.write("Source mix by date")
+        st.dataframe(source_mix_table, use_container_width=True)
         risk_fig = go.Figure()
         for column, label, color, dash in (
             (
@@ -4352,6 +4467,10 @@ def render_api_nlp_research_content(
 
     comparison = nlp_payload.get("comparison") or {}
     st.subheader("Agreement Diagnostics")
+    if comparison.get("exploratory_monitoring_only"):
+        st.info(
+            "Agreement metrics are exploratory monitoring diagnostics only."
+        )
     st.dataframe(
         pd.DataFrame(
             [
@@ -5342,6 +5461,7 @@ def render_manager_view(
         else "Unavailable",
     )
     provider_mix = nlp_current.get("provider_mix") or {}
+    source_mix = nlp_current.get("source_mix") or {}
     st.caption(
         "Provider Mix: "
         + (
@@ -5350,6 +5470,25 @@ def render_manager_view(
             else "None"
         )
     )
+    st.caption(
+        "Source mix: "
+        + (
+            ", ".join(f"{key}={value}" for key, value in source_mix.items())
+            if source_mix
+            else "None"
+        )
+        + f" · Allocation impact: {nlp_current.get('allocation_impact', 'None')}"
+        + f" · Valid label dates: {nlp_current.get('valid_decision_label_dates', 0)}"
+    )
+    if nlp_current.get("multi_source_monitoring"):
+        st.caption(
+            "RBI macro stance: "
+            f"{nlp_current.get('rbi_macro_signal', 'Insufficient')} · "
+            "News/geopolitical signal: "
+            f"{nlp_current.get('news_geopolitical_signal', 'Insufficient')} · "
+            "Composite NLP status: "
+            f"{nlp_current.get('composite_nlp_label', 'insufficient_nlp_data')}"
+        )
     st.warning(
         str(
             nlp_current.get(
@@ -5358,7 +5497,10 @@ def render_manager_view(
             )
         )
     )
-    if nlp_current.get("coverage_quality", "Insufficient") != "Sufficient":
+    if (
+        nlp_current.get("coverage_quality", "Insufficient") != "Sufficient"
+        and not nlp_current.get("valid_decision_label_dates", 0)
+    ):
         st.caption(NLP_INTAKE_INACTIVE_MESSAGE)
     st.caption(
         "Caveat: NLP remains a monitoring and confirmation layer only. "
@@ -5651,6 +5793,11 @@ def render_developer_view(
                 for column in [
                     "record_id",
                     "provider",
+                    "title",
+                    "sentiment_score",
+                    "sentiment_label",
+                    "risk_score",
+                    "risk_label",
                     "finbert_label",
                     "finbert_score",
                     "scoring_method_used",
@@ -5665,6 +5812,17 @@ def render_developer_view(
                 finbert_scores.loc[:, fallback_columns],
                 use_container_width=True,
             )
+            daily_nlp_signal = api_nlp_results.get(
+                "daily_nlp_signal", pd.DataFrame()
+            )
+            st.write("Daily NLP aggregation and decision-lag diagnostics")
+            if (
+                isinstance(daily_nlp_signal, pd.DataFrame)
+                and not daily_nlp_signal.empty
+            ):
+                st.dataframe(daily_nlp_signal, use_container_width=True)
+            else:
+                st.caption("No daily NLP signal diagnostics are available.")
             st.write("Decision-lagged composite NLP risk index")
             st.dataframe(
                 api_nlp_results.get("composite_index", pd.DataFrame()),

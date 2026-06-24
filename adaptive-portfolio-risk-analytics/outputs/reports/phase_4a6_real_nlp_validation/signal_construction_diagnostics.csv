@@ -1,0 +1,10 @@
+diagnostic,value
+records_entering_scoring,50
+records_with_sentiment_scores,50
+records_entering_composite_index,50
+article_days_with_at_least_one_valid_record,24
+rolling_coverage_by_day_mean,0.422416716084646
+rolling_coverage_by_day_max,0.6666666666666666
+raw_daily_nlp_label_count,55
+decision_lagged_nlp_label_count,54
+insufficient_reason_counts,"{""decision_lag_no_prior_signal"": 1, ""no_valid_nlp_source_in_rolling_window"": 3}"

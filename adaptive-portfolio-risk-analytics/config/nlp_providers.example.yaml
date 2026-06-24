@@ -19,6 +19,10 @@ gdelt:
     - "oil price shock India"
     - "India banking stress"
   max_records_per_query: 50
+  request_delay_seconds: 6
+  retry_delay_seconds: 10
+  max_retries: 3
+  timeout_seconds: 30
 
 alpha_vantage:
   enabled: false

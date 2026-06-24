@@ -54,7 +54,7 @@ def test_csv_document_prefers_text_column(tmp_path: Path) -> None:
                 "document_id": "csv_doc",
                 "publication_date": "2024-01-05",
                 "title": "CSV",
-                "document_type": "macro_report",
+                "document_type": "unknown",
                 "file_path": "document.csv",
             }
         ]
