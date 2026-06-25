@@ -2,7 +2,10 @@ rbi:
   enabled: false
   mode: local_manifest
   local_manifest_path: data/sentiment/rbi_real/manifest.csv
-  feed_urls: []
+  feed_urls:
+    - https://www.rbi.org.in/pressreleases_rss.xml
+    - https://www.rbi.org.in/Publication_rss.xml
+    - https://www.rbi.org.in/speeches_rss.xml
 
 earnings:
   enabled: true
@@ -19,6 +22,10 @@ gdelt:
     - "oil price shock India"
     - "India banking stress"
   max_records_per_query: 50
+  request_delay_seconds: 6
+  retry_delay_seconds: 10
+  max_retries: 3
+  timeout_seconds: 30
 
 alpha_vantage:
   enabled: false

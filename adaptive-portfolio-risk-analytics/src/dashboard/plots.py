@@ -953,6 +953,7 @@ def format_metric_cards(
                 "cagr",
                 "volatility",
                 "drawdown",
+                "pain_index",
             ]
         ):
             formatted[key] = f"{value:.2%}"

@@ -1,6 +1,8 @@
 metric,actual,threshold,passes
-record_count,0.0,50.0,False
-distinct_publication_dates,0.0,20.0,False
-decision_label_coverage,0.0,0.2,False
-provider_coverage,0.0,1.0,False
+record_count,50.0,50.0,True
+distinct_publication_dates,25.0,20.0,True
+decision_label_coverage,0.9827586206896551,0.2,True
+provider_coverage,1.0,1.0,True
 reaction_warning_rate,0.0,0.25,True
+valid_decision_label_dates,57.0,1.0,True
+source_family_count,2.0,2.0,True

@@ -5,7 +5,30 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from .risk_metrics import RiskAnalytics
+from .risk_metrics import RiskAnalytics, compute_pain_index
+
+
+def compute_pain_ratio(
+    portfolio_returns,
+    periods_per_year: int = 252,
+    risk_free_rate: float = 0.0,
+) -> float:
+    """Return annualized excess return divided by Pain Index."""
+    returns = (
+        portfolio_returns
+        if isinstance(portfolio_returns, pd.Series)
+        else pd.Series(portfolio_returns)
+    )
+    if returns.empty:
+        return 0.0
+    pain = compute_pain_index(returns)
+    if not np.isfinite(pain) or pain <= 1e-12:
+        return float("nan")
+    annual_return = PerformanceAnalytics.annualized_return(
+        returns,
+        periods_per_year=periods_per_year,
+    )
+    return float((annual_return - float(risk_free_rate)) / pain)
 
 
 class PerformanceAnalytics:
@@ -67,6 +90,24 @@ class PerformanceAnalytics:
         return float(annual_return / abs(max_dd))
 
     @staticmethod
+    def pain_index(returns: pd.Series, initial_value: float = 1.0) -> float:
+        """Return the mean absolute drawdown over the return path."""
+        return compute_pain_index(returns, initial_value=initial_value)
+
+    @staticmethod
+    def pain_ratio(
+        returns: pd.Series,
+        periods_per_year: int = 252,
+        risk_free_rate: float = 0.0,
+    ) -> float:
+        """Return annualized excess return divided by Pain Index."""
+        return compute_pain_ratio(
+            returns,
+            periods_per_year=periods_per_year,
+            risk_free_rate=risk_free_rate,
+        )
+
+    @staticmethod
     def cagr(returns: pd.Series, periods_per_year: int = 252) -> float:
         """Alias for annualized_return (CAGR = Compound Annual Growth Rate)."""
         return PerformanceAnalytics.annualized_return(returns, periods_per_year)
@@ -88,6 +129,11 @@ class PerformanceAnalytics:
             "var_95": RiskAnalytics.value_at_risk(returns),
             "cvar_95": RiskAnalytics.conditional_value_at_risk(returns),
             "calmar": PerformanceAnalytics.calmar_ratio(returns),
+            "pain_index": PerformanceAnalytics.pain_index(returns),
+            "pain_ratio": PerformanceAnalytics.pain_ratio(
+                returns,
+                risk_free_rate=risk_free_rate,
+            ),
         }
     @staticmethod
     def summary_dataframe(

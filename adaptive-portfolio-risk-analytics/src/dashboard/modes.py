@@ -20,6 +20,7 @@ RESEARCH_OBJECTIVES = {
     "Net Sharpe": "sharpe",
     "Net Sortino": "sortino",
     "Net Calmar": "calmar",
+    "Net Pain Ratio": "pain_ratio",
     "Max Drawdown": "max_drawdown",
     "Net Final Value": "final_value",
 }
@@ -101,6 +102,8 @@ NET_METRIC_LABELS = {
     "sharpe": "Net Sharpe",
     "sortino": "Net Sortino",
     "calmar": "Net Calmar",
+    "pain_index": "Pain Index",
+    "pain_ratio": "Net Pain Ratio",
     "volatility": "Net Volatility",
     "max_drawdown": "Max Drawdown",
     "final_value": "Net Final Value",

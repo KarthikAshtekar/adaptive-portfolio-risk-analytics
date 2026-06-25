@@ -36,10 +36,10 @@ def _document_type(title: object) -> str:
         return "monetary_policy_statement"
     if "speech" in text or "governor" in text:
         return "governor_speech"
-    if "notification" in text:
-        return "notification"
-    if "publication" in text or "report" in text:
-        return "publication"
+    if "financial stability" in text:
+        return "financial_stability_report"
+    if "annual report" in text:
+        return "annual_report"
     return "press_release"
 
 

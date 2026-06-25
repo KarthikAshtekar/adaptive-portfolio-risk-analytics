@@ -1,27 +1,29 @@
 {
   "status": "success",
-  "warning": "Real provider data unavailable; collection completed with configuration, cache, fixture, and provenance diagnostics only.",
-  "config_path": "D:\\PGDBA\\MyNotes\\SEM-3\\Part-1\\FRM\\Project\\adaptive-portfolio-risk-analytics\\config\\nlp_providers.example.yaml",
+  "warning": "",
+  "config_path": "D:\\PGDBA\\MyNotes\\SEM-3\\Part-1\\FRM\\Project\\adaptive-portfolio-risk-analytics\\config\\nlp_providers.local.yaml",
   "config_valid": true,
   "config_errors": [],
   "config_warnings": [],
-  "no_live": true,
-  "network_calls_allowed": false,
+  "no_live": false,
+  "network_calls_allowed": true,
   "cache_enabled": true,
+  "cache_ignored": true,
   "cache_dir": "D:\\PGDBA\\MyNotes\\SEM-3\\Part-1\\FRM\\Project\\adaptive-portfolio-risk-analytics\\data\\sentiment\\cache",
-  "start_date": "2020-01-01",
+  "start_date": "2026-04-01",
   "end_date": "2026-06-21",
   "providers_enabled": [
-    "earnings"
+    "gdelt"
   ],
   "providers_initialized": [
-    "earnings_calls"
+    "gdelt"
   ],
-  "collected_record_count": 2,
-  "real_record_count": 0,
-  "fixture_or_placeholder_count": 2,
-  "ex_ante_valid_count": 2,
+  "collected_record_count": 50,
+  "real_record_count": 50,
+  "fixture_or_placeholder_count": 0,
+  "ex_ante_valid_count": 50,
   "reaction_warning_count": 0,
+  "gdelt_query_count": 3,
   "intake_manual_action_required": true,
   "valid_real_records_by_corpus": {
     "rbi": 0,

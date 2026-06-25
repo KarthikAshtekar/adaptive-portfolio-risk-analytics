@@ -14,7 +14,6 @@ RBI_DOCUMENT_TYPES = (
     "monetary_policy_statement",
     "governor_speech",
     "press_release",
-    "macro_report",
     "financial_stability_report",
     "annual_report",
     "unknown",

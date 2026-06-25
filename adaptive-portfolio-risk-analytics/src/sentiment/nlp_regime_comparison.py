@@ -5,6 +5,8 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
+from .composite_index import VALID_COMPOSITE_NLP_LABELS
+
 
 def nlp_agrees_with_regime(nlp_label: object, regime: object) -> bool | float:
     label = str(nlp_label or "insufficient_nlp_data").strip().lower()
@@ -90,7 +92,7 @@ def compare_composite_nlp_to_regimes(
         ),
         axis=1,
     )
-    covered = labels.ne("insufficient_nlp_data")
+    covered = labels.isin(VALID_COMPOSITE_NLP_LABELS)
     risk_off = labels.eq("nlp_risk_off")
     rule_stress = rule.astype(str).str.lower().isin(
         {"stress", "crisis", "risk-off", "risk_off"}
@@ -139,8 +141,9 @@ def compare_composite_nlp_to_regimes(
         and current_regime.lower() in {"calm", "normal", "risk-on", "risk_on"}
         else "Quant-NLP Disagreement"
     )
+    comparison_valid = comparison.loc[covered].copy()
     return {
-        "comparison_table": comparison,
+        "comparison_table": comparison_valid,
         "agreement_with_rule_based": _rate(
             comparison["agreement_rule_based"]
         ),

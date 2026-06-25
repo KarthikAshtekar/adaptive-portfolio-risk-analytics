@@ -1,4 +1,4 @@
-"""Phase 4A through 4A.6 sentiment confirmation public API."""
+"""Phase 4A through 4A.9 sentiment confirmation public API."""
 
 from src.sentiment.api_ingestion import (
     INGESTION_OUTPUT_FILES,
@@ -6,7 +6,9 @@ from src.sentiment.api_ingestion import (
 )
 from src.sentiment.composite_index import (
     COMPOSITE_NLP_LABELS,
+    VALID_COMPOSITE_NLP_LABELS,
     build_composite_nlp_risk_index,
+    build_daily_nlp_signal,
 )
 from src.sentiment.corpus_intake import (
     EARNINGS_MANIFEST_COLUMNS as INTAKE_EARNINGS_MANIFEST_COLUMNS,
@@ -29,6 +31,16 @@ from src.sentiment.finbert_scoring import score_with_finbert
 from src.sentiment.nlp_regime_comparison import (
     compare_composite_nlp_to_regimes,
     nlp_agrees_with_regime,
+)
+from src.sentiment.nlp_shadow_overlay import (
+    CONFIRMATION_VARIANT,
+    EARLY_WARNING_VARIANT,
+    NLPShadowOverlayConfig,
+    build_nlp_signal_alignment,
+    build_overlay_decisions,
+    build_shadow_policy_map,
+    is_defensive_regime,
+    is_risk_off_nlp_label,
 )
 from src.sentiment.provider_config import (
     load_provider_config,
@@ -88,6 +100,32 @@ from src.sentiment.rbi_corpus_builder import (
     load_real_rbi_corpus,
     validate_rbi_manifest,
 )
+from src.sentiment.rbi_official_fetcher import (
+    DEFAULT_RBI_EXCLUDE_KEYWORDS,
+    DEFAULT_RBI_FETCH_KEYWORDS,
+    DEFAULT_RBI_SOURCE_URLS,
+    DEFAULT_RBI_TARGET_POLICY_SOURCE_URLS,
+    FETCH_DIAGNOSTIC_COLUMNS,
+    RBI_TARGET_DOCUMENT_TYPE_PRIORITY,
+    RBI_TARGET_POLICY_PHRASES,
+    build_rbi_document_id,
+    classify_rbi_document_type,
+    download_rbi_document,
+    extract_rbi_text,
+    fetch_rbi_document_index,
+    filter_rbi_entries_by_policy_relevance,
+    filter_rbi_entries_by_keywords,
+    is_rbi_index_or_navigation_page,
+    parse_rbi_target_document_types,
+    rbi_entry_exclude_keyword_match,
+    rbi_entry_policy_relevance,
+    rbi_entry_policy_target_metadata,
+    rbi_policy_target_metadata,
+    rbi_text_quality_metrics,
+    resolve_rbi_target_policy_sources,
+    sort_rbi_entries_for_policy_targets,
+    update_rbi_manifest,
+)
 from src.sentiment.rbi_processing import (
     clean_rbi_sentence,
     process_rbi_documents,
@@ -143,10 +181,21 @@ __all__ = [
     "EMPIRICAL_OUTPUT_FILES",
     "REAL_RBI_DOCUMENT_TYPES",
     "REAL_RBI_MANIFEST_COLUMNS",
+    "DEFAULT_RBI_EXCLUDE_KEYWORDS",
+    "DEFAULT_RBI_FETCH_KEYWORDS",
+    "DEFAULT_RBI_SOURCE_URLS",
+    "DEFAULT_RBI_TARGET_POLICY_SOURCE_URLS",
+    "FETCH_DIAGNOSTIC_COLUMNS",
+    "RBI_TARGET_DOCUMENT_TYPE_PRIORITY",
+    "RBI_TARGET_POLICY_PHRASES",
     "SENTIMENT_LABELS",
     "SentimentRecord",
     "AlphaVantageNewsProvider",
     "COMPOSITE_NLP_LABELS",
+    "CONFIRMATION_VARIANT",
+    "EARLY_WARNING_VARIANT",
+    "NLPShadowOverlayConfig",
+    "VALID_COMPOSITE_NLP_LABELS",
     "DEFAULT_GDELT_QUERIES",
     "EARNINGS_MANIFEST_COLUMNS",
     "EarningsCallProvider",
@@ -164,8 +213,13 @@ __all__ = [
     "build_current_sentiment_summary",
     "build_current_macro_summary",
     "build_daily_sentiment_signal",
+    "build_daily_nlp_signal",
+    "build_nlp_signal_alignment",
+    "build_overlay_decisions",
+    "build_shadow_policy_map",
     "build_macro_stance_index",
     "build_composite_nlp_risk_index",
+    "build_rbi_document_id",
     "build_rbi_manifest_from_directory",
     "calculate_sentiment_confirmation_score",
     "calculate_nlp_coverage",
@@ -179,7 +233,24 @@ __all__ = [
     "compare_sentiment_to_regimes",
     "compare_macro_to_regimes",
     "compare_composite_nlp_to_regimes",
+    "classify_rbi_document_type",
     "clean_rbi_sentence",
+    "download_rbi_document",
+    "extract_rbi_text",
+    "fetch_rbi_document_index",
+    "filter_rbi_entries_by_policy_relevance",
+    "filter_rbi_entries_by_keywords",
+    "is_rbi_index_or_navigation_page",
+    "is_defensive_regime",
+    "is_risk_off_nlp_label",
+    "parse_rbi_target_document_types",
+    "rbi_entry_exclude_keyword_match",
+    "rbi_entry_policy_relevance",
+    "rbi_entry_policy_target_metadata",
+    "rbi_policy_target_metadata",
+    "rbi_text_quality_metrics",
+    "resolve_rbi_target_policy_sources",
+    "sort_rbi_entries_for_policy_targets",
     "load_local_sentiment_csv",
     "load_provider_config",
     "load_rbi_documents",
@@ -211,4 +282,5 @@ __all__ = [
     "validate_corpus_manifest",
     "validate_nlp_corpus_intake",
     "validate_provider_config",
+    "update_rbi_manifest",
 ]

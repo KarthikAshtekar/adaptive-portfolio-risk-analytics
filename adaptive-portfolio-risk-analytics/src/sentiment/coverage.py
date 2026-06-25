@@ -7,6 +7,19 @@ import json
 import numpy as np
 import pandas as pd
 
+from .composite_index import VALID_COMPOSITE_NLP_LABELS
+
+
+def _source_family(provider: object) -> str:
+    value = str(provider or "").strip().lower()
+    if value == "rbi":
+        return "rbi_macro"
+    if value in {"earnings", "earnings_calls"}:
+        return "earnings"
+    if value in {"gdelt", "alpha_vantage", "alpha_vantage_news"}:
+        return "news"
+    return value or "unknown"
+
 
 def calculate_nlp_coverage(
     records_df: pd.DataFrame,
@@ -63,9 +76,9 @@ def calculate_nlp_coverage(
         if label_column in composite_index:
             labels = composite_index[label_column].fillna(
                 "insufficient_nlp_data"
-            )
+            ).astype(str)
             decision_label_coverage = float(
-                labels.ne("insufficient_nlp_data").mean()
+                labels.isin(VALID_COMPOSITE_NLP_LABELS).mean()
             )
 
     provider_values = (
@@ -75,6 +88,36 @@ def calculate_nlp_coverage(
     )
     source_mix_dict = provider_values.value_counts().to_dict()
     providers_with_data = int(provider_values[provider_values.ne("")].nunique())
+    source_families = sorted(
+        {
+            _source_family(provider)
+            for provider in provider_values[provider_values.ne("")]
+            if _source_family(provider) != "unknown"
+        }
+    )
+    if isinstance(composite_index, pd.DataFrame) and not composite_index.empty:
+        mix_column = (
+            "decision_source_mix"
+            if "decision_source_mix" in composite_index
+            else "source_mix"
+        )
+        if mix_column in composite_index:
+            mixes = (
+                composite_index[mix_column]
+                .dropna()
+                .astype(str)
+                .str.lower()
+                .unique()
+                .tolist()
+            )
+            families = set(source_families)
+            for mix in mixes:
+                if "news" in mix:
+                    families.add("news")
+                if "rbi" in mix:
+                    families.add("rbi_macro")
+            source_families = sorted(families)
+    source_family_count = len(source_families)
     enabled_provider_count = providers_with_data
     if (
         isinstance(provider_diagnostics, pd.DataFrame)
@@ -118,15 +161,14 @@ def calculate_nlp_coverage(
             or decision_label_coverage > 0
         )
     )
-    coverage_quality = (
-        "stale"
-        if stale and record_count > 0
-        else "sufficient"
-        if meets_thresholds
-        else "limited"
-        if partial_thresholds
-        else "insufficient"
-    )
+    if stale and record_count > 0:
+        coverage_quality = "stale"
+    elif meets_thresholds and source_family_count >= 2:
+        coverage_quality = "sufficient"
+    elif meets_thresholds or partial_thresholds:
+        coverage_quality = "limited"
+    else:
+        coverage_quality = "insufficient"
 
     return {
         "record_count": record_count,
@@ -138,6 +180,9 @@ def calculate_nlp_coverage(
         "provider_coverage": float(np.clip(provider_coverage, 0.0, 1.0)),
         "source_mix": json.dumps(source_mix_dict, sort_keys=True),
         "source_mix_dict": source_mix_dict,
+        "source_families": source_families,
+        "source_family_count": int(source_family_count),
+        "source_diversity_limited": bool(source_family_count < 2),
         "latest_record_date": (
             latest.date().isoformat() if pd.notna(latest) else None
         ),

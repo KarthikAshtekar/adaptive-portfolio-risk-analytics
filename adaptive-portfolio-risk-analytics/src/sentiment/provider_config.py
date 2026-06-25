@@ -15,6 +15,13 @@ DEFAULT_PROVIDER_CONFIG = REPO_ROOT / "config" / "nlp_providers.example.yaml"
 PROVIDER_NAMES = ("rbi", "earnings", "gdelt", "alpha_vantage")
 LOCAL_MODES = {"local", "local_manifest", "manifest"}
 API_MODES = {"api", "feed", "feeds"}
+GDELT_DEFAULTS = {
+    "max_records_per_query": 50,
+    "request_delay_seconds": 6,
+    "retry_delay_seconds": 10,
+    "max_retries": 3,
+    "timeout_seconds": 30,
+}
 
 
 def _resolve_path(value: object, base_dir: Path) -> Path | None:
@@ -77,6 +84,27 @@ def validate_provider_config(
                 if not key_env_present:
                     row_errors.append(
                         f"required API key environment variable is not set: {key_env}"
+                    )
+        if provider_name == "gdelt":
+            gdelt_numeric_rules = {
+                "request_delay_seconds": (0.0, None),
+                "retry_delay_seconds": (0.0, None),
+                "max_retries": (0.0, None),
+                "timeout_seconds": (1.0, None),
+                "max_records_per_query": (1.0, None),
+            }
+            for key, (minimum, maximum) in gdelt_numeric_rules.items():
+                try:
+                    value = float(settings.get(key, GDELT_DEFAULTS[key]))
+                except (TypeError, ValueError):
+                    row_errors.append(f"{key} must be numeric")
+                    continue
+                if value < minimum or (
+                    maximum is not None and value > maximum
+                ):
+                    row_errors.append(
+                        f"{key} must be between {minimum} and "
+                        f"{maximum if maximum is not None else 'infinity'}"
                     )
 
         errors.extend(f"{provider_name}: {message}" for message in row_errors)
@@ -163,6 +191,12 @@ def load_provider_config(path: str | Path | None = None) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise ValueError("NLP provider config root must be a mapping")
     result = copy.deepcopy(payload)
+    gdelt = result.setdefault("gdelt", {})
+    if not isinstance(gdelt, dict):
+        gdelt = {}
+        result["gdelt"] = gdelt
+    for key, value in GDELT_DEFAULTS.items():
+        gdelt.setdefault(key, value)
     result["_config_path"] = str(config_path)
     result["_validation"] = validate_provider_config(result, base_dir=REPO_ROOT)
     return result
