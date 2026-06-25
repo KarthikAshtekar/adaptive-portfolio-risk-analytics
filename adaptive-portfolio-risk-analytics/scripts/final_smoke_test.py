@@ -55,6 +55,12 @@ REQUIRED_V1_3_0_RELEASE_FILES = (
     "nlp_shadow_impact_table.csv",
     "evidence_matrix.csv",
 )
+REQUIRED_TEAM_HANDOFF_FILES = (
+    "README_FOR_TEAM.md",
+    "README_TECHNICAL_APPENDIX.md",
+    "REPORT_WRITING_GUIDE.md",
+    "artifact_index.csv",
+)
 
 
 def main() -> int:
@@ -380,6 +386,21 @@ def main() -> int:
         for item in failures
     ):
         print("PASS v1.3.0 final integrated release-pack artifacts exist")
+
+    team_handoff_dir = (
+        REPO_ROOT
+        / "outputs"
+        / "reports"
+        / "team_report_handoff_pack"
+    )
+    for filename in REQUIRED_TEAM_HANDOFF_FILES:
+        if not (team_handoff_dir / filename).is_file():
+            failures.append(f"missing team handoff artifact: {filename}")
+    if not any(
+        item.startswith("missing team handoff artifact:")
+        for item in failures
+    ):
+        print("PASS team report handoff artifacts exist")
 
     if failures:
         print("\nSmoke test failed:")
