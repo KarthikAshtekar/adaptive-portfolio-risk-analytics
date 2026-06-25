@@ -8,6 +8,7 @@ import pandas as pd
 
 import scripts.validate_real_nlp_signal as validator
 from scripts.validate_real_nlp_signal import VERDICT_B, VERDICT_C
+from src.sentiment import REAL_RBI_MANIFEST_COLUMNS
 
 
 def _records(*, provider: str = "gdelt", document_type: str = "news") -> pd.DataFrame:
@@ -78,6 +79,15 @@ def _patch_validation_dependencies(monkeypatch) -> None:
     )
 
 
+def _empty_rbi_manifest(tmp_path: Path) -> Path:
+    corpus_dir = tmp_path / "rbi_real"
+    (corpus_dir / "raw").mkdir(parents=True)
+    (corpus_dir / "processed").mkdir(parents=True)
+    manifest = corpus_dir / "manifest.csv"
+    pd.DataFrame(columns=REAL_RBI_MANIFEST_COLUMNS).to_csv(manifest, index=False)
+    return manifest
+
+
 def test_validation_writes_daily_nlp_signal_and_monitoring_verdict_b(
     tmp_path: Path,
     monkeypatch,
@@ -85,6 +95,7 @@ def test_validation_writes_daily_nlp_signal_and_monitoring_verdict_b(
     _patch_validation_dependencies(monkeypatch)
     input_path = tmp_path / "gdelt_records.csv"
     output_dir = tmp_path / "report"
+    rbi_manifest = _empty_rbi_manifest(tmp_path)
     _records().to_csv(input_path, index=False)
 
     result = validator.validate_real_nlp_signal(
@@ -92,6 +103,8 @@ def test_validation_writes_daily_nlp_signal_and_monitoring_verdict_b(
         start_date="2026-04-01",
         end_date="2026-06-21",
         output_dir=output_dir,
+        multi_source_output_dir=tmp_path / "multi_source_report",
+        rbi_manifest_path=rbi_manifest,
     )
 
     summary = result["summary"]
@@ -153,6 +166,7 @@ def test_validation_remains_c_when_decision_coverage_is_zero(
     _patch_validation_dependencies(monkeypatch)
     input_path = tmp_path / "earnings_only_records.csv"
     output_dir = tmp_path / "report"
+    rbi_manifest = _empty_rbi_manifest(tmp_path)
     _records(provider="earnings_calls", document_type="earnings_call").to_csv(
         input_path,
         index=False,
@@ -163,6 +177,8 @@ def test_validation_remains_c_when_decision_coverage_is_zero(
         start_date="2026-04-01",
         end_date="2026-06-21",
         output_dir=output_dir,
+        multi_source_output_dir=tmp_path / "multi_source_report",
+        rbi_manifest_path=rbi_manifest,
     )
 
     assert result["summary"]["verdict"] == VERDICT_C

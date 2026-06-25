@@ -214,6 +214,9 @@ DEFAULT_GDELT_FIXTURE = (
 DEFAULT_API_NLP_OUTPUT_DIR = (
     project_root / "outputs" / "cache" / "dashboard_api_nlp"
 )
+PHASE_4A13_OUTPUT_DIR = (
+    project_root / "outputs" / "reports" / "phase_4a13_nlp_shadow_impact"
+)
 INSUFFICIENT_REAL_NLP_CAVEAT = (
     "NLP signal is monitoring-only due to insufficient real-data coverage."
 )
@@ -325,12 +328,14 @@ SENSITIVITY_OBJECTIVE_MAP = {
     "Sharpe": "sharpe",
     "Sortino": "sortino",
     "Calmar": "calmar",
+    "Pain Ratio": "pain_ratio",
+    "Pain Index": "pain_index",
     "Max Drawdown": "max_drawdown",
     "Final Value": "final_value",
     **RESEARCH_OBJECTIVES,
 }
 
-LOWER_IS_BETTER_METRICS = {"volatility"}
+LOWER_IS_BETTER_METRICS = {"volatility", "pain_index"}
 
 
 def ticker_label(ticker: str) -> str:
@@ -660,6 +665,7 @@ def render_key_takeaways(
     )
     sharpe_strategy, sharpe_value = _best_strategy_by_metric(performance_comparison_df, "sharpe")
     calmar_strategy, calmar_value = _best_strategy_by_metric(performance_comparison_df, "calmar")
+    pain_strategy, pain_value = _best_strategy_by_metric(performance_comparison_df, "pain_ratio")
     final_value_strategy, final_value = _best_strategy_by_metric(
         performance_comparison_df,
         "final_value",
@@ -677,6 +683,7 @@ def render_key_takeaways(
         ("Lowest volatility", f"{volatility_strategy} ({format_percent(volatility_value)})"),
         ("Highest Net Sharpe", f"{sharpe_strategy} ({format_decimal(sharpe_value)})"),
         ("Highest Net Calmar", f"{calmar_strategy} ({format_decimal(calmar_value)})"),
+        ("Highest Net Pain Ratio", f"{pain_strategy} ({format_decimal(pain_value)})"),
         (
             "Highest Net Final Value",
             f"{final_value_strategy} ({format_currency(final_value)})",
@@ -860,7 +867,7 @@ def _render_metric_cards(cards: list[tuple[str, str]]) -> None:
 
 
 def format_metric_for_card(metric: str, value: float) -> str:
-    if metric in {"cagr", "volatility", "max_drawdown"}:
+    if metric in {"cagr", "volatility", "max_drawdown", "pain_index"}:
         return format_percent(value)
     if metric == "final_value":
         return format_currency(value)
@@ -965,6 +972,8 @@ def _format_manager_decision_table(table: pd.DataFrame) -> pd.DataFrame:
             "sharpe",
             "sortino",
             "calmar",
+            "pain_ratio",
+            "pain_index",
             "max_drawdown",
             "final_value",
             "total_turnover",
@@ -972,9 +981,9 @@ def _format_manager_decision_table(table: pd.DataFrame) -> pd.DataFrame:
             "number_of_rebalances",
         ]
     ].copy()
-    for column in ["cagr", "max_drawdown"]:
+    for column in ["cagr", "max_drawdown", "pain_index"]:
         display[column] = display[column].map(format_percent)
-    for column in ["sharpe", "sortino", "calmar", "total_turnover"]:
+    for column in ["sharpe", "sortino", "calmar", "pain_ratio", "total_turnover"]:
         display[column] = display[column].map(format_decimal)
     for column in ["final_value", "total_transaction_cost"]:
         display[column] = display[column].map(format_currency)
@@ -1002,6 +1011,434 @@ def format_currency(value: float) -> str:
     if not _is_finite(value):
         return "n/a"
     return f"{float(value):,.0f}"
+
+
+def _read_optional_report_csv(path: Path) -> pd.DataFrame:
+    """Read an optional generated-report CSV without breaking dashboard startup."""
+    if not path.exists():
+        return pd.DataFrame()
+    try:
+        return pd.read_csv(path)
+    except Exception:
+        return pd.DataFrame()
+
+
+def _read_optional_report_text(path: Path) -> str:
+    if not path.exists():
+        return ""
+    try:
+        return path.read_text(encoding="utf-8")
+    except Exception:
+        return ""
+
+
+def _to_numeric_columns(frame: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
+    if not isinstance(frame, pd.DataFrame) or frame.empty:
+        return pd.DataFrame()
+    converted = frame.copy()
+    for column in columns:
+        if column in converted:
+            converted[column] = pd.to_numeric(converted[column], errors="coerce")
+    return converted
+
+
+def _metric_delta(
+    best_shadow: pd.Series | None,
+    hmm_reference: pd.Series | None,
+    metric: str,
+) -> float:
+    if best_shadow is None or hmm_reference is None:
+        return np.nan
+    best_value = pd.to_numeric(pd.Series([best_shadow.get(metric)]), errors="coerce").iloc[0]
+    reference_value = pd.to_numeric(
+        pd.Series([hmm_reference.get(metric)]),
+        errors="coerce",
+    ).iloc[0]
+    if not _is_finite(best_value) or not _is_finite(reference_value):
+        return np.nan
+    return float(best_value - reference_value)
+
+
+def load_nlp_shadow_impact_outputs(
+    output_dir: Path = PHASE_4A13_OUTPUT_DIR,
+) -> dict[str, object]:
+    """Load Phase 4A.13 shadow-impact report artifacts for dashboard display.
+
+    The generated artifacts are reporting-only. Loading them here does not alter
+    strategy selection, evidence gates, or portfolio allocation.
+    """
+    frames = {
+        "strategy_metrics": _read_optional_report_csv(
+            output_dir / "strategy_metrics.csv"
+        ),
+        "pain_ratio_comparison": _read_optional_report_csv(
+            output_dir / "pain_ratio_comparison.csv"
+        ),
+        "drawdown_comparison": _read_optional_report_csv(
+            output_dir / "drawdown_comparison.csv"
+        ),
+        "overlay_decisions": _read_optional_report_csv(
+            output_dir / "overlay_decisions.csv"
+        ),
+        "nlp_signal_alignment": _read_optional_report_csv(
+            output_dir / "nlp_signal_alignment.csv"
+        ),
+        "lookahead_diagnostics": _read_optional_report_csv(
+            output_dir / "lookahead_diagnostics.csv"
+        ),
+    }
+    numeric_columns = [
+        "cagr",
+        "volatility",
+        "sharpe",
+        "sortino",
+        "calmar",
+        "max_drawdown",
+        "pain_index",
+        "pain_ratio",
+        "total_turnover",
+        "transaction_cost_drag",
+        "total_transaction_cost",
+        "coverage_score",
+        "decision_lag_days",
+        "drawdown",
+    ]
+    frames = {
+        name: _to_numeric_columns(frame, numeric_columns)
+        for name, frame in frames.items()
+    }
+
+    strategy_metrics = frames["strategy_metrics"]
+    lookahead = frames["lookahead_diagnostics"]
+    available = not strategy_metrics.empty and not frames["pain_ratio_comparison"].empty
+    lookahead_passed = bool(
+        not lookahead.empty
+        and lookahead.get("lookahead_check_passed", pd.Series(dtype=bool))
+        .astype(str)
+        .str.lower()
+        .isin(["true", "1", "yes"])
+        .all()
+    )
+
+    best_shadow: pd.Series | None = None
+    hmm_reference: pd.Series | None = None
+    best_shadow_strategy = "Unavailable"
+    if available and "strategy" in strategy_metrics:
+        strategy_names = strategy_metrics["strategy"].astype(str)
+        shadow_rows = strategy_metrics.loc[
+            strategy_names.str.contains("NLP", case=False, na=False)
+        ]
+        if not shadow_rows.empty and "pain_ratio" in shadow_rows:
+            valid_shadow_rows = shadow_rows.dropna(subset=["pain_ratio"])
+            if not valid_shadow_rows.empty:
+                best_shadow = valid_shadow_rows.loc[
+                    valid_shadow_rows["pain_ratio"].idxmax()
+                ]
+                best_shadow_strategy = str(best_shadow.get("strategy", "Unavailable"))
+        hmm_rows = strategy_metrics.loc[strategy_names.eq("HMM Conservative")]
+        if not hmm_rows.empty:
+            hmm_reference = hmm_rows.iloc[0]
+
+    deltas = {
+        metric: _metric_delta(best_shadow, hmm_reference, metric)
+        for metric in [
+            "pain_ratio",
+            "pain_index",
+            "calmar",
+            "max_drawdown",
+            "cagr",
+            "total_turnover",
+            "transaction_cost_drag",
+        ]
+    }
+    positive_shadow = bool(_is_finite(deltas["pain_ratio"]) and deltas["pain_ratio"] > 0)
+    status = (
+        "Positive shadow impact, not allocation-active"
+        if available and lookahead_passed and positive_shadow
+        else "Monitoring only"
+    )
+
+    overlay_actions = frames["overlay_decisions"]
+    if not overlay_actions.empty and "overlay_action" in overlay_actions:
+        overlay_action_counts = (
+            overlay_actions["overlay_action"]
+            .astype(str)
+            .value_counts()
+            .rename_axis("overlay_action")
+            .reset_index(name="decision_count")
+        )
+    else:
+        overlay_action_counts = pd.DataFrame()
+
+    alignment = frames["nlp_signal_alignment"]
+    if not alignment.empty and "source_mix" in alignment:
+        source_mix_counts = (
+            alignment["source_mix"]
+            .astype(str)
+            .value_counts()
+            .rename_axis("source_mix")
+            .reset_index(name="decision_count")
+        )
+    else:
+        source_mix_counts = pd.DataFrame()
+
+    return {
+        **frames,
+        "available": available,
+        "output_dir": output_dir,
+        "summary_text": _read_optional_report_text(output_dir / "summary.md"),
+        "limitations_text": _read_optional_report_text(output_dir / "limitations.md"),
+        "report_path": output_dir / "report.html",
+        "lookahead_passed": lookahead_passed,
+        "status": status,
+        "production_allocation_active": False,
+        "best_shadow_strategy": best_shadow_strategy,
+        "deltas_vs_hmm": deltas,
+        "overlay_action_counts": overlay_action_counts,
+        "source_mix_counts": source_mix_counts,
+    }
+
+
+def _format_shadow_metric_table(frame: pd.DataFrame) -> pd.DataFrame:
+    if not isinstance(frame, pd.DataFrame) or frame.empty:
+        return pd.DataFrame()
+    display = frame.copy()
+    percent_columns = [
+        column
+        for column in display.columns
+        if column in {"cagr", "pain_index", "max_drawdown"}
+        or column.startswith("cagr_delta")
+        or column.startswith("pain_index_delta")
+        or column.startswith("max_drawdown_delta")
+    ]
+    decimal_columns = [
+        column
+        for column in display.columns
+        if column in {"pain_ratio", "calmar"}
+        or column.startswith("pain_ratio_delta")
+        or column.startswith("calmar_delta")
+    ]
+    for column in percent_columns:
+        display[column] = pd.to_numeric(display[column], errors="coerce").map(
+            format_percent
+        )
+    for column in decimal_columns:
+        display[column] = pd.to_numeric(display[column], errors="coerce").map(
+            format_decimal
+        )
+    return display
+
+
+def render_nlp_shadow_impact_manager_card(
+    payload: dict[str, object] | None = None,
+) -> None:
+    """Render the compact Manager View status for the shadow-only NLP experiment."""
+    shadow_payload = payload or load_nlp_shadow_impact_outputs()
+    st.header("NLP Shadow Impact")
+    if not shadow_payload.get("available"):
+        st.caption(
+            "No Phase 4A.13 NLP shadow-impact artifacts are available yet. "
+            "Run scripts/run_nlp_shadow_impact_experiment.py to populate this card."
+        )
+        return
+
+    deltas = shadow_payload.get("deltas_vs_hmm", {})
+    shadow_col1, shadow_col2, shadow_col3, shadow_col4 = st.columns(4)
+    shadow_col1.metric("NLP Allocation Status", str(shadow_payload["status"]))
+    shadow_col2.metric(
+        "Best Shadow Variant",
+        str(shadow_payload.get("best_shadow_strategy", "Unavailable")),
+    )
+    shadow_col3.metric(
+        "Pain Ratio Δ vs HMM",
+        format_decimal(deltas.get("pain_ratio", np.nan)),
+    )
+    shadow_col4.metric(
+        "Look-Ahead Check",
+        "Pass" if shadow_payload.get("lookahead_passed") else "Fail",
+    )
+    st.caption(
+        "Phase 4A.13 NLP overlays are shadow/experimental only. "
+        "Production allocation active: No."
+    )
+
+
+def _plot_shadow_drawdowns(drawdowns: pd.DataFrame) -> go.Figure:
+    frame = drawdowns.copy()
+    frame["date"] = pd.to_datetime(frame["date"], errors="coerce")
+    frame["drawdown"] = pd.to_numeric(frame["drawdown"], errors="coerce")
+    frame = frame.dropna(subset=["date", "drawdown"])
+    fig = go.Figure()
+    for strategy, group in frame.groupby("strategy"):
+        fig.add_trace(
+            go.Scatter(
+                x=group["date"],
+                y=group["drawdown"],
+                mode="lines",
+                name=str(strategy),
+            )
+        )
+    fig.update_layout(
+        title="Phase 4A.13 Shadow Strategy Drawdowns",
+        xaxis_title="Decision date",
+        yaxis_title="Drawdown",
+        yaxis_tickformat=".1%",
+        template="plotly_white",
+    )
+    return fig
+
+
+def render_nlp_shadow_impact_research_content(
+    payload: dict[str, object] | None = None,
+) -> None:
+    """Render Phase 4A.13 shadow-impact artifacts in the Research View."""
+    shadow_payload = payload or load_nlp_shadow_impact_outputs()
+    st.header("Phase 4A.13 — NLP Shadow Impact")
+    st.info(
+        "This section reads generated shadow-experiment artifacts only. "
+        "NLP remains monitoring-only and does not change production strategy selection."
+    )
+    if not shadow_payload.get("available"):
+        st.caption(
+            "Run scripts/run_nlp_shadow_impact_experiment.py to generate "
+            "Phase 4A.13 shadow-impact outputs."
+        )
+        return
+
+    deltas = shadow_payload.get("deltas_vs_hmm", {})
+    impact_col1, impact_col2, impact_col3, impact_col4 = st.columns(4)
+    impact_col1.metric("Shadow Status", str(shadow_payload["status"]))
+    impact_col2.metric(
+        "Pain Ratio Δ vs HMM",
+        format_decimal(deltas.get("pain_ratio", np.nan)),
+    )
+    impact_col3.metric(
+        "Pain Index Δ vs HMM",
+        format_percent(deltas.get("pain_index", np.nan)),
+    )
+    impact_col4.metric(
+        "Calmar Δ vs HMM",
+        format_decimal(deltas.get("calmar", np.nan)),
+    )
+
+    st.subheader("Pain Index / Pain Ratio Comparison")
+    st.dataframe(
+        _format_shadow_metric_table(shadow_payload["pain_ratio_comparison"]),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    st.subheader("NLP Shadow Strategy Comparison")
+    st.dataframe(
+        _format_shadow_metric_table(shadow_payload["strategy_metrics"]),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    drawdowns = shadow_payload["drawdown_comparison"]
+    if isinstance(drawdowns, pd.DataFrame) and not drawdowns.empty:
+        st.plotly_chart(_plot_shadow_drawdowns(drawdowns), use_container_width=True)
+
+    st.subheader("Overlay Action Timeline")
+    action_counts = shadow_payload["overlay_action_counts"]
+    if isinstance(action_counts, pd.DataFrame) and not action_counts.empty:
+        st.dataframe(action_counts, use_container_width=True, hide_index=True)
+    overlay_decisions = shadow_payload["overlay_decisions"]
+    timeline_columns = [
+        column
+        for column in [
+            "decision_date",
+            "overlay_variant",
+            "regime_label",
+            "nlp_label",
+            "allocation_before_overlay",
+            "allocation_after_overlay",
+            "overlay_action",
+            "lookahead_check_passed",
+        ]
+        if column in overlay_decisions
+    ]
+    st.dataframe(
+        overlay_decisions.loc[:, timeline_columns].tail(100),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    st.subheader("Source Mix Timeline")
+    source_mix_counts = shadow_payload["source_mix_counts"]
+    if isinstance(source_mix_counts, pd.DataFrame) and not source_mix_counts.empty:
+        st.dataframe(source_mix_counts, use_container_width=True, hide_index=True)
+    alignment = shadow_payload["nlp_signal_alignment"]
+    alignment_columns = [
+        column
+        for column in [
+            "decision_date",
+            "nlp_signal_date_used",
+            "source_mix",
+            "nlp_label",
+            "source_quality",
+            "coverage_score",
+            "lookahead_check_passed",
+        ]
+        if column in alignment
+    ]
+    st.dataframe(
+        alignment.loc[:, alignment_columns].tail(100),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+
+def render_nlp_shadow_impact_developer_content(
+    payload: dict[str, object] | None = None,
+) -> None:
+    """Render Phase 4A.13 look-ahead and overlay audit artifacts."""
+    shadow_payload = payload or load_nlp_shadow_impact_outputs()
+    if not shadow_payload.get("available"):
+        st.caption(
+            "No Phase 4A.13 NLP shadow-impact artifacts are available. "
+            f"Expected output directory: {shadow_payload.get('output_dir')}"
+        )
+        return
+
+    st.write("Input/output paths")
+    st.json(
+        {
+            "output_dir": str(shadow_payload["output_dir"]),
+            "report_html": str(shadow_payload["report_path"]),
+            "production_allocation_active": shadow_payload[
+                "production_allocation_active"
+            ],
+        }
+    )
+    st.metric(
+        "Look-ahead diagnostics",
+        "Pass" if shadow_payload.get("lookahead_passed") else "Fail",
+    )
+    st.write("Look-ahead diagnostics")
+    st.dataframe(
+        shadow_payload["lookahead_diagnostics"],
+        use_container_width=True,
+        hide_index=True,
+    )
+    st.write("Overlay decision audit table")
+    st.dataframe(
+        shadow_payload["overlay_decisions"],
+        use_container_width=True,
+        hide_index=True,
+    )
+    st.write("NLP signal lag checks")
+    st.dataframe(
+        shadow_payload["nlp_signal_alignment"],
+        use_container_width=True,
+        hide_index=True,
+    )
+    render_dataframe_download(
+        "Download Phase 4A.13 Overlay Decisions",
+        shadow_payload["overlay_decisions"],
+        "phase_4a13_overlay_decisions.csv",
+        key="download_phase_4a13_overlay_decisions",
+    )
 
 
 def format_days(value: float) -> str:
@@ -2253,7 +2690,7 @@ def build_api_nlp_monitoring_results(
             "reaction_warning_rate": reaction_warning_rate,
             "source_quality_distribution": source_quality_distribution,
             "caveat": warnings[0] if warnings else (
-                "NLP remains monitoring-only in v1.2.5."
+                "NLP remains monitoring-only in v1.2.8."
             ),
             "important_warning": " ".join(warnings)
             or (
@@ -3153,7 +3590,16 @@ def render_dashboard_tabs(
         st.header("Backtest Results")
         comparison_metric = st.selectbox(
             "Comparison Metric",
-            ["cagr", "sharpe", "sortino", "volatility", "max_drawdown", "calmar"],
+            [
+                "cagr",
+                "sharpe",
+                "sortino",
+                "volatility",
+                "max_drawdown",
+                "calmar",
+                "pain_ratio",
+                "pain_index",
+            ],
             index=1,
             key="tab_comparison_metric",
         )
@@ -3369,6 +3815,7 @@ def render_dashboard_tabs(
         render_sentiment_research_content(sentiment_results)
         render_rbi_macro_research_content(rbi_macro_sentiment_results)
         render_api_nlp_research_content(api_nlp_results)
+        render_nlp_shadow_impact_research_content()
 
     with tabs[5]:
         render_adaptive_allocation_content(
@@ -4564,11 +5011,12 @@ def render_adaptive_allocation_content(
     st.caption(
         f"Defensive sleeve: {format_defensive_source(defensive_metadata)}"
     )
-    metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
+    metric_col1, metric_col2, metric_col3, metric_col4, metric_col5 = st.columns(5)
     metric_col1.metric("Adaptive Net CAGR", format_percent(metrics.get("cagr")))
     metric_col2.metric("Adaptive Net Sharpe", format_decimal(metrics.get("sharpe")))
     metric_col3.metric("Adaptive Net Calmar", format_decimal(metrics.get("calmar")))
-    metric_col4.metric(
+    metric_col4.metric("Adaptive Net Pain Ratio", format_decimal(metrics.get("pain_ratio")))
+    metric_col5.metric(
         "Adaptive Max Drawdown",
         format_percent(metrics.get("max_drawdown")),
     )
@@ -5507,6 +5955,7 @@ def render_manager_view(
         "Low-quality record details, provider keys, raw records, transcripts, "
         "and model internals are not exposed in Manager View."
     )
+    render_nlp_shadow_impact_manager_card()
 
     st.header("Tradeoff Table")
     st.dataframe(
@@ -5828,6 +6277,12 @@ def render_developer_view(
                 api_nlp_results.get("composite_index", pd.DataFrame()),
                 use_container_width=True,
             )
+
+    with st.expander(
+        "2D. Phase 4A.13 NLP Shadow Impact Audit",
+        expanded=False,
+    ):
+        render_nlp_shadow_impact_developer_content()
 
     with st.expander("3. Raw CPCV Diagnostics", expanded=False):
         if robustness_payload is None:

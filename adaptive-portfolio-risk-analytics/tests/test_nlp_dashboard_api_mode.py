@@ -48,6 +48,11 @@ def test_research_and_developer_views_expose_nlp_diagnostics() -> None:
     assert "Possible reaction-data records" in APP_SOURCE
     assert "FinBERT and lexicon fallback metadata" in APP_SOURCE
     assert "Ex-ante validation and timestamp alignment checks" in APP_SOURCE
+    assert "Phase 4A.13 — NLP Shadow Impact" in APP_SOURCE
+    assert "Pain Index / Pain Ratio Comparison" in APP_SOURCE
+    assert "NLP Shadow Strategy Comparison" in APP_SOURCE
+    assert "Phase 4A.13 NLP Shadow Impact Audit" in APP_SOURCE
+    assert "Overlay decision audit table" in APP_SOURCE
 
 
 def test_dashboard_nlp_builder_runs_offline_with_fixture_providers(

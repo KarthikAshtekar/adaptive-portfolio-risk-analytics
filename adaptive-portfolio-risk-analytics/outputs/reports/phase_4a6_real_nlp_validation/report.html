@@ -33,20 +33,20 @@
   </header>
   <section data-contract-section="technical-summary">
     <h2>Technical Summary</h2>
-    <div class="status"><strong>B. Useful for monitoring only</strong><br>GDELT/news-only NLP is a real news monitoring signal, not an allocation signal. Allocation impact: None.</div>
+    <div class="status"><strong>B. Useful for monitoring only</strong><br>RBI + news NLP is useful for multi-source monitoring only. Allocation impact: None.</div>
     <div class="metric-grid">
       <div class="metric"><span>Real records</span><strong>50</strong></div>
-      <div class="metric"><span>Coverage quality</span><strong>Limited</strong></div>
+      <div class="metric"><span>Coverage quality</span><strong>Sufficient</strong></div>
       <div class="metric"><span>Reaction warnings</span><strong>0.0%</strong></div>
-      <div class="metric"><span>Decision coverage</span><strong>93.1%</strong></div>
-      <div class="metric"><span>Valid label dates</span><strong>54</strong></div>
+      <div class="metric"><span>Decision coverage</span><strong>98.3%</strong></div>
+      <div class="metric"><span>Valid label dates</span><strong>57</strong></div>
       <div class="metric"><span>Allocation impact</span><strong>None</strong></div>
     </div>
   </section>
   <section data-contract-section="key-findings">
     <h2>Real news monitoring signal is active</h2>
     <p>The harness found 50 real provider records. Valid decision-lagged news labels are available for monitoring, but source diversity and allocation-testing evidence remain limited.</p>
-    <p>GDELT-only NLP is a real news monitoring signal, not an allocation signal. Source mix: {&quot;news_only&quot;: 54, &quot;none&quot;: 4}. Insufficient reasons: {&quot;decision_lag_no_prior_signal&quot;: 1, &quot;no_valid_nlp_source_in_rolling_window&quot;: 3}.</p>
+    <p>GDELT-only NLP is a real news monitoring signal, not an allocation signal. Source mix: {&quot;none&quot;: 1, &quot;rbi_and_news&quot;: 54, &quot;rbi_only&quot;: 3}. Insufficient reasons: {&quot;decision_lag_no_prior_signal&quot;: 1, &quot;no_valid_nlp_source_in_rolling_window&quot;: 3}.</p>
     <p>The chart shows each evidence dimension relative to its configured minimum. Values below the reference line are not decision-eligible.</p>
     <figure>
       <img src="charts/coverage_threshold_attainment.png" alt="NLP validation threshold attainment">
@@ -80,7 +80,7 @@
     </tr>
     <tr>
       <td>decision_label_coverage</td>
-      <td>0.931034</td>
+      <td>0.982759</td>
       <td>0.20</td>
       <td>True</td>
     </tr>
@@ -98,15 +98,15 @@
     </tr>
     <tr>
       <td>valid_decision_label_dates</td>
-      <td>54.000000</td>
+      <td>57.000000</td>
       <td>1.00</td>
       <td>True</td>
     </tr>
     <tr>
       <td>source_family_count</td>
-      <td>1.000000</td>
+      <td>2.000000</td>
       <td>2.00</td>
-      <td>False</td>
+      <td>True</td>
     </tr>
   </tbody>
 </table></div>
@@ -157,19 +157,19 @@
     </tr>
     <tr>
       <td>9. What is the coverage ratio?</td>
-      <td>93.1%</td>
+      <td>98.3%</td>
     </tr>
     <tr>
       <td>10. What is the composite NLP risk label distribution?</td>
-      <td>{"insufficient_nlp_data": 4, "nlp_neutral": 46, "nlp_risk_on": 8}</td>
+      <td>{"insufficient_nlp_data": 1, "nlp_neutral": 52, "nlp_risk_on": 5}</td>
     </tr>
     <tr>
       <td>11. What is the source mix?</td>
-      <td>{"news_only": 54, "none": 4}</td>
+      <td>{"none": 1, "rbi_and_news": 54, "rbi_only": 3}</td>
     </tr>
     <tr>
       <td>12. How many valid decision-label dates exist?</td>
-      <td>54</td>
+      <td>57</td>
     </tr>
     <tr>
       <td>13. What are the insufficient reasons?</td>

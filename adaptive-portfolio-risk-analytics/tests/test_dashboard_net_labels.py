@@ -8,6 +8,8 @@ def test_headline_return_metrics_have_explicit_net_labels() -> None:
     assert net_metric_label("sharpe") == "Net Sharpe"
     assert net_metric_label("sortino") == "Net Sortino"
     assert net_metric_label("calmar") == "Net Calmar"
+    assert net_metric_label("pain_ratio") == "Net Pain Ratio"
+    assert net_metric_label("pain_index") == "Pain Index"
     assert net_metric_label("final_value") == "Net Final Value"
     assert net_metric_label("excess_cagr") == "Net Excess CAGR"
     assert (

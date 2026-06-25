@@ -5,7 +5,7 @@ A professional-grade quantitative portfolio optimization and risk analytics syst
 for institutional portfolio management and research.
 """
 
-__version__ = "1.2.5"
+__version__ = "1.3.0"
 __author__ = "Quantitative Finance Team"
 __email__ = "team@example.com"
 

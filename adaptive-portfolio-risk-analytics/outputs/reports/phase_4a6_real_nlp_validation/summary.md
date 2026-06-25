@@ -1,24 +1,24 @@
 # Phase 4A.6 Real NLP Signal Validation
 
-Generated: 2026-06-23
+Generated: 2026-06-25
 
 ## Technical summary
 
 **B. Useful for monitoring only**
 
-GDELT/news-only NLP is a real news monitoring signal, not an allocation signal. Allocation impact: None.
+RBI + news NLP is useful for multi-source monitoring only. Allocation impact: None.
 
 - Real provider records: 50.
-- Real RBI documents: 0.
+- Real RBI documents: 34.
 - Real GDELT/news records: 50.
-- Coverage quality: limited.
-- Decision-label coverage: 93.1%.
-- Valid decision-label dates: 54.
-- Source mix: `{"news_only": 54, "none": 4}`.
-- Source families: `["news"]`.
-- RBI/news agreement: N/A.
-- Multi-source monitoring active: No.
-- RBI manual action required: Yes.
+- Coverage quality: sufficient.
+- Decision-label coverage: 98.3%.
+- Valid decision-label dates: 57.
+- Source mix: `{"none": 1, "rbi_and_news": 54, "rbi_only": 3}`.
+- Source families: `["news", "rbi_macro"]`.
+- RBI/news agreement: 85.2%.
+- Multi-source monitoring active: Yes.
+- RBI manual action required: No.
 - Insufficient reasons: `{"decision_lag_no_prior_signal": 1, "no_valid_nlp_source_in_rolling_window": 3}`.
 - Source-quality distribution: `{"high": 33, "low": 0, "medium": 17, "unknown": 0}`.
 - Reaction-warning rate: 0.0%.

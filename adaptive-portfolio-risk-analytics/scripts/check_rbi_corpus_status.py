@@ -17,9 +17,51 @@ from src.sentiment import validate_rbi_manifest  # noqa: E402
 
 
 DEFAULT_MANIFEST = REPO_ROOT / "data" / "sentiment" / "rbi_real" / "manifest.csv"
+DEFAULT_FETCH_DIAGNOSTICS = (
+    REPO_ROOT / "outputs" / "reports" / "rbi_official_fetcher" / "fetch_diagnostics.csv"
+)
 MIN_VALID_DOCUMENTS = 10
 MIN_DISTINCT_PUBLICATION_DATES = 6
 MIN_DOCUMENT_TYPES = 2
+MIN_POLICY_CORE_DOCUMENTS = 4
+
+
+def _fetch_index_page_diagnostics(path: Path = DEFAULT_FETCH_DIAGNOSTICS) -> dict[str, object]:
+    if not path.is_file():
+        return {
+            "skipped_index_pages": 0,
+            "index_page_reason_counts": {},
+        }
+    try:
+        frame = pd.read_csv(path)
+    except Exception:
+        return {
+            "skipped_index_pages": 0,
+            "index_page_reason_counts": {},
+        }
+    if frame.empty or "is_index_page" not in frame:
+        return {
+            "skipped_index_pages": 0,
+            "index_page_reason_counts": {},
+        }
+    index_mask = frame["is_index_page"].astype(str).str.lower().isin(
+        {"true", "1", "yes"}
+    )
+    skipped = frame.loc[index_mask].copy()
+    reason_counts = (
+        skipped.get("index_page_reason", pd.Series(dtype="string"))
+        .fillna("")
+        .astype(str)
+        .replace("", "unspecified")
+        .value_counts()
+        .to_dict()
+        if not skipped.empty
+        else {}
+    )
+    return {
+        "skipped_index_pages": int(len(skipped)),
+        "index_page_reason_counts": reason_counts,
+    }
 
 
 def build_rbi_corpus_status(
@@ -42,7 +84,19 @@ def build_rbi_corpus_status(
         if not valid.empty
         else {}
     )
+    index_diagnostics = _fetch_index_page_diagnostics()
     document_type_count = len(document_type_counts)
+    mpc_minutes_count = int(document_type_counts.get("mpc_minutes", 0))
+    monetary_policy_statement_count = int(
+        document_type_counts.get("monetary_policy_statement", 0)
+    )
+    governor_speech_count = int(document_type_counts.get("governor_speech", 0))
+    financial_stability_report_count = int(
+        document_type_counts.get("financial_stability_report", 0)
+    )
+    policy_core_documents = int(
+        mpc_minutes_count + monetary_policy_statement_count
+    )
     status = {
         "manifest_path": str(Path(manifest_path)),
         "valid_document_count": int(len(valid)),
@@ -50,6 +104,11 @@ def build_rbi_corpus_status(
         "distinct_publication_dates": int(publication_dates.dt.normalize().nunique()),
         "document_type_count": int(document_type_count),
         "document_type_counts": document_type_counts,
+        "mpc_minutes_count": mpc_minutes_count,
+        "monetary_policy_statement_count": monetary_policy_statement_count,
+        "governor_speech_count": governor_speech_count,
+        "financial_stability_report_count": financial_stability_report_count,
+        "policy_core_documents": policy_core_documents,
         "date_start": publication_dates.min().date().isoformat()
         if not publication_dates.empty
         else "",
@@ -58,11 +117,14 @@ def build_rbi_corpus_status(
         else "",
         "word_count": int(validation["summary"].get("total_word_count", 0)),
         "sentence_count": int(validation["summary"].get("total_sentence_count", 0)),
+        "skipped_index_pages": int(index_diagnostics["skipped_index_pages"]),
+        "index_page_reason_counts": index_diagnostics["index_page_reason_counts"],
     }
     status["minimum_requirements_passed"] = bool(
         status["valid_document_count"] >= MIN_VALID_DOCUMENTS
         and status["distinct_publication_dates"] >= MIN_DISTINCT_PUBLICATION_DATES
         and status["document_type_count"] >= MIN_DOCUMENT_TYPES
+        and status["policy_core_documents"] >= MIN_POLICY_CORE_DOCUMENTS
     )
     status["manual_action_required"] = not bool(
         status["minimum_requirements_passed"]
@@ -94,6 +156,36 @@ def build_rbi_corpus_status(
             "passes": status["document_type_count"] >= MIN_DOCUMENT_TYPES,
         },
         {
+            "metric": "policy_core_documents",
+            "actual": status["policy_core_documents"],
+            "threshold": MIN_POLICY_CORE_DOCUMENTS,
+            "passes": status["policy_core_documents"] >= MIN_POLICY_CORE_DOCUMENTS,
+        },
+        {
+            "metric": "mpc_minutes_count",
+            "actual": status["mpc_minutes_count"],
+            "threshold": "",
+            "passes": True,
+        },
+        {
+            "metric": "monetary_policy_statement_count",
+            "actual": status["monetary_policy_statement_count"],
+            "threshold": "",
+            "passes": True,
+        },
+        {
+            "metric": "governor_speech_count",
+            "actual": status["governor_speech_count"],
+            "threshold": "",
+            "passes": True,
+        },
+        {
+            "metric": "financial_stability_report_count",
+            "actual": status["financial_stability_report_count"],
+            "threshold": "",
+            "passes": True,
+        },
+        {
             "metric": "word_count",
             "actual": status["word_count"],
             "threshold": 1,
@@ -104,6 +196,12 @@ def build_rbi_corpus_status(
             "actual": status["sentence_count"],
             "threshold": 1,
             "passes": status["sentence_count"] > 0,
+        },
+        {
+            "metric": "skipped_index_pages",
+            "actual": status["skipped_index_pages"],
+            "threshold": "",
+            "passes": True,
         },
         {
             "metric": "minimum_requirements_passed",
@@ -123,6 +221,16 @@ def build_rbi_corpus_status(
             {
                 "metric": "document_type_count_detail",
                 "category": document_type,
+                "actual": int(count),
+                "threshold": "",
+                "passes": True,
+            }
+        )
+    for reason, count in status["index_page_reason_counts"].items():
+        rows.append(
+            {
+                "metric": "index_page_reason_count",
+                "category": reason,
                 "actual": int(count),
                 "threshold": "",
                 "passes": True,
@@ -159,6 +267,17 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Invalid document count: {status['invalid_document_count']}")
     print(f"Distinct publication dates: {status['distinct_publication_dates']}")
     print(f"Document type counts: {status['document_type_counts']}")
+    print(f"MPC minutes count: {status['mpc_minutes_count']}")
+    print(
+        "Monetary policy statement count: "
+        f"{status['monetary_policy_statement_count']}"
+    )
+    print(f"Governor speech count: {status['governor_speech_count']}")
+    print(
+        "Financial stability report count: "
+        f"{status['financial_stability_report_count']}"
+    )
+    print(f"Policy core documents: {status['policy_core_documents']}")
     print(
         "Date range: "
         + (
@@ -169,6 +288,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     print(f"Word count: {status['word_count']}")
     print(f"Sentence count: {status['sentence_count']}")
+    print(f"Skipped index pages: {status['skipped_index_pages']}")
+    print(f"Index page reason counts: {status['index_page_reason_counts']}")
     print(
         "Minimum requirements passed: "
         + ("yes" if status["minimum_requirements_passed"] else "no")

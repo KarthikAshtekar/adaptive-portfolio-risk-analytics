@@ -1,6 +1,6 @@
 # Phase 4A.6 Source Notes
 
-Generated: 2026-06-23
+Generated: 2026-06-25
 
 ## Report contract
 

@@ -88,6 +88,8 @@ def test_performance_comparison_table_has_expected_columns(
         "volatility",
         "max_drawdown",
         "calmar",
+        "pain_index",
+        "pain_ratio",
         "var_95",
         "cvar_95",
         "final_value",

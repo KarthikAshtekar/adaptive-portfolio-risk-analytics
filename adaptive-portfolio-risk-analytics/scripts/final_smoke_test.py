@@ -1,4 +1,4 @@
-"""Lightweight v1.2.5 project-freeze smoke checks."""
+"""Lightweight v1.3.0 project-release smoke checks."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-VERSION_LABEL = "v1.2.5 — RBI + News Multi-Source NLP Monitoring"
+VERSION_LABEL = "v1.3.0 — Final Integrated Portfolio Risk Analytics Release"
 REQUIRED_MODULES = (
     "src.analytics",
     "src.backtesting",
@@ -34,6 +34,26 @@ REQUIRED_REPORTS = (
     "viva_questions_and_answers.md",
     "resume_bullets.md",
     "final_validation_checklist.md",
+)
+REQUIRED_V1_3_0_RELEASE_FILES = (
+    "executive_summary.md",
+    "final_report.md",
+    "final_report.html",
+    "technical_methodology.md",
+    "portfolio_results.md",
+    "pain_ratio_analysis.md",
+    "nlp_shadow_impact.md",
+    "risk_analytics_summary.md",
+    "strategy_selection_summary.md",
+    "dashboard_guide.md",
+    "reproducibility_commands.md",
+    "limitations.md",
+    "viva_questions_and_answers.md",
+    "final_metrics_table.csv",
+    "strategy_ranking_table.csv",
+    "pain_ratio_comparison.csv",
+    "nlp_shadow_impact_table.csv",
+    "evidence_matrix.csv",
 )
 
 
@@ -71,9 +91,9 @@ def main() -> int:
     readme_path = REPO_ROOT / "README.md"
     readme = readme_path.read_text(encoding="utf-8") if readme_path.is_file() else ""
     if VERSION_LABEL not in readme:
-        failures.append("README does not contain the v1.2.5 label")
+        failures.append("README does not contain the v1.3.0 label")
     else:
-        print("PASS README contains v1.2.5 label")
+        print("PASS README contains v1.3.0 label")
 
     phase4a_dir = (
         REPO_ROOT
@@ -255,6 +275,7 @@ def main() -> int:
         "scripts/bootstrap_rbi_real_corpus.py",
         "scripts/import_rbi_text_document.py",
         "scripts/check_rbi_corpus_status.py",
+        "scripts/fetch_rbi_documents.py",
         "data/sentiment/rbi_real/manifest_template.csv",
         "data/sentiment/rbi_real/intake_notes.md",
         "data/sentiment/earnings_calls/manifest_template.csv",
@@ -269,6 +290,96 @@ def main() -> int:
         item.startswith("missing NLP intake") for item in failures
     ):
         print("PASS Phase 4A.7 intake workflow artifacts exist")
+
+    fetcher_dir = (
+        REPO_ROOT
+        / "outputs"
+        / "reports"
+        / "rbi_official_fetcher"
+    )
+    if fetcher_dir.is_dir():
+        for filename in (
+            "fetch_summary.md",
+            "fetch_diagnostics.csv",
+            "manual_fallback_required.csv",
+            "downloaded_documents.csv",
+        ):
+            if not (fetcher_dir / filename).is_file():
+                failures.append(f"missing RBI fetcher artifact: {filename}")
+        if not any(
+            item.startswith("missing RBI fetcher artifact:")
+            for item in failures
+        ):
+            print("PASS Phase 4A.9 RBI fetcher artifacts exist")
+
+    phase4a12_dir = (
+        REPO_ROOT
+        / "outputs"
+        / "reports"
+        / "phase_4a12_nlp_monitoring_final_pack"
+    )
+    for filename in (
+        "report.html",
+        "summary.md",
+        "technical_methodology.md",
+        "data_sources.md",
+        "validation_results.md",
+        "limitations.md",
+        "reproducibility_commands.md",
+        "dashboard_guide.md",
+        "source_mix_summary.csv",
+        "rbi_corpus_summary.csv",
+        "news_signal_summary.csv",
+        "daily_nlp_signal_snapshot.csv",
+    ):
+        if not (phase4a12_dir / filename).is_file():
+            failures.append(f"missing Phase 4A.12 final-pack artifact: {filename}")
+    if not any(
+        item.startswith("missing Phase 4A.12 final-pack artifact:")
+        for item in failures
+    ):
+        print("PASS Phase 4A.12 NLP monitoring final-pack artifacts exist")
+
+    phase4a13_dir = (
+        REPO_ROOT
+        / "outputs"
+        / "reports"
+        / "phase_4a13_nlp_shadow_impact"
+    )
+    if phase4a13_dir.is_dir():
+        for filename in (
+            "report.html",
+            "summary.md",
+            "strategy_metrics.csv",
+            "pain_ratio_comparison.csv",
+            "drawdown_comparison.csv",
+            "overlay_decisions.csv",
+            "nlp_signal_alignment.csv",
+            "lookahead_diagnostics.csv",
+            "limitations.md",
+        ):
+            if not (phase4a13_dir / filename).is_file():
+                failures.append(f"missing Phase 4A.13 artifact: {filename}")
+        if not any(
+            item.startswith("missing Phase 4A.13 artifact:")
+            for item in failures
+        ):
+            print("PASS Phase 4A.13 NLP shadow-impact artifacts exist")
+
+    v1_3_0_dir = (
+        REPO_ROOT
+        / "outputs"
+        / "reports"
+        / "v1_3_0_final_integrated_release"
+    )
+    for filename in REQUIRED_V1_3_0_RELEASE_FILES:
+        if not (v1_3_0_dir / filename).is_file():
+            failures.append(f"missing v1.3.0 final release artifact: {filename}")
+    if not any(
+        item.startswith("missing v1.3.0 final release artifact:")
+        for item in failures
+    ):
+        print("PASS v1.3.0 final integrated release-pack artifacts exist")
 
     if failures:
         print("\nSmoke test failed:")

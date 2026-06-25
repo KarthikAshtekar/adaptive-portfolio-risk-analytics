@@ -344,12 +344,9 @@ class RollingBacktester(BaseBacktester):
             net_portfolio_values=portfolio_values_s,
         )
 
+        summary_metrics = PerformanceAnalytics.summary_table(portfolio_returns_s)
         performance_metrics = {
-            "cumulative_return": PerformanceAnalytics.cumulative_return(portfolio_returns_s),
-            "cagr": PerformanceAnalytics.annualized_return(portfolio_returns_s),
-            "sharpe": PerformanceAnalytics.sharpe_ratio(portfolio_returns_s),
-            "sortino": PerformanceAnalytics.sortino_ratio(portfolio_returns_s),
-            "volatility": RiskAnalytics.volatility(portfolio_returns_s),
+            **summary_metrics,
             "max_drawdown": float(drawdown.min()),
             "final_value": float(portfolio_values_s.iloc[-1]),
             "transaction_cost": float(rebalance_summary["total_transaction_cost"]),

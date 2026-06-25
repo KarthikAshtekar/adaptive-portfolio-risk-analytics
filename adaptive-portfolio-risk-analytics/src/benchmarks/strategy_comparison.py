@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-from src.analytics import PerformanceAnalytics, RiskAnalytics
+from src.analytics import PerformanceAnalytics
 from src.backtesting import RollingBacktester
 from src.backtesting.transaction_costs import TransactionCostModel
 
@@ -82,6 +82,8 @@ def build_performance_comparison_table(
             "volatility": summary["volatility"],
             "max_drawdown": summary["max_drawdown"],
             "calmar": summary["calmar"],
+            "pain_index": summary["pain_index"],
+            "pain_ratio": summary["pain_ratio"],
             "var_95": summary["var_95"],
             "cvar_95": summary["cvar_95"],
             "final_value": float(portfolio_values.iloc[-1]),

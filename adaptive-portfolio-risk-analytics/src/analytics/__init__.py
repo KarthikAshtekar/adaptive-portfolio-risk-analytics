@@ -1,7 +1,7 @@
 """Analytics exports."""
 
-from .risk_metrics import RiskAnalytics
-from .performance_metrics import PerformanceAnalytics
+from .risk_metrics import RiskAnalytics, compute_drawdown_series, compute_pain_index
+from .performance_metrics import PerformanceAnalytics, compute_pain_ratio
 from .active_risk_metrics import (
     calculate_active_risk_metrics,
     calculate_beta,
@@ -46,6 +46,9 @@ from .var_es import (
 __all__ = [
     "RiskAnalytics",
     "PerformanceAnalytics",
+    "compute_drawdown_series",
+    "compute_pain_index",
+    "compute_pain_ratio",
     "calculate_active_risk_metrics",
     "calculate_beta",
     "calculate_concentration_metrics",

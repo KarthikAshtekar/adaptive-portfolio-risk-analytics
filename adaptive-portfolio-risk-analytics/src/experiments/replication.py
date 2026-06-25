@@ -433,6 +433,8 @@ def summarize_replication_results(
             {
                 "fixed_objective": best[objective],
                 "fixed_calmar": best["calmar"],
+                "fixed_pain_index": best.get("pain_index", np.nan),
+                "fixed_pain_ratio": best.get("pain_ratio", np.nan),
                 "fixed_max_drawdown": best["max_drawdown"],
                 "fixed_final_value": best["final_value"],
                 "fixed_cagr": best["cagr"],
@@ -452,6 +454,18 @@ def summarize_replication_results(
         > pd.to_numeric(paired["fixed_objective"], errors="coerce")
     )
     paired["calmar_win"] = paired["calmar"] > paired["fixed_calmar"]
+    if "pain_index" not in paired:
+        paired["pain_index"] = np.nan
+    if "pain_ratio" not in paired:
+        paired["pain_ratio"] = np.nan
+    paired["pain_index_win"] = pd.to_numeric(
+        paired["pain_index"],
+        errors="coerce",
+    ) < pd.to_numeric(paired["fixed_pain_index"], errors="coerce")
+    paired["pain_ratio_win"] = pd.to_numeric(
+        paired["pain_ratio"],
+        errors="coerce",
+    ) > pd.to_numeric(paired["fixed_pain_ratio"], errors="coerce")
     paired["drawdown_win"] = paired["max_drawdown"] > paired["fixed_max_drawdown"]
     paired["final_value_win"] = paired["final_value"] > paired["fixed_final_value"]
     paired["stress_protection_win"] = (
@@ -503,9 +517,17 @@ def summarize_replication_results(
                 "selected_objective": objective,
                 "selected_objective_win_rate": objective_win_rate,
                 "win_rate_by_calmar": float(group["calmar_win"].mean()),
+                "win_rate_by_pain_index": float(group["pain_index_win"].mean()),
+                "win_rate_by_pain_ratio": float(group["pain_ratio_win"].mean()),
                 "win_rate_by_max_drawdown": drawdown_win_rate,
                 "win_rate_by_final_value": float(group["final_value_win"].mean()),
                 "average_calmar": float(group["calmar"].mean()),
+                "average_pain_index": float(
+                    pd.to_numeric(group.get("pain_index"), errors="coerce").mean()
+                ),
+                "average_pain_ratio": float(
+                    pd.to_numeric(group.get("pain_ratio"), errors="coerce").mean()
+                ),
                 "median_calmar": float(group["calmar"].median()),
                 "worst_case_calmar": float(group["calmar"].min()),
                 "average_max_drawdown": float(group["max_drawdown"].mean()),
@@ -645,6 +667,8 @@ def run_policy_tuning_study(
                     "regime_source": source,
                     "cagr": summary["cagr"],
                     "calmar": summary["calmar"],
+                    "pain_index": summary["pain_index"],
+                    "pain_ratio": summary["pain_ratio"],
                     "max_drawdown": summary["max_drawdown"],
                     "final_value": summary["final_value"],
                     "recovery_duration": summary["recovery_duration"],
@@ -1041,6 +1065,8 @@ def _summarize_backtest(
         "sharpe": metrics["sharpe"],
         "sortino": metrics["sortino"],
         "calmar": metrics["calmar"],
+        "pain_index": metrics["pain_index"],
+        "pain_ratio": metrics["pain_ratio"],
         "max_drawdown": metrics["max_drawdown"],
         "final_value": float(values.iloc[-1]),
         "var_95": metrics["var_95"],
@@ -1328,6 +1354,7 @@ def _validate_objective(objective: str) -> None:
         "sharpe",
         "sortino",
         "calmar",
+        "pain_ratio",
         "max_drawdown",
         "final_value",
     }:
