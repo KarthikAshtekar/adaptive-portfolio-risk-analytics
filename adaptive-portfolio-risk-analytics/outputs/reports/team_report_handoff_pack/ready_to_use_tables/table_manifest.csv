@@ -1,0 +1,21 @@
+file,source,report_section,main_use,key_insight
+final_metrics_table.csv,outputs/reports/v1_3_0_final_integrated_release/final_metrics_table.csv,Final recommendation,Compact final strategy metrics,HERC/HMM/Rule/NLP shadow roles visible in one table
+strategy_ranking_table.csv,outputs/reports/v1_3_0_final_integrated_release/strategy_ranking_table.csv,Final recommendation,Ranked strategy role summary,HERC core; HMM overlay; Rule fallback; NLP shadow only
+evidence_matrix.csv,outputs/reports/v1_3_0_final_integrated_release/evidence_matrix.csv,Strategy selection,Evidence and production-status matrix,Production decisions are separate from shadow evidence
+pain_ratio_comparison.csv,outputs/reports/v1_3_0_final_integrated_release/pain_ratio_comparison.csv,Pain Ratio,Drawdown-experience comparison,NLP Confirmation improves Pain Ratio but worsens Pain Index/max drawdown
+nlp_shadow_impact_table.csv,outputs/reports/v1_3_0_final_integrated_release/nlp_shadow_impact_table.csv,NLP shadow impact,Metric deltas vs HMM Conservative,Positive shadow impact but not production-active
+fixed_vs_adaptive_metrics_comparison.csv,outputs/reports/post_p0_adaptive_validation/metrics_comparison.csv,Fixed vs adaptive,Full metric comparison,Adaptive improves drawdown efficiency but sacrifices growth
+adaptive_vs_fixed_summary.csv,outputs/reports/post_p0_adaptive_validation/adaptive_vs_fixed.csv,Fixed vs adaptive,Best adaptive vs best fixed deltas,HMM Conservative controls drawdown better than HERC but has lower CAGR
+cpcv_robustness_summary.csv,outputs/reports/post_p0_adaptive_validation/cpcv_summary.csv,CPCV,Robustness ranking and fold coverage,Rule Conservative has strong robustness evidence with limited fold coverage
+stress_period_comparison.csv,outputs/reports/post_p0_adaptive_validation/stress_period_comparison.csv,Stress testing,Stress-window risk metrics,Adaptive protects in severe drawdown windows
+replication_summary.csv,outputs/reports/phase_3e_replication/replication_summary.csv,Replication,Matched scenario replication summary,Supports role-based conclusion
+policy_tuning_results.csv,outputs/reports/phase_3e_replication/policy_tuning_results.csv,Policy tuning,Adaptive policy comparison,Conservative policies support risk-control framing
+selection_gate_results.csv,outputs/reports/phase_3f_strategy_selection/selection_gate_results.csv,Selection engine,Evidence gates,Gates explain moderate confidence and role separation
+recommendation_examples.csv,outputs/reports/phase_3f_strategy_selection/recommendation_examples.csv,Selection engine,Investor-profile examples,Profiles use the same role-based strategy logic
+scenario_playbook.csv,outputs/reports/phase_3f_strategy_selection/scenario_playbook.csv,Selection engine,Scenario-specific guidance,Explains when core/overlay/fallback roles matter
+source_mix_summary.csv,outputs/reports/phase_4a12_nlp_monitoring_final_pack/source_mix_summary.csv,NLP monitoring,Composite source mix,NLP has monitoring source diversity but remains non-allocation
+rbi_corpus_summary.csv,outputs/reports/phase_4a12_nlp_monitoring_final_pack/rbi_corpus_summary.csv,NLP monitoring,RBI corpus status,RBI policy corpus supports monitoring context
+news_signal_summary.csv,outputs/reports/phase_4a12_nlp_monitoring_final_pack/news_signal_summary.csv,NLP monitoring,News signal summary,GDELT/news contributes to monitoring signal
+phase_4a13_strategy_metrics.csv,outputs/reports/phase_4a13_nlp_shadow_impact/strategy_metrics.csv,NLP shadow impact,Full shadow-window metrics,Includes costs and shadow-production flags
+phase_4a13_lookahead_diagnostics.csv,outputs/reports/phase_4a13_nlp_shadow_impact/lookahead_diagnostics.csv,NLP shadow impact,Look-ahead diagnostics,56/56 checks passed
+phase_4a13_overlay_decisions.csv,outputs/reports/phase_4a13_nlp_shadow_impact/overlay_decisions.csv,NLP shadow impact,Overlay audit trail,Shows shadow decisions and non-production behavior

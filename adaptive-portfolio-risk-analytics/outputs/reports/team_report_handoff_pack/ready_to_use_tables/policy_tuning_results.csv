@@ -1,0 +1,5 @@
+policy_variant,regime_source,cagr,calmar,max_drawdown,final_value,recovery_duration,turnover,transaction_cost,stress_period_return,status,failure_reason,best_drawdown_preserving_improvement,best_recovery_improvement,best_calmar_improvement,overfit_or_drawdown_cost
+Conservative base,hmm_walk_forward,0.0855950062462032,0.6954728407387861,-0.1230745490438957,1686114.5403494344,348.0,14.8821449755449,46666.52117289619,0.10832533110689702,success,,False,False,False,False
+Conservative faster re-risking,hmm_walk_forward,0.0818752309875852,0.6652490837759105,-0.12307454904389603,1649699.4376820982,339.0,14.666767739897754,45678.559489180596,0.10971035870383616,success,,False,True,False,False
+Conservative base,rule_based_lagged,0.10180948703618786,1.20648625769881,-0.08438511950428185,1852866.685429163,,26.885034224144448,80471.68051236594,0.21232853257086415,success,,False,False,False,False
+Conservative faster re-risking,rule_based_lagged,0.09839730345990416,1.0527622199429196,-0.09346583834024669,1816667.477793873,,28.02276049096247,82371.28660332941,0.21130655547224442,success,,False,False,False,True

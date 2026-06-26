@@ -1,0 +1,10 @@
+metric,HMM_Conservative,HMM_NLP_Confirmation_Overlay,delta_vs_HMM,interpretation
+CAGR,-0.0125,0.1142,0.1267,NLP confirmation improved return in the shadow window
+Pain Index,0.0152,0.0166,0.0014,NLP confirmation worsened average drawdown pain versus HMM
+Pain Ratio,-2.14,5.69,7.83,NLP confirmation improved return per unit of average drawdown pain
+Calmar,-0.56,2.54,3.10,NLP confirmation improved return per unit of maximum drawdown
+Max Drawdown,-0.0223,-0.0450,-0.0227,NLP confirmation worsened worst drawdown versus HMM
+Turnover,1.04,0.43,-0.61,NLP confirmation reduced turnover
+Transaction Cost Drag,0.0020,0.0009,-0.0011,NLP confirmation reduced cost drag
+Look-ahead checks,56/56,56/56,0,All decision-lag diagnostics passed
+Production allocation active,False,False,0,NLP remains non-production

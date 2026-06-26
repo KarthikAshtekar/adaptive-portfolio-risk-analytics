@@ -1,0 +1,6 @@
+strategy,pain_ratio,pain_ratio_delta_vs_HMM_Conservative,pain_index,pain_index_delta_vs_HMM_Conservative,calmar,calmar_delta_vs_HMM_Conservative,max_drawdown,max_drawdown_delta_vs_HMM_Conservative,cagr,cagr_delta_vs_HMM_Conservative
+Fixed HERC,-0.39,1.75,0.0328,0.0176,0.09,0.65,-0.0784,-0.0561,0.0071,0.0195
+HMM Conservative,-2.14,0.00,0.0152,0.0000,-0.56,0.00,-0.0223,0.0000,-0.0125,0.0000
+Rule Conservative,17.80,19.94,0.0032,-0.0120,7.34,7.90,-0.0105,0.0118,0.0770,0.0895
+HMM + NLP Confirmation Overlay,5.69,7.83,0.0166,0.0014,2.54,3.10,-0.0450,-0.0227,0.1142,0.1267
+HMM + NLP Early-Warning Overlay,-2.14,0.00,0.0152,0.0000,-0.56,0.00,-0.0223,0.0000,-0.0125,0.0000

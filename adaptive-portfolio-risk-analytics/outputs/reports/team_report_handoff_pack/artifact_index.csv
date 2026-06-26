@@ -2,6 +2,12 @@ artifact_path,artifact_type,why_it_matters
 outputs/reports/team_report_handoff_pack/README_FOR_TEAM.md,team handoff,Main repo-grounded guide for final report writers
 outputs/reports/team_report_handoff_pack/README_TECHNICAL_APPENDIX.md,team handoff,Technical module/script/test/artifact map
 outputs/reports/team_report_handoff_pack/REPORT_WRITING_GUIDE.md,team handoff,Practical chapter guide and allowed/avoided claims
+outputs/reports/team_report_handoff_pack/TABLES_FIGURES_RESULTS_INSIGHTS.md,team handoff,Ready-to-use tables figures captions results and insights for report writing
+outputs/reports/team_report_handoff_pack/artifact_index.csv,team handoff,Index of handoff and important source artifacts
+outputs/reports/team_report_handoff_pack/ready_to_use_tables/table_manifest.csv,team handoff,Manifest describing copied report-ready CSV tables and key insights
+outputs/reports/team_report_handoff_pack/ready_to_use_figures/figure_manifest.csv,team handoff,Manifest describing copied report-ready PNG figures and captions
+outputs/reports/team_report_handoff_pack/ready_to_use_tables/,team handoff,Aggregated CSV tables copied from final phase artifacts for easy report assembly
+outputs/reports/team_report_handoff_pack/ready_to_use_figures/,team handoff,Aggregated PNG figures copied from final phase artifacts for easy report assembly
 README.md,project README,Current v1.3.0 project summary and run guide
 outputs/final_project_pack/INDEX.md,final pack,Index of final project pack artifacts
 outputs/final_project_pack/final_project_summary.md,final pack,High-level final project summary

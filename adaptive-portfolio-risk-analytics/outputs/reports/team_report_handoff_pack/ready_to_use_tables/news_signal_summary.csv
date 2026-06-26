@@ -1,0 +1,4 @@
+metric,value,notes
+record_count,50,Deduped real provider records.
+provider_counts,"{""gdelt"": 50}",Provider distribution in deduped records.
+distinct_publication_dates,25,Distinct UTC publication dates when timestamped.

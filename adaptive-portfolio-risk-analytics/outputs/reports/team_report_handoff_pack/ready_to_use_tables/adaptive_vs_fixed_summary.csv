@@ -1,0 +1,16 @@
+Metric,Best Adaptive Strategy,Best Adaptive,Best Fixed Strategy,Best Fixed,Adaptive - Fixed,Winner,Interpretation
+CAGR,Regime-Adaptive HMM Walk-Forward — Conservative,0.10022772165811888,HERC,0.15012792421790433,-0.049900202559785445,Fixed,Adaptive sacrifices annualized growth if negative.
+Sharpe,Regime-Adaptive HMM Walk-Forward — Conservative,1.085460521869126,HERC,1.0452660387566814,0.04019448311244456,Adaptive,Higher net risk-adjusted return is better.
+Sortino,Regime-Adaptive HMM Walk-Forward — Conservative,1.3487866313949508,HERC,1.1523238309024026,0.19646280049254816,Adaptive,Higher downside-risk-adjusted return is better.
+Calmar,Regime-Adaptive HMM Walk-Forward — Conservative,1.1953279813116724,HERC,0.7938551178912501,0.4014728634204223,Adaptive,Primary selected objective.
+Max Drawdown,Regime-Adaptive HMM Walk-Forward — Conservative,-0.0838495569627139,HERC,-0.18911249777754824,0.10526294081483434,Adaptive,Less negative drawdown is better.
+Final Value,Regime-Adaptive HMM Walk-Forward — Conservative,1836011.1822130384,HERC,2434518.0365511887,-598506.8543381502,Fixed,"Net terminal wealth from a 1,000,000 base."
+VaR,Regime-Adaptive HMM Walk-Forward — Conservative,-0.00707763631078435,HERC,-0.009777775807887511,0.0027001394971031614,Adaptive,Signed fifth-percentile daily return; less negative is better.
+ES/CVaR,Regime-Adaptive HMM Walk-Forward — Conservative,-0.00973707955147592,HERC,-0.01762616313706459,0.00788908358558867,Adaptive,Signed daily tail return; less negative is better.
+Drawdown Duration,Regime-Adaptive HMM Walk-Forward — Conservative,328.0,HERC,268.0,60.0,Fixed,Fewer trading observations below the prior peak is better.
+Turnover,Regime-Adaptive HMM Walk-Forward — Conservative,9.831020625751503,HERC,7.310451748394683,2.52056887735682,Fixed,Lower trading burden is better.
+Transaction Cost,Regime-Adaptive HMM Walk-Forward — Conservative,23428.880297859036,HERC,18206.071957231776,5222.80834062726,Fixed,Lower evaluation-period currency cost is better.
+Stress-period return,Regime-Adaptive HMM Walk-Forward — Conservative,-0.015652523925061203,HERC,-0.023242976452996424,0.007590452527935221,Adaptive,Mean compounded return across the five requested windows.
+CPCV median selected objective,Regime-Adaptive Rule-Based — Conservative,2.010440053269247,HRP,1.509717945947986,0.5007221073212609,Adaptive,Median fold Calmar among each type's top robustness-ranked configuration.
+CPCV worst-fold objective,Regime-Adaptive Rule-Based — Conservative,0.9559262178388173,HRP,0.2485214947331137,0.7074047231057036,Adaptive,Worst successful-fold Calmar; failed folds are reported separately.
+CPCV stability score,Regime-Adaptive Rule-Based — Conservative,0.720979668667032,HRP,0.6508617812020534,0.0701178874649786,Adaptive,Higher is more stable across successful folds.

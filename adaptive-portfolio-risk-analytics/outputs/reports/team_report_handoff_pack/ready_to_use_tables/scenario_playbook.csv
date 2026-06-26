@@ -1,0 +1,11 @@
+investor_profile,scenario,core_strategy,overlay_or_reference,overlay_usage,decision_rule
+Growth,Normal,HERC,Regime-Adaptive HMM Walk-Forward — Conservative,optional,Prioritize terminal wealth while retaining a separately identified risk overlay.
+Balanced,Normal,HERC,Regime-Adaptive HMM Walk-Forward — Conservative,recommended,"Balance net growth, drawdown control, evidence quality, and implementation cost."
+Capital Preservation,Normal,HERC,Regime-Adaptive HMM Walk-Forward — Conservative,recommended,Emphasize drawdown reduction and stable net outcomes over maximum terminal wealth.
+Stress Protection,Normal,HERC,Regime-Adaptive HMM Walk-Forward — Conservative,recommended,Emphasize stress-period protection and drawdown control.
+Robustness First,Normal,HERC,Regime-Adaptive Rule-Based — Conservative,recommended,Prioritize CPCV and replication evidence before point-estimate performance.
+All,Stress / Crisis,HERC,Regime-Adaptive HMM Walk-Forward — Conservative,recommended if walk-forward gates pass,Prioritize drawdown protection; retain HERC as the strategic core.
+All,HMM Unstable,HERC,Regime-Adaptive Rule-Based — Conservative,fallback / robustness reference,Do not use full-sample or failed walk-forward HMM evidence.
+All,High Cost,HERC,Regime-Adaptive HMM Walk-Forward — Conservative,optional; reduce switching,Require net evidence and prefer the lower-turnover eligible overlay.
+All,Low CPCV Confidence,HERC,Regime-Adaptive Rule-Based — Conservative,reference only unless coverage improves,Reduce confidence when successful-fold coverage is limited.
+All,Insufficient Data,HERC,,none,Use the fixed core only; adaptive selection is not available.

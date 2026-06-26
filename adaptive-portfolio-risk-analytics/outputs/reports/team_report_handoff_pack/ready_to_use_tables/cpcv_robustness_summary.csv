@@ -1,0 +1,7 @@
+rank,config_id,strategy,strategy_type,regime_source,policy_preset,metric,n_folds,objective_median,objective_worst,stability_score,robustness_score,successful_folds,failed_folds
+1,5,Regime-Adaptive Rule-Based — Conservative,regime_adaptive,rule_based_lagged,conservative,calmar,6,2.010440053269247,0.9559262178388173,0.720979668667032,0.9441959337334065,6,9
+2,1,HRP,fixed,,,calmar,10,1.509717945947986,0.2485214947331137,0.6508617812020534,0.6968390229070773,10,5
+3,0,HERC,fixed,,,calmar,10,1.4758058340583355,0.5297109166366508,0.6634700756896529,0.6660273484712639,10,5
+4,4,Regime-Adaptive HMM Walk-Forward — Conservative,regime_adaptive,hmm_walk_forward,conservative,calmar,3,1.1762255179897636,0.9553198395492246,0.8174417526581217,0.6634883505316244,3,12
+5,2,Inverse Volatility,fixed,,,calmar,10,1.0392704379058455,0.0983010724411684,0.6161032354212217,0.389887313750911,10,5
+6,3,Equal Weight,fixed,,,calmar,10,0.9502673531193252,0.08784309316339643,0.615275020322116,0.25638833739775657,10,5

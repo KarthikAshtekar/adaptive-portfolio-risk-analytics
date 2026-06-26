@@ -86,6 +86,8 @@ outputs/reports/*
 !outputs/reports/phase_4a2_rbi_macro_sentiment/**
 !outputs/reports/phase_4a3_real_rbi_macro_validation/
 !outputs/reports/phase_4a3_real_rbi_macro_validation/**
+!outputs/reports/team_report_handoff_pack/
+!outputs/reports/team_report_handoff_pack/**
 !outputs/reports/phase_4a5_api_sentiment_ingestion/
 !outputs/reports/phase_4a5_api_sentiment_ingestion/**
 !outputs/reports/phase_4a6_real_nlp_validation/
