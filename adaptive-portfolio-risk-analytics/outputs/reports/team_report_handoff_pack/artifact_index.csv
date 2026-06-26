@@ -1,0 +1,39 @@
+artifact_path,artifact_type,why_it_matters
+outputs/reports/team_report_handoff_pack/README_FOR_TEAM.md,team handoff,Main repo-grounded guide for final report writers
+outputs/reports/team_report_handoff_pack/README_TECHNICAL_APPENDIX.md,team handoff,Technical module/script/test/artifact map
+outputs/reports/team_report_handoff_pack/REPORT_WRITING_GUIDE.md,team handoff,Practical chapter guide and allowed/avoided claims
+README.md,project README,Current v1.3.0 project summary and run guide
+outputs/final_project_pack/INDEX.md,final pack,Index of final project pack artifacts
+outputs/final_project_pack/final_project_summary.md,final pack,High-level final project summary
+outputs/final_project_pack/methodology_report.md,final pack,Concise methodology reference
+outputs/final_project_pack/final_results_summary.md,final pack,Final results and interpretation
+outputs/final_project_pack/final_validation_checklist.md,final pack,Validation checklist
+outputs/reports/post_p0_adaptive_validation/summary.md,adaptive validation,Adaptive vs fixed interpretation and CPCV summary
+outputs/reports/post_p0_adaptive_validation/cpcv_summary.csv,CPCV artifact,Fold robustness summary for report tables
+outputs/reports/phase_3e_replication/summary.md,replication,Replication and defensive-return consistency summary
+outputs/reports/phase_3f_strategy_selection/summary.md,strategy selection,Final role-based recommendation and guardrails
+outputs/reports/phase_3f_strategy_selection/selection_gate_results.csv,strategy selection,Evidence gate outputs
+outputs/reports/phase_4a6_real_nlp_validation/summary.md,NLP validation,Real NLP validation summary
+outputs/reports/phase_4a12_nlp_monitoring_final_pack/summary.md,NLP monitoring,Final RBI + news NLP monitoring summary
+outputs/reports/phase_4a12_nlp_monitoring_final_pack/source_mix_summary.csv,NLP monitoring,Source mix counts and monitoring context
+outputs/reports/phase_4a13_nlp_shadow_impact/summary.md,NLP shadow impact,Pain Ratio and NLP shadow-impact interpretation
+outputs/reports/phase_4a13_nlp_shadow_impact/strategy_metrics.csv,NLP shadow impact,Main shadow strategy metrics table
+outputs/reports/phase_4a13_nlp_shadow_impact/pain_ratio_comparison.csv,NLP shadow impact,Pain Ratio and drawdown comparison
+outputs/reports/v1_3_0_final_integrated_release/final_report.md,release pack,Integrated final report text
+outputs/reports/v1_3_0_final_integrated_release/evidence_matrix.csv,release pack,Final evidence matrix and production decisions
+scripts/final_smoke_test.py,script,Validates imports and required report artifacts
+scripts/fetch_rbi_documents.py,script,Official RBI targeted policy-document fetcher
+scripts/run_nlp_shadow_impact_experiment.py,script,Shadow-only NLP impact experiment
+src/validation/cpcv.py,module,CPCV split and purge/embargo logic
+src/validation/robustness.py,module,CPCV fold summaries and robustness ranking
+src/adaptive/controller.py,module,Regime-adaptive allocation controller
+src/selection/selector.py,module,Strategy recommendation engine
+src/analytics/performance_metrics.py,module,Performance and Pain Ratio metrics
+src/sentiment/nlp_shadow_overlay.py,module,NLP shadow overlay implementation
+tests/test_cpcv_validation.py,test,CPCV split and purge/embargo coverage
+tests/test_adaptive_cpcv_integration.py,test,Adaptive CPCV integration coverage
+tests/test_adaptive_controller.py,test,Adaptive controller behavior
+tests/test_strategy_selection_engine.py,test,Strategy-selection behavior
+tests/test_pain_ratio_metrics.py,test,Pain Index and Pain Ratio correctness
+tests/test_nlp_shadow_impact_experiment.py,test,NLP shadow experiment artifacts and safeguards
+tests/test_rbi_targeted_policy_fetch.py,test,Official RBI targeted fetcher behavior

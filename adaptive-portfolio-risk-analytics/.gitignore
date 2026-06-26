@@ -92,6 +92,9 @@ outputs/reports/*
 !outputs/reports/phase_4a6_real_nlp_validation/**
 !outputs/reports/nlp_corpus_intake_validation/
 !outputs/reports/nlp_corpus_intake_validation/**
+!outputs/reports/team_report_handoff_pack/
+!outputs/reports/team_report_handoff_pack/**
+
 
 # Real/private/copyrighted NLP source documents remain local.
 data/sentiment/rbi_real/raw/*
