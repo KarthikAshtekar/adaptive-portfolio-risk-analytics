@@ -57,15 +57,35 @@ Use this guide to turn the repository into the final academic/report document.
 
 ## Tables to include
 
-1. Fixed strategy performance table.
-2. Adaptive strategy performance table.
-3. Adaptive vs fixed comparison table.
-4. CPCV robustness ranking table.
-5. Strategy-selection evidence matrix.
-6. Pain Ratio comparison table.
-7. NLP shadow-impact metrics table.
-8. RBI/NLP corpus status table.
-9. Dashboard mode summary table.
+Use the aggregated files under:
+
+- `outputs/reports/team_report_handoff_pack/ready_to_use_tables/`
+- `outputs/reports/team_report_handoff_pack/ready_to_use_figures/`
+- `outputs/reports/team_report_handoff_pack/TABLES_FIGURES_RESULTS_INSIGHTS.md`
+
+Recommended tables:
+
+1. Fixed/adaptive strategy performance table: `ready_to_use_tables/fixed_vs_adaptive_metrics_comparison.csv`.
+2. Adaptive vs fixed summary table: `ready_to_use_tables/adaptive_vs_fixed_summary.csv`.
+3. CPCV robustness ranking table: `ready_to_use_tables/cpcv_robustness_summary.csv`.
+4. Strategy-selection evidence matrix: `ready_to_use_tables/evidence_matrix.csv`.
+5. Final strategy ranking table: `ready_to_use_tables/strategy_ranking_table.csv`.
+6. Pain Ratio comparison table: `ready_to_use_tables/pain_ratio_comparison.csv`.
+7. NLP shadow-impact metrics table: `ready_to_use_tables/nlp_shadow_impact_table.csv`.
+8. RBI/NLP corpus status table: `ready_to_use_tables/rbi_corpus_summary.csv`.
+9. NLP source-mix table: `ready_to_use_tables/source_mix_summary.csv`.
+10. Look-ahead diagnostics table: `ready_to_use_tables/phase_4a13_lookahead_diagnostics.csv`.
+11. Selection gate table: `ready_to_use_tables/selection_gate_results.csv`.
+12. Stress-period comparison table: `ready_to_use_tables/stress_period_comparison.csv`.
+
+Recommended figures:
+
+1. Calmar ranking: `ready_to_use_figures/calmar_ranking.png`.
+2. Stress drawdown comparison: `ready_to_use_figures/stress_drawdown_comparison.png`.
+3. Replication win rates: `ready_to_use_figures/replication_win_rates.png`.
+4. Cost sensitivity heatmap: `ready_to_use_figures/cost_sensitivity_heatmap.png`.
+5. Profile candidate scores: `ready_to_use_figures/profile_candidate_scores.png`.
+6. NLP coverage threshold attainment: `ready_to_use_figures/nlp_coverage_threshold_attainment.png`.
 
 ## Allowed claims
 
@@ -91,4 +111,3 @@ Use this guide to turn the repository into the final academic/report document.
 ## Recommended wording for final conclusion
 
 The final platform supports regime-aware portfolio analytics and evidence-gated strategy selection. HERC remains the growth core because it provides stronger long-run growth. HMM Conservative remains the primary model-based risk-control overlay because it materially improves drawdown behavior. Rule Conservative remains the robustness/fallback reference because it is transparent and robust in short windows. Pain Ratio adds a useful average-drawdown view alongside Calmar. RBI + news NLP is useful for monitoring and shows positive shadow impact, but it is not production-active because the evidence window is short and drawdown results are mixed.
-

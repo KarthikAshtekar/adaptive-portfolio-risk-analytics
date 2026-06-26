@@ -1,0 +1,8 @@
+component,evidence_status,production_status,supporting_artifacts,main_limitations,final_decision
+HERC strategic core,Strong strategic growth evidence,Production core,"README; final_project_pack; strategy comparison tables",Can have larger drawdowns than conservative overlays,Production core
+HMM Conservative overlay,Useful model-based drawdown-control evidence,Production risk-control overlay,"README; adaptive reports; strategy-selection outputs",Growth opportunity cost and HMM sensitivity,Production risk-control overlay
+Rule Conservative fallback,Robust explainable fallback evidence,Fallback/reference,"CPCV robustness artifact; strategy-selection outputs",Simpler rule logic may miss probabilistic regime nuance,Fallback/reference
+Pain Ratio metric,Implemented and tested,Production metric,"tests/test_pain_ratio_metrics.py; dashboard tables; Phase 4A.13 report",Window-dependent and complements rather than replaces Calmar,Production metric
+RBI + news NLP monitoring,Useful monitoring evidence,Monitoring/reporting,"Phase 4A.12 final pack; Phase 4A.6 validation; source-mix diagnostics",Short source history and coverage constraints,Monitoring/reporting
+NLP shadow impact,Positive shadow evidence,Shadow only,"Phase 4A.13 shadow-impact report; lookahead diagnostics",Short window and mixed drawdown results,Positive shadow evidence
+Production NLP allocation,Insufficient allocation evidence,Not approved,"Phase 4A.13 limitations; strategy-selection summary",Pain Index and max drawdown worsened vs HMM Conservative,Not approved

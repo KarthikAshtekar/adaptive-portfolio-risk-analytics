@@ -1,0 +1,386 @@
+investor_profile,strategy,gate,status,reason,value,threshold
+Growth,Equal Weight,Net return basis,PASS,Metrics are net of costs.,net,
+Growth,Equal Weight,No full-sample HMM,NOT_AVAILABLE,Candidate does not use HMM.,,
+Growth,Equal Weight,Sufficient data,PASS,History meets the minimum evidence window.,1603,504.0
+Growth,Equal Weight,CPCV coverage,PASS,Successful CPCV folds divided by attempted folds.,0.6666666666666666,0.6
+Growth,Equal Weight,CPCV worst fold,PASS,Worst successful fold remains positive.,0.0878430931633964,0.0
+Growth,Equal Weight,Turnover,PASS,Turnover is within the lower implementation range.,1.693230016570765,12.0
+Growth,Equal Weight,Cost assumption,PASS,Trading-cost assumption is within the tested range.,15.0,50.0
+Growth,Equal Weight,Stress evidence,WARN,Stress evidence does not establish clear protection.,-0.14805234213454743,
+Growth,Equal Weight,Defensive metadata,NOT_AVAILABLE,Fixed strategy has no defensive sleeve.,,
+Growth,Equal Weight,HMM walk-forward valid,NOT_AVAILABLE,Candidate does not use HMM.,,
+Growth,Equal Weight,Replication classification,WARN,Replication classified the strategy as nan.,nan,
+Growth,HRP,Net return basis,PASS,Metrics are net of costs.,net,
+Growth,HRP,No full-sample HMM,NOT_AVAILABLE,Candidate does not use HMM.,,
+Growth,HRP,Sufficient data,PASS,History meets the minimum evidence window.,1603,504.0
+Growth,HRP,CPCV coverage,PASS,Successful CPCV folds divided by attempted folds.,0.6666666666666666,0.6
+Growth,HRP,CPCV worst fold,PASS,Worst successful fold remains positive.,0.2485214947331137,0.0
+Growth,HRP,Turnover,PASS,Turnover is within the lower implementation range.,5.392094640694605,12.0
+Growth,HRP,Cost assumption,PASS,Trading-cost assumption is within the tested range.,15.0,50.0
+Growth,HRP,Stress evidence,NOT_AVAILABLE,No stress-period result is available.,,
+Growth,HRP,Defensive metadata,NOT_AVAILABLE,Fixed strategy has no defensive sleeve.,,
+Growth,HRP,HMM walk-forward valid,NOT_AVAILABLE,Candidate does not use HMM.,,
+Growth,HRP,Replication classification,WARN,Replication classified the strategy as nan.,nan,
+Growth,HERC,Net return basis,PASS,Metrics are net of costs.,net,
+Growth,HERC,No full-sample HMM,NOT_AVAILABLE,Candidate does not use HMM.,,
+Growth,HERC,Sufficient data,PASS,History meets the minimum evidence window.,1603,504.0
+Growth,HERC,CPCV coverage,PASS,Successful CPCV folds divided by attempted folds.,0.6666666666666666,0.6
+Growth,HERC,CPCV worst fold,PASS,Worst successful fold remains positive.,0.5297109166366508,0.0
+Growth,HERC,Turnover,PASS,Turnover is within the lower implementation range.,7.310451595677924,12.0
+Growth,HERC,Cost assumption,PASS,Trading-cost assumption is within the tested range.,15.0,50.0
+Growth,HERC,Stress evidence,WARN,Stress evidence does not establish clear protection.,-0.023242976452996417,
+Growth,HERC,Defensive metadata,NOT_AVAILABLE,Fixed strategy has no defensive sleeve.,,
+Growth,HERC,HMM walk-forward valid,NOT_AVAILABLE,Candidate does not use HMM.,,
+Growth,HERC,Replication classification,WARN,Replication classified the strategy as nan.,nan,
+Growth,Regime-Adaptive Rule-Based — Conservative,Net return basis,PASS,Metrics are net of costs.,net,
+Growth,Regime-Adaptive Rule-Based — Conservative,No full-sample HMM,NOT_AVAILABLE,Candidate does not use HMM.,,
+Growth,Regime-Adaptive Rule-Based — Conservative,Sufficient data,PASS,History meets the minimum evidence window.,1603,504.0
+Growth,Regime-Adaptive Rule-Based — Conservative,CPCV coverage,WARN,Successful CPCV folds divided by attempted folds.,0.4,0.6
+Growth,Regime-Adaptive Rule-Based — Conservative,CPCV worst fold,PASS,Worst successful fold remains positive.,0.9559262178388171,0.0
+Growth,Regime-Adaptive Rule-Based — Conservative,Turnover,WARN,Turnover is elevated and cost-sensitive.,20.72760916591004,12.0
+Growth,Regime-Adaptive Rule-Based — Conservative,Cost assumption,PASS,Trading-cost assumption is within the tested range.,15.0,50.0
+Growth,Regime-Adaptive Rule-Based — Conservative,Stress evidence,NOT_AVAILABLE,No stress-period result is available.,,
+Growth,Regime-Adaptive Rule-Based — Conservative,Defensive metadata,PASS,Defensive return source is recorded.,synthetic,
+Growth,Regime-Adaptive Rule-Based — Conservative,HMM walk-forward valid,NOT_AVAILABLE,Candidate does not use HMM.,,
+Growth,Regime-Adaptive Rule-Based — Conservative,Replication classification,PASS,Replication classified the strategy as risk-control overlay.,risk-control overlay,
+Growth,Regime-Adaptive HMM Walk-Forward — Conservative,Net return basis,PASS,Metrics are net of costs.,net,
+Growth,Regime-Adaptive HMM Walk-Forward — Conservative,No full-sample HMM,PASS,HMM evidence is walk-forward.,hmm_walk_forward,
+Growth,Regime-Adaptive HMM Walk-Forward — Conservative,Sufficient data,PASS,History meets the minimum evidence window.,1603,504.0
+Growth,Regime-Adaptive HMM Walk-Forward — Conservative,CPCV coverage,WARN,Successful CPCV folds divided by attempted folds.,0.2,0.6
+Growth,Regime-Adaptive HMM Walk-Forward — Conservative,CPCV worst fold,PASS,Worst successful fold remains positive.,0.9553198395492246,0.0
+Growth,Regime-Adaptive HMM Walk-Forward — Conservative,Turnover,PASS,Turnover is within the lower implementation range.,8.12216805459633,12.0
+Growth,Regime-Adaptive HMM Walk-Forward — Conservative,Cost assumption,PASS,Trading-cost assumption is within the tested range.,15.0,50.0
+Growth,Regime-Adaptive HMM Walk-Forward — Conservative,Stress evidence,PASS,Available stress evidence shows material protection.,-0.01565252392506118,
+Growth,Regime-Adaptive HMM Walk-Forward — Conservative,Defensive metadata,PASS,Defensive return source is recorded.,synthetic,
+Growth,Regime-Adaptive HMM Walk-Forward — Conservative,HMM walk-forward valid,PASS,Walk-forward HMM completed successfully.,True,
+Growth,Regime-Adaptive HMM Walk-Forward — Conservative,Replication classification,PASS,Replication classified the strategy as risk-control overlay.,risk-control overlay,
+Growth,Regime-Adaptive Rule-Based — Balanced,Net return basis,PASS,Metrics are net of costs.,net,
+Growth,Regime-Adaptive Rule-Based — Balanced,No full-sample HMM,NOT_AVAILABLE,Candidate does not use HMM.,,
+Growth,Regime-Adaptive Rule-Based — Balanced,Sufficient data,PASS,History meets the minimum evidence window.,1603,504.0
+Growth,Regime-Adaptive Rule-Based — Balanced,CPCV coverage,NOT_AVAILABLE,No CPCV result is available for this candidate.,,
+Growth,Regime-Adaptive Rule-Based — Balanced,CPCV worst fold,NOT_AVAILABLE,Worst-fold objective is unavailable.,,
+Growth,Regime-Adaptive Rule-Based — Balanced,Turnover,WARN,Turnover is elevated and cost-sensitive.,22.60637335784746,12.0
+Growth,Regime-Adaptive Rule-Based — Balanced,Cost assumption,PASS,Trading-cost assumption is within the tested range.,15.0,50.0
+Growth,Regime-Adaptive Rule-Based — Balanced,Stress evidence,NOT_AVAILABLE,No stress-period result is available.,,
+Growth,Regime-Adaptive Rule-Based — Balanced,Defensive metadata,PASS,Defensive return source is recorded.,synthetic,
+Growth,Regime-Adaptive Rule-Based — Balanced,HMM walk-forward valid,NOT_AVAILABLE,Candidate does not use HMM.,,
+Growth,Regime-Adaptive Rule-Based — Balanced,Replication classification,PASS,Replication classified the strategy as risk-control overlay.,risk-control overlay,
+Growth,Regime-Adaptive HMM Walk-Forward — Balanced,Net return basis,PASS,Metrics are net of costs.,net,
+Growth,Regime-Adaptive HMM Walk-Forward — Balanced,No full-sample HMM,PASS,HMM evidence is walk-forward.,hmm_walk_forward,
+Growth,Regime-Adaptive HMM Walk-Forward — Balanced,Sufficient data,PASS,History meets the minimum evidence window.,1603,504.0
+Growth,Regime-Adaptive HMM Walk-Forward — Balanced,CPCV coverage,NOT_AVAILABLE,No CPCV result is available for this candidate.,,
+Growth,Regime-Adaptive HMM Walk-Forward — Balanced,CPCV worst fold,NOT_AVAILABLE,Worst-fold objective is unavailable.,,
+Growth,Regime-Adaptive HMM Walk-Forward — Balanced,Turnover,PASS,Turnover is within the lower implementation range.,8.970616645109391,12.0
+Growth,Regime-Adaptive HMM Walk-Forward — Balanced,Cost assumption,PASS,Trading-cost assumption is within the tested range.,15.0,50.0
+Growth,Regime-Adaptive HMM Walk-Forward — Balanced,Stress evidence,NOT_AVAILABLE,No stress-period result is available.,,
+Growth,Regime-Adaptive HMM Walk-Forward — Balanced,Defensive metadata,PASS,Defensive return source is recorded.,synthetic,
+Growth,Regime-Adaptive HMM Walk-Forward — Balanced,HMM walk-forward valid,PASS,Walk-forward HMM completed successfully.,True,
+Growth,Regime-Adaptive HMM Walk-Forward — Balanced,Replication classification,PASS,Replication classified the strategy as risk-control overlay.,risk-control overlay,
+Balanced,Equal Weight,Net return basis,PASS,Metrics are net of costs.,net,
+Balanced,Equal Weight,No full-sample HMM,NOT_AVAILABLE,Candidate does not use HMM.,,
+Balanced,Equal Weight,Sufficient data,PASS,History meets the minimum evidence window.,1603,504.0
+Balanced,Equal Weight,CPCV coverage,PASS,Successful CPCV folds divided by attempted folds.,0.6666666666666666,0.6
+Balanced,Equal Weight,CPCV worst fold,PASS,Worst successful fold remains positive.,0.0878430931633964,0.0
+Balanced,Equal Weight,Turnover,PASS,Turnover is within the lower implementation range.,1.693230016570765,12.0
+Balanced,Equal Weight,Cost assumption,PASS,Trading-cost assumption is within the tested range.,15.0,50.0
+Balanced,Equal Weight,Stress evidence,WARN,Stress evidence does not establish clear protection.,-0.14805234213454743,
+Balanced,Equal Weight,Defensive metadata,NOT_AVAILABLE,Fixed strategy has no defensive sleeve.,,
+Balanced,Equal Weight,HMM walk-forward valid,NOT_AVAILABLE,Candidate does not use HMM.,,
+Balanced,Equal Weight,Replication classification,WARN,Replication classified the strategy as nan.,nan,
+Balanced,HRP,Net return basis,PASS,Metrics are net of costs.,net,
+Balanced,HRP,No full-sample HMM,NOT_AVAILABLE,Candidate does not use HMM.,,
+Balanced,HRP,Sufficient data,PASS,History meets the minimum evidence window.,1603,504.0
+Balanced,HRP,CPCV coverage,PASS,Successful CPCV folds divided by attempted folds.,0.6666666666666666,0.6
+Balanced,HRP,CPCV worst fold,PASS,Worst successful fold remains positive.,0.2485214947331137,0.0
+Balanced,HRP,Turnover,PASS,Turnover is within the lower implementation range.,5.392094640694605,12.0
+Balanced,HRP,Cost assumption,PASS,Trading-cost assumption is within the tested range.,15.0,50.0
+Balanced,HRP,Stress evidence,NOT_AVAILABLE,No stress-period result is available.,,
+Balanced,HRP,Defensive metadata,NOT_AVAILABLE,Fixed strategy has no defensive sleeve.,,
+Balanced,HRP,HMM walk-forward valid,NOT_AVAILABLE,Candidate does not use HMM.,,
+Balanced,HRP,Replication classification,WARN,Replication classified the strategy as nan.,nan,
+Balanced,HERC,Net return basis,PASS,Metrics are net of costs.,net,
+Balanced,HERC,No full-sample HMM,NOT_AVAILABLE,Candidate does not use HMM.,,
+Balanced,HERC,Sufficient data,PASS,History meets the minimum evidence window.,1603,504.0
+Balanced,HERC,CPCV coverage,PASS,Successful CPCV folds divided by attempted folds.,0.6666666666666666,0.6
+Balanced,HERC,CPCV worst fold,PASS,Worst successful fold remains positive.,0.5297109166366508,0.0
+Balanced,HERC,Turnover,PASS,Turnover is within the lower implementation range.,7.310451595677924,12.0
+Balanced,HERC,Cost assumption,PASS,Trading-cost assumption is within the tested range.,15.0,50.0
+Balanced,HERC,Stress evidence,WARN,Stress evidence does not establish clear protection.,-0.023242976452996417,
+Balanced,HERC,Defensive metadata,NOT_AVAILABLE,Fixed strategy has no defensive sleeve.,,
+Balanced,HERC,HMM walk-forward valid,NOT_AVAILABLE,Candidate does not use HMM.,,
+Balanced,HERC,Replication classification,WARN,Replication classified the strategy as nan.,nan,
+Balanced,Regime-Adaptive Rule-Based — Conservative,Net return basis,PASS,Metrics are net of costs.,net,
+Balanced,Regime-Adaptive Rule-Based — Conservative,No full-sample HMM,NOT_AVAILABLE,Candidate does not use HMM.,,
+Balanced,Regime-Adaptive Rule-Based — Conservative,Sufficient data,PASS,History meets the minimum evidence window.,1603,504.0
+Balanced,Regime-Adaptive Rule-Based — Conservative,CPCV coverage,WARN,Successful CPCV folds divided by attempted folds.,0.4,0.6
+Balanced,Regime-Adaptive Rule-Based — Conservative,CPCV worst fold,PASS,Worst successful fold remains positive.,0.9559262178388171,0.0
+Balanced,Regime-Adaptive Rule-Based — Conservative,Turnover,WARN,Turnover is elevated and cost-sensitive.,20.72760916591004,12.0
+Balanced,Regime-Adaptive Rule-Based — Conservative,Cost assumption,PASS,Trading-cost assumption is within the tested range.,15.0,50.0
+Balanced,Regime-Adaptive Rule-Based — Conservative,Stress evidence,NOT_AVAILABLE,No stress-period result is available.,,
+Balanced,Regime-Adaptive Rule-Based — Conservative,Defensive metadata,PASS,Defensive return source is recorded.,synthetic,
+Balanced,Regime-Adaptive Rule-Based — Conservative,HMM walk-forward valid,NOT_AVAILABLE,Candidate does not use HMM.,,
+Balanced,Regime-Adaptive Rule-Based — Conservative,Replication classification,PASS,Replication classified the strategy as risk-control overlay.,risk-control overlay,
+Balanced,Regime-Adaptive HMM Walk-Forward — Conservative,Net return basis,PASS,Metrics are net of costs.,net,
+Balanced,Regime-Adaptive HMM Walk-Forward — Conservative,No full-sample HMM,PASS,HMM evidence is walk-forward.,hmm_walk_forward,
+Balanced,Regime-Adaptive HMM Walk-Forward — Conservative,Sufficient data,PASS,History meets the minimum evidence window.,1603,504.0
+Balanced,Regime-Adaptive HMM Walk-Forward — Conservative,CPCV coverage,WARN,Successful CPCV folds divided by attempted folds.,0.2,0.6
+Balanced,Regime-Adaptive HMM Walk-Forward — Conservative,CPCV worst fold,PASS,Worst successful fold remains positive.,0.9553198395492246,0.0
+Balanced,Regime-Adaptive HMM Walk-Forward — Conservative,Turnover,PASS,Turnover is within the lower implementation range.,8.12216805459633,12.0
+Balanced,Regime-Adaptive HMM Walk-Forward — Conservative,Cost assumption,PASS,Trading-cost assumption is within the tested range.,15.0,50.0
+Balanced,Regime-Adaptive HMM Walk-Forward — Conservative,Stress evidence,PASS,Available stress evidence shows material protection.,-0.01565252392506118,
+Balanced,Regime-Adaptive HMM Walk-Forward — Conservative,Defensive metadata,PASS,Defensive return source is recorded.,synthetic,
+Balanced,Regime-Adaptive HMM Walk-Forward — Conservative,HMM walk-forward valid,PASS,Walk-forward HMM completed successfully.,True,
+Balanced,Regime-Adaptive HMM Walk-Forward — Conservative,Replication classification,PASS,Replication classified the strategy as risk-control overlay.,risk-control overlay,
+Balanced,Regime-Adaptive Rule-Based — Balanced,Net return basis,PASS,Metrics are net of costs.,net,
+Balanced,Regime-Adaptive Rule-Based — Balanced,No full-sample HMM,NOT_AVAILABLE,Candidate does not use HMM.,,
+Balanced,Regime-Adaptive Rule-Based — Balanced,Sufficient data,PASS,History meets the minimum evidence window.,1603,504.0
+Balanced,Regime-Adaptive Rule-Based — Balanced,CPCV coverage,NOT_AVAILABLE,No CPCV result is available for this candidate.,,
+Balanced,Regime-Adaptive Rule-Based — Balanced,CPCV worst fold,NOT_AVAILABLE,Worst-fold objective is unavailable.,,
+Balanced,Regime-Adaptive Rule-Based — Balanced,Turnover,WARN,Turnover is elevated and cost-sensitive.,22.60637335784746,12.0
+Balanced,Regime-Adaptive Rule-Based — Balanced,Cost assumption,PASS,Trading-cost assumption is within the tested range.,15.0,50.0
+Balanced,Regime-Adaptive Rule-Based — Balanced,Stress evidence,NOT_AVAILABLE,No stress-period result is available.,,
+Balanced,Regime-Adaptive Rule-Based — Balanced,Defensive metadata,PASS,Defensive return source is recorded.,synthetic,
+Balanced,Regime-Adaptive Rule-Based — Balanced,HMM walk-forward valid,NOT_AVAILABLE,Candidate does not use HMM.,,
+Balanced,Regime-Adaptive Rule-Based — Balanced,Replication classification,PASS,Replication classified the strategy as risk-control overlay.,risk-control overlay,
+Balanced,Regime-Adaptive HMM Walk-Forward — Balanced,Net return basis,PASS,Metrics are net of costs.,net,
+Balanced,Regime-Adaptive HMM Walk-Forward — Balanced,No full-sample HMM,PASS,HMM evidence is walk-forward.,hmm_walk_forward,
+Balanced,Regime-Adaptive HMM Walk-Forward — Balanced,Sufficient data,PASS,History meets the minimum evidence window.,1603,504.0
+Balanced,Regime-Adaptive HMM Walk-Forward — Balanced,CPCV coverage,NOT_AVAILABLE,No CPCV result is available for this candidate.,,
+Balanced,Regime-Adaptive HMM Walk-Forward — Balanced,CPCV worst fold,NOT_AVAILABLE,Worst-fold objective is unavailable.,,
+Balanced,Regime-Adaptive HMM Walk-Forward — Balanced,Turnover,PASS,Turnover is within the lower implementation range.,8.970616645109391,12.0
+Balanced,Regime-Adaptive HMM Walk-Forward — Balanced,Cost assumption,PASS,Trading-cost assumption is within the tested range.,15.0,50.0
+Balanced,Regime-Adaptive HMM Walk-Forward — Balanced,Stress evidence,NOT_AVAILABLE,No stress-period result is available.,,
+Balanced,Regime-Adaptive HMM Walk-Forward — Balanced,Defensive metadata,PASS,Defensive return source is recorded.,synthetic,
+Balanced,Regime-Adaptive HMM Walk-Forward — Balanced,HMM walk-forward valid,PASS,Walk-forward HMM completed successfully.,True,
+Balanced,Regime-Adaptive HMM Walk-Forward — Balanced,Replication classification,PASS,Replication classified the strategy as risk-control overlay.,risk-control overlay,
+Capital Preservation,Equal Weight,Net return basis,PASS,Metrics are net of costs.,net,
+Capital Preservation,Equal Weight,No full-sample HMM,NOT_AVAILABLE,Candidate does not use HMM.,,
+Capital Preservation,Equal Weight,Sufficient data,PASS,History meets the minimum evidence window.,1603,504.0
+Capital Preservation,Equal Weight,CPCV coverage,PASS,Successful CPCV folds divided by attempted folds.,0.6666666666666666,0.6
+Capital Preservation,Equal Weight,CPCV worst fold,PASS,Worst successful fold remains positive.,0.0878430931633964,0.0
+Capital Preservation,Equal Weight,Turnover,PASS,Turnover is within the lower implementation range.,1.693230016570765,12.0
+Capital Preservation,Equal Weight,Cost assumption,PASS,Trading-cost assumption is within the tested range.,15.0,50.0
+Capital Preservation,Equal Weight,Stress evidence,WARN,Stress evidence does not establish clear protection.,-0.14805234213454743,
+Capital Preservation,Equal Weight,Defensive metadata,NOT_AVAILABLE,Fixed strategy has no defensive sleeve.,,
+Capital Preservation,Equal Weight,HMM walk-forward valid,NOT_AVAILABLE,Candidate does not use HMM.,,
+Capital Preservation,Equal Weight,Replication classification,WARN,Replication classified the strategy as nan.,nan,
+Capital Preservation,HRP,Net return basis,PASS,Metrics are net of costs.,net,
+Capital Preservation,HRP,No full-sample HMM,NOT_AVAILABLE,Candidate does not use HMM.,,
+Capital Preservation,HRP,Sufficient data,PASS,History meets the minimum evidence window.,1603,504.0
+Capital Preservation,HRP,CPCV coverage,PASS,Successful CPCV folds divided by attempted folds.,0.6666666666666666,0.6
+Capital Preservation,HRP,CPCV worst fold,PASS,Worst successful fold remains positive.,0.2485214947331137,0.0
+Capital Preservation,HRP,Turnover,PASS,Turnover is within the lower implementation range.,5.392094640694605,12.0
+Capital Preservation,HRP,Cost assumption,PASS,Trading-cost assumption is within the tested range.,15.0,50.0
+Capital Preservation,HRP,Stress evidence,NOT_AVAILABLE,No stress-period result is available.,,
+Capital Preservation,HRP,Defensive metadata,NOT_AVAILABLE,Fixed strategy has no defensive sleeve.,,
+Capital Preservation,HRP,HMM walk-forward valid,NOT_AVAILABLE,Candidate does not use HMM.,,
+Capital Preservation,HRP,Replication classification,WARN,Replication classified the strategy as nan.,nan,
+Capital Preservation,HERC,Net return basis,PASS,Metrics are net of costs.,net,
+Capital Preservation,HERC,No full-sample HMM,NOT_AVAILABLE,Candidate does not use HMM.,,
+Capital Preservation,HERC,Sufficient data,PASS,History meets the minimum evidence window.,1603,504.0
+Capital Preservation,HERC,CPCV coverage,PASS,Successful CPCV folds divided by attempted folds.,0.6666666666666666,0.6
+Capital Preservation,HERC,CPCV worst fold,PASS,Worst successful fold remains positive.,0.5297109166366508,0.0
+Capital Preservation,HERC,Turnover,PASS,Turnover is within the lower implementation range.,7.310451595677924,12.0
+Capital Preservation,HERC,Cost assumption,PASS,Trading-cost assumption is within the tested range.,15.0,50.0
+Capital Preservation,HERC,Stress evidence,WARN,Stress evidence does not establish clear protection.,-0.023242976452996417,
+Capital Preservation,HERC,Defensive metadata,NOT_AVAILABLE,Fixed strategy has no defensive sleeve.,,
+Capital Preservation,HERC,HMM walk-forward valid,NOT_AVAILABLE,Candidate does not use HMM.,,
+Capital Preservation,HERC,Replication classification,WARN,Replication classified the strategy as nan.,nan,
+Capital Preservation,Regime-Adaptive Rule-Based — Conservative,Net return basis,PASS,Metrics are net of costs.,net,
+Capital Preservation,Regime-Adaptive Rule-Based — Conservative,No full-sample HMM,NOT_AVAILABLE,Candidate does not use HMM.,,
+Capital Preservation,Regime-Adaptive Rule-Based — Conservative,Sufficient data,PASS,History meets the minimum evidence window.,1603,504.0
+Capital Preservation,Regime-Adaptive Rule-Based — Conservative,CPCV coverage,WARN,Successful CPCV folds divided by attempted folds.,0.4,0.6
+Capital Preservation,Regime-Adaptive Rule-Based — Conservative,CPCV worst fold,PASS,Worst successful fold remains positive.,0.9559262178388171,0.0
+Capital Preservation,Regime-Adaptive Rule-Based — Conservative,Turnover,WARN,Turnover is elevated and cost-sensitive.,20.72760916591004,12.0
+Capital Preservation,Regime-Adaptive Rule-Based — Conservative,Cost assumption,PASS,Trading-cost assumption is within the tested range.,15.0,50.0
+Capital Preservation,Regime-Adaptive Rule-Based — Conservative,Stress evidence,NOT_AVAILABLE,No stress-period result is available.,,
+Capital Preservation,Regime-Adaptive Rule-Based — Conservative,Defensive metadata,PASS,Defensive return source is recorded.,synthetic,
+Capital Preservation,Regime-Adaptive Rule-Based — Conservative,HMM walk-forward valid,NOT_AVAILABLE,Candidate does not use HMM.,,
+Capital Preservation,Regime-Adaptive Rule-Based — Conservative,Replication classification,PASS,Replication classified the strategy as risk-control overlay.,risk-control overlay,
+Capital Preservation,Regime-Adaptive HMM Walk-Forward — Conservative,Net return basis,PASS,Metrics are net of costs.,net,
+Capital Preservation,Regime-Adaptive HMM Walk-Forward — Conservative,No full-sample HMM,PASS,HMM evidence is walk-forward.,hmm_walk_forward,
+Capital Preservation,Regime-Adaptive HMM Walk-Forward — Conservative,Sufficient data,PASS,History meets the minimum evidence window.,1603,504.0
+Capital Preservation,Regime-Adaptive HMM Walk-Forward — Conservative,CPCV coverage,WARN,Successful CPCV folds divided by attempted folds.,0.2,0.6
+Capital Preservation,Regime-Adaptive HMM Walk-Forward — Conservative,CPCV worst fold,PASS,Worst successful fold remains positive.,0.9553198395492246,0.0
+Capital Preservation,Regime-Adaptive HMM Walk-Forward — Conservative,Turnover,PASS,Turnover is within the lower implementation range.,8.12216805459633,12.0
+Capital Preservation,Regime-Adaptive HMM Walk-Forward — Conservative,Cost assumption,PASS,Trading-cost assumption is within the tested range.,15.0,50.0
+Capital Preservation,Regime-Adaptive HMM Walk-Forward — Conservative,Stress evidence,PASS,Available stress evidence shows material protection.,-0.01565252392506118,
+Capital Preservation,Regime-Adaptive HMM Walk-Forward — Conservative,Defensive metadata,PASS,Defensive return source is recorded.,synthetic,
+Capital Preservation,Regime-Adaptive HMM Walk-Forward — Conservative,HMM walk-forward valid,PASS,Walk-forward HMM completed successfully.,True,
+Capital Preservation,Regime-Adaptive HMM Walk-Forward — Conservative,Replication classification,PASS,Replication classified the strategy as risk-control overlay.,risk-control overlay,
+Capital Preservation,Regime-Adaptive Rule-Based — Balanced,Net return basis,PASS,Metrics are net of costs.,net,
+Capital Preservation,Regime-Adaptive Rule-Based — Balanced,No full-sample HMM,NOT_AVAILABLE,Candidate does not use HMM.,,
+Capital Preservation,Regime-Adaptive Rule-Based — Balanced,Sufficient data,PASS,History meets the minimum evidence window.,1603,504.0
+Capital Preservation,Regime-Adaptive Rule-Based — Balanced,CPCV coverage,NOT_AVAILABLE,No CPCV result is available for this candidate.,,
+Capital Preservation,Regime-Adaptive Rule-Based — Balanced,CPCV worst fold,NOT_AVAILABLE,Worst-fold objective is unavailable.,,
+Capital Preservation,Regime-Adaptive Rule-Based — Balanced,Turnover,WARN,Turnover is elevated and cost-sensitive.,22.60637335784746,12.0
+Capital Preservation,Regime-Adaptive Rule-Based — Balanced,Cost assumption,PASS,Trading-cost assumption is within the tested range.,15.0,50.0
+Capital Preservation,Regime-Adaptive Rule-Based — Balanced,Stress evidence,NOT_AVAILABLE,No stress-period result is available.,,
+Capital Preservation,Regime-Adaptive Rule-Based — Balanced,Defensive metadata,PASS,Defensive return source is recorded.,synthetic,
+Capital Preservation,Regime-Adaptive Rule-Based — Balanced,HMM walk-forward valid,NOT_AVAILABLE,Candidate does not use HMM.,,
+Capital Preservation,Regime-Adaptive Rule-Based — Balanced,Replication classification,PASS,Replication classified the strategy as risk-control overlay.,risk-control overlay,
+Capital Preservation,Regime-Adaptive HMM Walk-Forward — Balanced,Net return basis,PASS,Metrics are net of costs.,net,
+Capital Preservation,Regime-Adaptive HMM Walk-Forward — Balanced,No full-sample HMM,PASS,HMM evidence is walk-forward.,hmm_walk_forward,
+Capital Preservation,Regime-Adaptive HMM Walk-Forward — Balanced,Sufficient data,PASS,History meets the minimum evidence window.,1603,504.0
+Capital Preservation,Regime-Adaptive HMM Walk-Forward — Balanced,CPCV coverage,NOT_AVAILABLE,No CPCV result is available for this candidate.,,
+Capital Preservation,Regime-Adaptive HMM Walk-Forward — Balanced,CPCV worst fold,NOT_AVAILABLE,Worst-fold objective is unavailable.,,
+Capital Preservation,Regime-Adaptive HMM Walk-Forward — Balanced,Turnover,PASS,Turnover is within the lower implementation range.,8.970616645109391,12.0
+Capital Preservation,Regime-Adaptive HMM Walk-Forward — Balanced,Cost assumption,PASS,Trading-cost assumption is within the tested range.,15.0,50.0
+Capital Preservation,Regime-Adaptive HMM Walk-Forward — Balanced,Stress evidence,NOT_AVAILABLE,No stress-period result is available.,,
+Capital Preservation,Regime-Adaptive HMM Walk-Forward — Balanced,Defensive metadata,PASS,Defensive return source is recorded.,synthetic,
+Capital Preservation,Regime-Adaptive HMM Walk-Forward — Balanced,HMM walk-forward valid,PASS,Walk-forward HMM completed successfully.,True,
+Capital Preservation,Regime-Adaptive HMM Walk-Forward — Balanced,Replication classification,PASS,Replication classified the strategy as risk-control overlay.,risk-control overlay,
+Stress Protection,Equal Weight,Net return basis,PASS,Metrics are net of costs.,net,
+Stress Protection,Equal Weight,No full-sample HMM,NOT_AVAILABLE,Candidate does not use HMM.,,
+Stress Protection,Equal Weight,Sufficient data,PASS,History meets the minimum evidence window.,1603,504.0
+Stress Protection,Equal Weight,CPCV coverage,PASS,Successful CPCV folds divided by attempted folds.,0.6666666666666666,0.6
+Stress Protection,Equal Weight,CPCV worst fold,PASS,Worst successful fold remains positive.,0.0878430931633964,0.0
+Stress Protection,Equal Weight,Turnover,PASS,Turnover is within the lower implementation range.,1.693230016570765,12.0
+Stress Protection,Equal Weight,Cost assumption,PASS,Trading-cost assumption is within the tested range.,15.0,50.0
+Stress Protection,Equal Weight,Stress evidence,WARN,Stress evidence does not establish clear protection.,-0.14805234213454743,
+Stress Protection,Equal Weight,Defensive metadata,NOT_AVAILABLE,Fixed strategy has no defensive sleeve.,,
+Stress Protection,Equal Weight,HMM walk-forward valid,NOT_AVAILABLE,Candidate does not use HMM.,,
+Stress Protection,Equal Weight,Replication classification,WARN,Replication classified the strategy as nan.,nan,
+Stress Protection,HRP,Net return basis,PASS,Metrics are net of costs.,net,
+Stress Protection,HRP,No full-sample HMM,NOT_AVAILABLE,Candidate does not use HMM.,,
+Stress Protection,HRP,Sufficient data,PASS,History meets the minimum evidence window.,1603,504.0
+Stress Protection,HRP,CPCV coverage,PASS,Successful CPCV folds divided by attempted folds.,0.6666666666666666,0.6
+Stress Protection,HRP,CPCV worst fold,PASS,Worst successful fold remains positive.,0.2485214947331137,0.0
+Stress Protection,HRP,Turnover,PASS,Turnover is within the lower implementation range.,5.392094640694605,12.0
+Stress Protection,HRP,Cost assumption,PASS,Trading-cost assumption is within the tested range.,15.0,50.0
+Stress Protection,HRP,Stress evidence,NOT_AVAILABLE,No stress-period result is available.,,
+Stress Protection,HRP,Defensive metadata,NOT_AVAILABLE,Fixed strategy has no defensive sleeve.,,
+Stress Protection,HRP,HMM walk-forward valid,NOT_AVAILABLE,Candidate does not use HMM.,,
+Stress Protection,HRP,Replication classification,WARN,Replication classified the strategy as nan.,nan,
+Stress Protection,HERC,Net return basis,PASS,Metrics are net of costs.,net,
+Stress Protection,HERC,No full-sample HMM,NOT_AVAILABLE,Candidate does not use HMM.,,
+Stress Protection,HERC,Sufficient data,PASS,History meets the minimum evidence window.,1603,504.0
+Stress Protection,HERC,CPCV coverage,PASS,Successful CPCV folds divided by attempted folds.,0.6666666666666666,0.6
+Stress Protection,HERC,CPCV worst fold,PASS,Worst successful fold remains positive.,0.5297109166366508,0.0
+Stress Protection,HERC,Turnover,PASS,Turnover is within the lower implementation range.,7.310451595677924,12.0
+Stress Protection,HERC,Cost assumption,PASS,Trading-cost assumption is within the tested range.,15.0,50.0
+Stress Protection,HERC,Stress evidence,WARN,Stress evidence does not establish clear protection.,-0.023242976452996417,
+Stress Protection,HERC,Defensive metadata,NOT_AVAILABLE,Fixed strategy has no defensive sleeve.,,
+Stress Protection,HERC,HMM walk-forward valid,NOT_AVAILABLE,Candidate does not use HMM.,,
+Stress Protection,HERC,Replication classification,WARN,Replication classified the strategy as nan.,nan,
+Stress Protection,Regime-Adaptive Rule-Based — Conservative,Net return basis,PASS,Metrics are net of costs.,net,
+Stress Protection,Regime-Adaptive Rule-Based — Conservative,No full-sample HMM,NOT_AVAILABLE,Candidate does not use HMM.,,
+Stress Protection,Regime-Adaptive Rule-Based — Conservative,Sufficient data,PASS,History meets the minimum evidence window.,1603,504.0
+Stress Protection,Regime-Adaptive Rule-Based — Conservative,CPCV coverage,WARN,Successful CPCV folds divided by attempted folds.,0.4,0.6
+Stress Protection,Regime-Adaptive Rule-Based — Conservative,CPCV worst fold,PASS,Worst successful fold remains positive.,0.9559262178388171,0.0
+Stress Protection,Regime-Adaptive Rule-Based — Conservative,Turnover,WARN,Turnover is elevated and cost-sensitive.,20.72760916591004,12.0
+Stress Protection,Regime-Adaptive Rule-Based — Conservative,Cost assumption,PASS,Trading-cost assumption is within the tested range.,15.0,50.0
+Stress Protection,Regime-Adaptive Rule-Based — Conservative,Stress evidence,NOT_AVAILABLE,No stress-period result is available.,,
+Stress Protection,Regime-Adaptive Rule-Based — Conservative,Defensive metadata,PASS,Defensive return source is recorded.,synthetic,
+Stress Protection,Regime-Adaptive Rule-Based — Conservative,HMM walk-forward valid,NOT_AVAILABLE,Candidate does not use HMM.,,
+Stress Protection,Regime-Adaptive Rule-Based — Conservative,Replication classification,PASS,Replication classified the strategy as risk-control overlay.,risk-control overlay,
+Stress Protection,Regime-Adaptive HMM Walk-Forward — Conservative,Net return basis,PASS,Metrics are net of costs.,net,
+Stress Protection,Regime-Adaptive HMM Walk-Forward — Conservative,No full-sample HMM,PASS,HMM evidence is walk-forward.,hmm_walk_forward,
+Stress Protection,Regime-Adaptive HMM Walk-Forward — Conservative,Sufficient data,PASS,History meets the minimum evidence window.,1603,504.0
+Stress Protection,Regime-Adaptive HMM Walk-Forward — Conservative,CPCV coverage,WARN,Successful CPCV folds divided by attempted folds.,0.2,0.6
+Stress Protection,Regime-Adaptive HMM Walk-Forward — Conservative,CPCV worst fold,PASS,Worst successful fold remains positive.,0.9553198395492246,0.0
+Stress Protection,Regime-Adaptive HMM Walk-Forward — Conservative,Turnover,PASS,Turnover is within the lower implementation range.,8.12216805459633,12.0
+Stress Protection,Regime-Adaptive HMM Walk-Forward — Conservative,Cost assumption,PASS,Trading-cost assumption is within the tested range.,15.0,50.0
+Stress Protection,Regime-Adaptive HMM Walk-Forward — Conservative,Stress evidence,PASS,Available stress evidence shows material protection.,-0.01565252392506118,
+Stress Protection,Regime-Adaptive HMM Walk-Forward — Conservative,Defensive metadata,PASS,Defensive return source is recorded.,synthetic,
+Stress Protection,Regime-Adaptive HMM Walk-Forward — Conservative,HMM walk-forward valid,PASS,Walk-forward HMM completed successfully.,True,
+Stress Protection,Regime-Adaptive HMM Walk-Forward — Conservative,Replication classification,PASS,Replication classified the strategy as risk-control overlay.,risk-control overlay,
+Stress Protection,Regime-Adaptive Rule-Based — Balanced,Net return basis,PASS,Metrics are net of costs.,net,
+Stress Protection,Regime-Adaptive Rule-Based — Balanced,No full-sample HMM,NOT_AVAILABLE,Candidate does not use HMM.,,
+Stress Protection,Regime-Adaptive Rule-Based — Balanced,Sufficient data,PASS,History meets the minimum evidence window.,1603,504.0
+Stress Protection,Regime-Adaptive Rule-Based — Balanced,CPCV coverage,NOT_AVAILABLE,No CPCV result is available for this candidate.,,
+Stress Protection,Regime-Adaptive Rule-Based — Balanced,CPCV worst fold,NOT_AVAILABLE,Worst-fold objective is unavailable.,,
+Stress Protection,Regime-Adaptive Rule-Based — Balanced,Turnover,WARN,Turnover is elevated and cost-sensitive.,22.60637335784746,12.0
+Stress Protection,Regime-Adaptive Rule-Based — Balanced,Cost assumption,PASS,Trading-cost assumption is within the tested range.,15.0,50.0
+Stress Protection,Regime-Adaptive Rule-Based — Balanced,Stress evidence,NOT_AVAILABLE,No stress-period result is available.,,
+Stress Protection,Regime-Adaptive Rule-Based — Balanced,Defensive metadata,PASS,Defensive return source is recorded.,synthetic,
+Stress Protection,Regime-Adaptive Rule-Based — Balanced,HMM walk-forward valid,NOT_AVAILABLE,Candidate does not use HMM.,,
+Stress Protection,Regime-Adaptive Rule-Based — Balanced,Replication classification,PASS,Replication classified the strategy as risk-control overlay.,risk-control overlay,
+Stress Protection,Regime-Adaptive HMM Walk-Forward — Balanced,Net return basis,PASS,Metrics are net of costs.,net,
+Stress Protection,Regime-Adaptive HMM Walk-Forward — Balanced,No full-sample HMM,PASS,HMM evidence is walk-forward.,hmm_walk_forward,
+Stress Protection,Regime-Adaptive HMM Walk-Forward — Balanced,Sufficient data,PASS,History meets the minimum evidence window.,1603,504.0
+Stress Protection,Regime-Adaptive HMM Walk-Forward — Balanced,CPCV coverage,NOT_AVAILABLE,No CPCV result is available for this candidate.,,
+Stress Protection,Regime-Adaptive HMM Walk-Forward — Balanced,CPCV worst fold,NOT_AVAILABLE,Worst-fold objective is unavailable.,,
+Stress Protection,Regime-Adaptive HMM Walk-Forward — Balanced,Turnover,PASS,Turnover is within the lower implementation range.,8.970616645109391,12.0
+Stress Protection,Regime-Adaptive HMM Walk-Forward — Balanced,Cost assumption,PASS,Trading-cost assumption is within the tested range.,15.0,50.0
+Stress Protection,Regime-Adaptive HMM Walk-Forward — Balanced,Stress evidence,NOT_AVAILABLE,No stress-period result is available.,,
+Stress Protection,Regime-Adaptive HMM Walk-Forward — Balanced,Defensive metadata,PASS,Defensive return source is recorded.,synthetic,
+Stress Protection,Regime-Adaptive HMM Walk-Forward — Balanced,HMM walk-forward valid,PASS,Walk-forward HMM completed successfully.,True,
+Stress Protection,Regime-Adaptive HMM Walk-Forward — Balanced,Replication classification,PASS,Replication classified the strategy as risk-control overlay.,risk-control overlay,
+Robustness First,Equal Weight,Net return basis,PASS,Metrics are net of costs.,net,
+Robustness First,Equal Weight,No full-sample HMM,NOT_AVAILABLE,Candidate does not use HMM.,,
+Robustness First,Equal Weight,Sufficient data,PASS,History meets the minimum evidence window.,1603,504.0
+Robustness First,Equal Weight,CPCV coverage,PASS,Successful CPCV folds divided by attempted folds.,0.6666666666666666,0.6
+Robustness First,Equal Weight,CPCV worst fold,PASS,Worst successful fold remains positive.,0.0878430931633964,0.0
+Robustness First,Equal Weight,Turnover,PASS,Turnover is within the lower implementation range.,1.693230016570765,12.0
+Robustness First,Equal Weight,Cost assumption,PASS,Trading-cost assumption is within the tested range.,15.0,50.0
+Robustness First,Equal Weight,Stress evidence,WARN,Stress evidence does not establish clear protection.,-0.14805234213454743,
+Robustness First,Equal Weight,Defensive metadata,NOT_AVAILABLE,Fixed strategy has no defensive sleeve.,,
+Robustness First,Equal Weight,HMM walk-forward valid,NOT_AVAILABLE,Candidate does not use HMM.,,
+Robustness First,Equal Weight,Replication classification,WARN,Replication classified the strategy as nan.,nan,
+Robustness First,HRP,Net return basis,PASS,Metrics are net of costs.,net,
+Robustness First,HRP,No full-sample HMM,NOT_AVAILABLE,Candidate does not use HMM.,,
+Robustness First,HRP,Sufficient data,PASS,History meets the minimum evidence window.,1603,504.0
+Robustness First,HRP,CPCV coverage,PASS,Successful CPCV folds divided by attempted folds.,0.6666666666666666,0.6
+Robustness First,HRP,CPCV worst fold,PASS,Worst successful fold remains positive.,0.2485214947331137,0.0
+Robustness First,HRP,Turnover,PASS,Turnover is within the lower implementation range.,5.392094640694605,12.0
+Robustness First,HRP,Cost assumption,PASS,Trading-cost assumption is within the tested range.,15.0,50.0
+Robustness First,HRP,Stress evidence,NOT_AVAILABLE,No stress-period result is available.,,
+Robustness First,HRP,Defensive metadata,NOT_AVAILABLE,Fixed strategy has no defensive sleeve.,,
+Robustness First,HRP,HMM walk-forward valid,NOT_AVAILABLE,Candidate does not use HMM.,,
+Robustness First,HRP,Replication classification,WARN,Replication classified the strategy as nan.,nan,
+Robustness First,HERC,Net return basis,PASS,Metrics are net of costs.,net,
+Robustness First,HERC,No full-sample HMM,NOT_AVAILABLE,Candidate does not use HMM.,,
+Robustness First,HERC,Sufficient data,PASS,History meets the minimum evidence window.,1603,504.0
+Robustness First,HERC,CPCV coverage,PASS,Successful CPCV folds divided by attempted folds.,0.6666666666666666,0.6
+Robustness First,HERC,CPCV worst fold,PASS,Worst successful fold remains positive.,0.5297109166366508,0.0
+Robustness First,HERC,Turnover,PASS,Turnover is within the lower implementation range.,7.310451595677924,12.0
+Robustness First,HERC,Cost assumption,PASS,Trading-cost assumption is within the tested range.,15.0,50.0
+Robustness First,HERC,Stress evidence,WARN,Stress evidence does not establish clear protection.,-0.023242976452996417,
+Robustness First,HERC,Defensive metadata,NOT_AVAILABLE,Fixed strategy has no defensive sleeve.,,
+Robustness First,HERC,HMM walk-forward valid,NOT_AVAILABLE,Candidate does not use HMM.,,
+Robustness First,HERC,Replication classification,WARN,Replication classified the strategy as nan.,nan,
+Robustness First,Regime-Adaptive Rule-Based — Conservative,Net return basis,PASS,Metrics are net of costs.,net,
+Robustness First,Regime-Adaptive Rule-Based — Conservative,No full-sample HMM,NOT_AVAILABLE,Candidate does not use HMM.,,
+Robustness First,Regime-Adaptive Rule-Based — Conservative,Sufficient data,PASS,History meets the minimum evidence window.,1603,504.0
+Robustness First,Regime-Adaptive Rule-Based — Conservative,CPCV coverage,WARN,Successful CPCV folds divided by attempted folds.,0.4,0.6
+Robustness First,Regime-Adaptive Rule-Based — Conservative,CPCV worst fold,PASS,Worst successful fold remains positive.,0.9559262178388171,0.0
+Robustness First,Regime-Adaptive Rule-Based — Conservative,Turnover,WARN,Turnover is elevated and cost-sensitive.,20.72760916591004,12.0
+Robustness First,Regime-Adaptive Rule-Based — Conservative,Cost assumption,PASS,Trading-cost assumption is within the tested range.,15.0,50.0
+Robustness First,Regime-Adaptive Rule-Based — Conservative,Stress evidence,NOT_AVAILABLE,No stress-period result is available.,,
+Robustness First,Regime-Adaptive Rule-Based — Conservative,Defensive metadata,PASS,Defensive return source is recorded.,synthetic,
+Robustness First,Regime-Adaptive Rule-Based — Conservative,HMM walk-forward valid,NOT_AVAILABLE,Candidate does not use HMM.,,
+Robustness First,Regime-Adaptive Rule-Based — Conservative,Replication classification,PASS,Replication classified the strategy as risk-control overlay.,risk-control overlay,
+Robustness First,Regime-Adaptive HMM Walk-Forward — Conservative,Net return basis,PASS,Metrics are net of costs.,net,
+Robustness First,Regime-Adaptive HMM Walk-Forward — Conservative,No full-sample HMM,PASS,HMM evidence is walk-forward.,hmm_walk_forward,
+Robustness First,Regime-Adaptive HMM Walk-Forward — Conservative,Sufficient data,PASS,History meets the minimum evidence window.,1603,504.0
+Robustness First,Regime-Adaptive HMM Walk-Forward — Conservative,CPCV coverage,WARN,Successful CPCV folds divided by attempted folds.,0.2,0.6
+Robustness First,Regime-Adaptive HMM Walk-Forward — Conservative,CPCV worst fold,PASS,Worst successful fold remains positive.,0.9553198395492246,0.0
+Robustness First,Regime-Adaptive HMM Walk-Forward — Conservative,Turnover,PASS,Turnover is within the lower implementation range.,8.12216805459633,12.0
+Robustness First,Regime-Adaptive HMM Walk-Forward — Conservative,Cost assumption,PASS,Trading-cost assumption is within the tested range.,15.0,50.0
+Robustness First,Regime-Adaptive HMM Walk-Forward — Conservative,Stress evidence,PASS,Available stress evidence shows material protection.,-0.01565252392506118,
+Robustness First,Regime-Adaptive HMM Walk-Forward — Conservative,Defensive metadata,PASS,Defensive return source is recorded.,synthetic,
+Robustness First,Regime-Adaptive HMM Walk-Forward — Conservative,HMM walk-forward valid,PASS,Walk-forward HMM completed successfully.,True,
+Robustness First,Regime-Adaptive HMM Walk-Forward — Conservative,Replication classification,PASS,Replication classified the strategy as risk-control overlay.,risk-control overlay,
+Robustness First,Regime-Adaptive Rule-Based — Balanced,Net return basis,PASS,Metrics are net of costs.,net,
+Robustness First,Regime-Adaptive Rule-Based — Balanced,No full-sample HMM,NOT_AVAILABLE,Candidate does not use HMM.,,
+Robustness First,Regime-Adaptive Rule-Based — Balanced,Sufficient data,PASS,History meets the minimum evidence window.,1603,504.0
+Robustness First,Regime-Adaptive Rule-Based — Balanced,CPCV coverage,NOT_AVAILABLE,No CPCV result is available for this candidate.,,
+Robustness First,Regime-Adaptive Rule-Based — Balanced,CPCV worst fold,NOT_AVAILABLE,Worst-fold objective is unavailable.,,
+Robustness First,Regime-Adaptive Rule-Based — Balanced,Turnover,WARN,Turnover is elevated and cost-sensitive.,22.60637335784746,12.0
+Robustness First,Regime-Adaptive Rule-Based — Balanced,Cost assumption,PASS,Trading-cost assumption is within the tested range.,15.0,50.0
+Robustness First,Regime-Adaptive Rule-Based — Balanced,Stress evidence,NOT_AVAILABLE,No stress-period result is available.,,
+Robustness First,Regime-Adaptive Rule-Based — Balanced,Defensive metadata,PASS,Defensive return source is recorded.,synthetic,
+Robustness First,Regime-Adaptive Rule-Based — Balanced,HMM walk-forward valid,NOT_AVAILABLE,Candidate does not use HMM.,,
+Robustness First,Regime-Adaptive Rule-Based — Balanced,Replication classification,PASS,Replication classified the strategy as risk-control overlay.,risk-control overlay,
+Robustness First,Regime-Adaptive HMM Walk-Forward — Balanced,Net return basis,PASS,Metrics are net of costs.,net,
+Robustness First,Regime-Adaptive HMM Walk-Forward — Balanced,No full-sample HMM,PASS,HMM evidence is walk-forward.,hmm_walk_forward,
+Robustness First,Regime-Adaptive HMM Walk-Forward — Balanced,Sufficient data,PASS,History meets the minimum evidence window.,1603,504.0
+Robustness First,Regime-Adaptive HMM Walk-Forward — Balanced,CPCV coverage,NOT_AVAILABLE,No CPCV result is available for this candidate.,,
+Robustness First,Regime-Adaptive HMM Walk-Forward — Balanced,CPCV worst fold,NOT_AVAILABLE,Worst-fold objective is unavailable.,,
+Robustness First,Regime-Adaptive HMM Walk-Forward — Balanced,Turnover,PASS,Turnover is within the lower implementation range.,8.970616645109391,12.0
+Robustness First,Regime-Adaptive HMM Walk-Forward — Balanced,Cost assumption,PASS,Trading-cost assumption is within the tested range.,15.0,50.0
+Robustness First,Regime-Adaptive HMM Walk-Forward — Balanced,Stress evidence,NOT_AVAILABLE,No stress-period result is available.,,
+Robustness First,Regime-Adaptive HMM Walk-Forward — Balanced,Defensive metadata,PASS,Defensive return source is recorded.,synthetic,
+Robustness First,Regime-Adaptive HMM Walk-Forward — Balanced,HMM walk-forward valid,PASS,Walk-forward HMM completed successfully.,True,
+Robustness First,Regime-Adaptive HMM Walk-Forward — Balanced,Replication classification,PASS,Replication classified the strategy as risk-control overlay.,risk-control overlay,

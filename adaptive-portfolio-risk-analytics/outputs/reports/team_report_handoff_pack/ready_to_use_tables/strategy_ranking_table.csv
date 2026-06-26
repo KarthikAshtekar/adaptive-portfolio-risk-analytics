@@ -1,0 +1,7 @@
+rank,strategy,production_role,primary_reason,final_decision,caveat
+1,HERC,Strategic growth core,Best strategic growth and terminal-value role in final project framing,Use as production core,Drawdown control can be weaker than conservative overlays
+2,HMM Conservative,Primary model-based risk-control overlay,Model-based regime-aware defensive behavior,Use as risk-control overlay,Growth opportunity cost and HMM fitting sensitivity
+3,Rule Conservative,Robustness/fallback reference,Explainable fallback and strong current robustness reference,Use as fallback/reference,May lag adaptive market nuance
+4,Equal Weight,Benchmark,Simple transparent baseline,Use for comparison only,Not the selected core or overlay
+5,HMM + NLP Confirmation Overlay,Shadow confirmation only,Positive Pain Ratio shadow impact,Do not use in production allocation,Short window and mixed drawdown effects
+6,HMM + NLP Early-Warning Overlay,Shadow early-warning only,No material improvement in latest window,Do not use in production allocation,Requires stronger signal persistence evidence

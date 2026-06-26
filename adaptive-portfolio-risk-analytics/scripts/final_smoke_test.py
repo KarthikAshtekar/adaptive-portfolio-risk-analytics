@@ -59,7 +59,10 @@ REQUIRED_TEAM_HANDOFF_FILES = (
     "README_FOR_TEAM.md",
     "README_TECHNICAL_APPENDIX.md",
     "REPORT_WRITING_GUIDE.md",
+    "TABLES_FIGURES_RESULTS_INSIGHTS.md",
     "artifact_index.csv",
+    "ready_to_use_tables/table_manifest.csv",
+    "ready_to_use_figures/figure_manifest.csv",
 )
 
 

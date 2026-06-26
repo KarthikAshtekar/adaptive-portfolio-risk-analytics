@@ -1,0 +1,7 @@
+file,source,report_section,suggested_caption,key_insight
+calmar_ranking.png,outputs/reports/post_p0_adaptive_validation/calmar_ranking.png,Strategy comparison,Calmar ranking highlights drawdown-efficiency differences across strategies.,Adaptive overlays improve drawdown efficiency
+stress_drawdown_comparison.png,outputs/reports/post_p0_adaptive_validation/stress_drawdown_comparison.png,Stress testing,Stress drawdown comparison shows how fixed and adaptive strategies behave in severe windows.,Adaptive protection is strongest during stress
+replication_win_rates.png,outputs/reports/phase_3e_replication/replication_win_rates.png,Replication,Replication win rates support a role-based interpretation rather than a universal winner.,Robustness varies by metric and scenario
+cost_sensitivity_heatmap.png,outputs/reports/phase_3e_replication/cost_sensitivity_heatmap.png,Cost sensitivity,Cost sensitivity heatmap shows why net-of-cost evaluation matters.,Transaction costs affect strategy attractiveness
+profile_candidate_scores.png,outputs/reports/phase_3f_strategy_selection/profile_candidate_scores.png,Strategy selection,Profile candidate scores show how the evidence-gated selector changes by investor objective.,Selection is profile-aware but role-based
+nlp_coverage_threshold_attainment.png,outputs/reports/phase_4a6_real_nlp_validation/charts/coverage_threshold_attainment.png,NLP monitoring,NLP coverage threshold chart documents whether text evidence is sufficient for monitoring interpretation.,NLP evidence is explicitly gated and monitoring-only

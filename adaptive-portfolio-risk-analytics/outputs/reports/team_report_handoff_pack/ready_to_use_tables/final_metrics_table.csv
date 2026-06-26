@@ -1,0 +1,6 @@
+strategy,role,production_status,shadow_experimental,cagr,pain_index,pain_ratio,calmar,max_drawdown,total_turnover,transaction_cost_drag,source_context
+Fixed HERC,Strategic growth core,production/reference,False,0.0071,0.0328,-0.39,0.09,-0.0784,0.54,0.0012,Phase 4A.13 shadow window
+HMM Conservative,Primary model-based risk-control overlay,production overlay/reference,False,-0.0125,0.0152,-2.14,-0.56,-0.0223,1.04,0.0020,Phase 4A.13 shadow window
+Rule Conservative,Robustness/fallback reference,production fallback/reference,False,0.0770,0.0032,17.80,7.34,-0.0105,1.49,0.0027,Phase 4A.13 shadow window
+HMM + NLP Confirmation Overlay,NLP shadow confirmation,not production-active,True,0.1142,0.0166,5.69,2.54,-0.0450,0.43,0.0009,Phase 4A.13 shadow window
+HMM + NLP Early-Warning Overlay,NLP shadow early warning,not production-active,True,-0.0125,0.0152,-2.14,-0.56,-0.0223,1.04,0.0020,Phase 4A.13 shadow window
