@@ -224,6 +224,33 @@ def test_preprocessor_drops_assets_above_missing_threshold() -> None:
     assert summary.dropped_asset_names == ("A",)
 
 
+def test_preprocessor_reports_dropped_asset_missingness_location() -> None:
+    dates = pd.date_range("2020-01-01", periods=20, freq="B")
+    df = pd.DataFrame(
+        {
+            "A": [np.nan, np.nan] + [float(i) for i in range(2, 20)],
+            "B": [float(i) for i in range(20)],
+        },
+        index=dates,
+    )
+
+    _, summary = DataPreprocessor.handle_missing_values(df)
+    report = summary.asset_missingness_report.set_index("asset")
+
+    assert report.loc["A", "status"] == "dropped"
+    assert report.loc["A", "drop_reason"] == "missing_data_above_5pct_threshold"
+    assert report.loc["A", "missing_observations"] == 2
+    assert report.loc["A", "missing_percentage"] == pytest.approx(0.10)
+    assert report.loc["A", "first_missing_date"] == "2020-01-01"
+    assert report.loc["A", "last_missing_date"] == "2020-01-02"
+    assert report.loc["A", "longest_missing_run_start"] == "2020-01-01"
+    assert report.loc["A", "longest_missing_run_end"] == "2020-01-02"
+    assert report.loc["A", "longest_missing_run_observations"] == 2
+    assert report.loc["A", "first_valid_date"] == "2020-01-03"
+    assert report.loc["B", "status"] == "retained"
+    assert report.loc["B", "drop_reason"] == ""
+
+
 def test_preprocessor_logs_dropped_assets(caplog: pytest.LogCaptureFixture) -> None:
     dates = pd.date_range("2020-01-01", periods=20, freq="B")
     df = pd.DataFrame(

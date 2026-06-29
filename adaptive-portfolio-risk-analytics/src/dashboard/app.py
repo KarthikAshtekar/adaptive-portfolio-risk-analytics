@@ -460,15 +460,27 @@ def selected_tickers_from_labels(labels: list[str]) -> list[str]:
     tickers = []
     for label in labels:
         ticker = label.split(" — ", 1)[0].strip().upper()
-        if ticker in INDIAN_ASSET_UNIVERSE:
+        if ticker:
             tickers.append(ticker)
     return list(dict.fromkeys(tickers))
 
 
 def merge_portfolio_tickers(selected_labels: list[str], added_tickers: list[str]) -> list[str]:
     selected_tickers = selected_tickers_from_labels(selected_labels)
-    cleaned_added_tickers = parse_ticker_entries(",".join(added_tickers))
-    return list(dict.fromkeys(selected_tickers + cleaned_added_tickers))
+    _ = added_tickers
+    return list(dict.fromkeys(selected_tickers))
+
+
+def asset_options_for_scope(preset: str, added_tickers: list[str]) -> list[str]:
+    base_options = (
+        [ticker_label(ticker) for ticker in INDIAN_ASSET_UNIVERSE]
+        if preset == "Custom"
+        else default_labels_for_preset(preset)
+    )
+    added_options = [
+        ticker_label(ticker) for ticker in parse_ticker_entries(",".join(added_tickers))
+    ]
+    return list(dict.fromkeys(base_options + added_options))
 
 
 def add_tickers_to_portfolio() -> None:
@@ -489,13 +501,25 @@ def add_tickers_to_portfolio() -> None:
         st.session_state["ui_ticker_to_add"] = ""
         return
 
+    new_labels = [ticker_label(ticker) for ticker in new_tickers]
+    current_selected_labels = list(st.session_state.get("ui_selected_assets", []))
     st.session_state["ui_added_tickers"] = list(dict.fromkeys(current_added_tickers + new_tickers))
+    st.session_state["ui_selected_assets"] = list(
+        dict.fromkeys(current_selected_labels + new_labels)
+    )
     st.session_state["ui_ticker_to_add"] = ""
     st.session_state[UI_MESSAGE_KEY] = ("info", f"Added ticker(s): {', '.join(new_tickers)}.")
 
 
 def clear_added_tickers() -> None:
-    if st.session_state.get("ui_added_tickers"):
+    added_tickers = parse_ticker_entries(",".join(st.session_state.get("ui_added_tickers", [])))
+    if added_tickers:
+        added_labels = {ticker_label(ticker) for ticker in added_tickers}
+        st.session_state["ui_selected_assets"] = [
+            label
+            for label in st.session_state.get("ui_selected_assets", [])
+            if label not in added_labels
+        ]
         st.session_state["ui_added_tickers"] = []
         st.session_state[UI_MESSAGE_KEY] = ("info", "Added tickers cleared.")
 
@@ -3444,6 +3468,46 @@ def render_data_quality_report(data_quality_summary) -> None:
         st.write("Cleaning method:", data_quality_summary.cleaning_method)
         if data_quality_summary.dropped_asset_names:
             st.write("Dropped assets:", ", ".join(data_quality_summary.dropped_asset_names))
+
+        asset_missingness_report = getattr(
+            data_quality_summary,
+            "asset_missingness_report",
+            pd.DataFrame(),
+        )
+        if not asset_missingness_report.empty:
+            display_report = asset_missingness_report.copy()
+            if "missing_percentage" in display_report:
+                display_report["missing_percentage"] = display_report[
+                    "missing_percentage"
+                ].map(lambda value: f"{float(value):.2%}")
+
+            dropped_report = display_report[
+                display_report["status"].astype(str).str.lower().eq("dropped")
+            ]
+            if not dropped_report.empty:
+                st.write("Dropped asset diagnostics")
+                st.dataframe(
+                    dropped_report[
+                        [
+                            "asset",
+                            "drop_reason",
+                            "missing_observations",
+                            "total_observations",
+                            "missing_percentage",
+                            "first_missing_date",
+                            "last_missing_date",
+                            "longest_missing_run_start",
+                            "longest_missing_run_end",
+                            "longest_missing_run_observations",
+                            "first_valid_date",
+                            "last_valid_date",
+                        ]
+                    ],
+                    use_container_width=True,
+                )
+
+            st.write("Asset-level missingness detail")
+            st.dataframe(display_report, use_container_width=True)
 
 
 def render_dashboard_tabs(
@@ -6639,7 +6703,10 @@ else:
             st.session_state["_last_preset"] = preset
             st.session_state["_last_select_all"] = select_all
 
-        asset_options = all_asset_labels if preset == "Custom" else default_labels_for_preset(preset)
+        asset_options = asset_options_for_scope(
+            preset,
+            st.session_state.get("ui_added_tickers", []),
+        )
         st.multiselect(
             "Selected Assets",
             options=asset_options,

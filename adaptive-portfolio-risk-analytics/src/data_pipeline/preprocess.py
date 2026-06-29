@@ -50,6 +50,7 @@ class MissingDataSummary:
     missing_after: int
     dropped_asset_names: tuple[str, ...]
     dropped_asset_missing_percentages: dict[str, float]
+    asset_missingness_report: pd.DataFrame
     cleaning_method: str
 
 
@@ -512,6 +513,10 @@ class DataPreprocessor:
         missing_percentages = data.isna().mean()
         dropped_assets = missing_percentages[missing_percentages > MISSING_DATA_DROP_THRESHOLD]
         retained_assets = missing_percentages.index[missing_percentages <= MISSING_DATA_DROP_THRESHOLD]
+        asset_missingness_report = DataPreprocessor._build_missingness_report(
+            data,
+            dropped_assets.index,
+        )
 
         if retained_assets.empty:
             raise ValueError("no assets remain after applying the missing-data threshold")
@@ -548,9 +553,123 @@ class DataPreprocessor:
             missing_after=missing_after,
             dropped_asset_names=tuple(dropped_assets.index.tolist()),
             dropped_asset_missing_percentages=dropped_asset_missing_percentages,
+            asset_missingness_report=asset_missingness_report,
             cleaning_method="drop_over_5pct_then_forward_fill_back_fill",
         )
         return cleaned, summary
+
+    @staticmethod
+    def _build_missingness_report(
+        data: pd.DataFrame,
+        dropped_assets: pd.Index,
+    ) -> pd.DataFrame:
+        dropped_set = {str(asset) for asset in dropped_assets}
+        records: list[dict[str, object]] = []
+
+        for asset in data.columns:
+            asset_name = str(asset)
+            series = data[asset]
+            missing_mask = series.isna()
+            missing_count = int(missing_mask.sum())
+            total_observations = int(len(series))
+            missing_percentage = (
+                float(missing_count / total_observations) if total_observations else 0.0
+            )
+            first_missing, last_missing = DataPreprocessor._first_last_true_index(missing_mask)
+            (
+                longest_start,
+                longest_end,
+                longest_count,
+            ) = DataPreprocessor._longest_true_run(missing_mask)
+            first_valid = series.first_valid_index()
+            last_valid = series.last_valid_index()
+            dropped = asset_name in dropped_set
+
+            records.append(
+                {
+                    "asset": asset_name,
+                    "status": "dropped" if dropped else "retained",
+                    "drop_reason": (
+                        f"missing_data_above_{int(MISSING_DATA_DROP_THRESHOLD * 100)}pct_threshold"
+                        if dropped
+                        else ""
+                    ),
+                    "missing_observations": missing_count,
+                    "total_observations": total_observations,
+                    "missing_percentage": missing_percentage,
+                    "first_missing_date": DataPreprocessor._format_index_value(first_missing),
+                    "last_missing_date": DataPreprocessor._format_index_value(last_missing),
+                    "longest_missing_run_start": DataPreprocessor._format_index_value(
+                        longest_start
+                    ),
+                    "longest_missing_run_end": DataPreprocessor._format_index_value(longest_end),
+                    "longest_missing_run_observations": int(longest_count),
+                    "first_valid_date": DataPreprocessor._format_index_value(first_valid),
+                    "last_valid_date": DataPreprocessor._format_index_value(last_valid),
+                }
+            )
+
+        columns = [
+            "asset",
+            "status",
+            "drop_reason",
+            "missing_observations",
+            "total_observations",
+            "missing_percentage",
+            "first_missing_date",
+            "last_missing_date",
+            "longest_missing_run_start",
+            "longest_missing_run_end",
+            "longest_missing_run_observations",
+            "first_valid_date",
+            "last_valid_date",
+        ]
+        return pd.DataFrame(records, columns=columns)
+
+    @staticmethod
+    def _first_last_true_index(mask: pd.Series) -> tuple[object | None, object | None]:
+        if not bool(mask.any()):
+            return None, None
+        true_index = mask.index[mask.to_numpy()]
+        return true_index[0], true_index[-1]
+
+    @staticmethod
+    def _longest_true_run(mask: pd.Series) -> tuple[object | None, object | None, int]:
+        best_start = None
+        best_end = None
+        best_count = 0
+        current_start = None
+        current_end = None
+        current_count = 0
+
+        for index_value, is_true in mask.items():
+            if bool(is_true):
+                if current_count == 0:
+                    current_start = index_value
+                current_end = index_value
+                current_count += 1
+                if current_count > best_count:
+                    best_start = current_start
+                    best_end = current_end
+                    best_count = current_count
+            else:
+                current_start = None
+                current_end = None
+                current_count = 0
+
+        return best_start, best_end, int(best_count)
+
+    @staticmethod
+    def _format_index_value(value: object | None) -> str | None:
+        if value is None:
+            return None
+        try:
+            timestamp = pd.Timestamp(value)
+            if pd.isna(timestamp):
+                return None
+            return timestamp.date().isoformat()
+        except (TypeError, ValueError):
+            return str(value)
 
     @staticmethod
     def detect_outliers(

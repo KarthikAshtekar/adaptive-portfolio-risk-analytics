@@ -5,7 +5,13 @@ from __future__ import annotations
 import pandas as pd
 
 import src.dashboard.app as dashboard_app
-from src.dashboard.app import merge_portfolio_tickers, parse_ticker_entries, ticker_label
+from src.dashboard.app import (
+    asset_options_for_scope,
+    merge_portfolio_tickers,
+    parse_ticker_entries,
+    selected_tickers_from_labels,
+    ticker_label,
+)
 
 
 def test_parse_ticker_entries_normalizes_and_deduplicates_symbols() -> None:
@@ -14,12 +20,25 @@ def test_parse_ticker_entries_normalizes_and_deduplicates_symbols() -> None:
     assert tickers == ["AAPL", "RELIANCE.NS", "BTC-USD"]
 
 
-def test_merge_portfolio_tickers_appends_added_tickers_without_replacing_selection() -> None:
+def test_merge_portfolio_tickers_uses_visible_selection_only() -> None:
     selected_labels = [ticker_label("HDFCBANK.NS"), ticker_label("TCS.NS")]
 
     tickers = merge_portfolio_tickers(selected_labels, ["AAPL", "TCS.NS"])
 
-    assert tickers == ["HDFCBANK.NS", "TCS.NS", "AAPL"]
+    assert tickers == ["HDFCBANK.NS", "TCS.NS"]
+
+
+def test_custom_ticker_labels_are_selected_assets() -> None:
+    tickers = selected_tickers_from_labels([ticker_label("AAPL"), ticker_label("TCS.NS")])
+
+    assert tickers == ["AAPL", "TCS.NS"]
+
+
+def test_asset_options_include_added_custom_tickers() -> None:
+    options = asset_options_for_scope("Core Diversified", ["AAPL", "BTC-USD"])
+
+    assert ticker_label("AAPL") in options
+    assert ticker_label("BTC-USD") in options
 
 
 def test_ticker_label_handles_custom_tickers() -> None:

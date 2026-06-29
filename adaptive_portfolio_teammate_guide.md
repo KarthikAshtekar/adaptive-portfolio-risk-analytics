@@ -6,15 +6,15 @@
 **Purpose:** Viva preparation + technical documentation support  
 **Current status:** Strong research prototype; not a production trading system
 
----
+\---
 
-## 1. One-Paragraph Project Summary
+## 1\. One-Paragraph Project Summary
 
 This project builds a portfolio analytics platform that takes historical market prices, cleans and validates them, converts them into returns, estimates risk through volatility/covariance/correlation, constructs portfolios using multiple allocation methods, and tests those strategies through rolling backtests with realistic rebalancing and transaction-cost assumptions. The project compares Equal Weight, Inverse Volatility, Mean-Variance/Max-Sharpe, Hierarchical Risk Parity (HRP), and Hierarchical Equal Risk Contribution (HERC), then adds risk analytics, benchmark comparison, volatility targeting, and experiment sensitivity analysis. The current system is best described as a **risk-aware adaptive allocation and portfolio analytics platform**. It is not yet a full regime-detection or NLP-driven dynamic allocation engine; those are future extensions.
 
----
+\---
 
-## 2. What Problem Are We Solving?
+## 2\. What Problem Are We Solving?
 
 A normal investor may ask: “Which stocks should I buy?”  
 This project asks a deeper question:
@@ -25,19 +25,19 @@ The project does not simply pick the asset with the highest past return. Instead
 
 A portfolio may contain 30 assets, but if all of them crash together, diversification is weak. Therefore, the project focuses on:
 
-- estimating returns and risk,
-- estimating covariance and correlation,
-- understanding asset similarity through hierarchical clustering,
-- constructing portfolios using different allocation philosophies,
-- testing strategies out of sample through rolling backtests,
-- including turnover and transaction costs,
-- comparing results against benchmarks,
-- explaining risk contribution, and
-- running sensitivity experiments over strategy assumptions.
+* estimating returns and risk,
+* estimating covariance and correlation,
+* understanding asset similarity through hierarchical clustering,
+* constructing portfolios using different allocation philosophies,
+* testing strategies out of sample through rolling backtests,
+* including turnover and transaction costs,
+* comparing results against benchmarks,
+* explaining risk contribution, and
+* running sensitivity experiments over strategy assumptions.
 
----
+\---
 
-## 3. Final Presentation Boundary
+## 3\. Final Presentation Boundary
 
 ### 3.1 Implemented and Safe to Present
 
@@ -54,15 +54,17 @@ The following parts are implemented and can be presented confidently:
 9. HRP allocation.
 10. HERC allocation.
 11. Covariance estimator factory:
-    - sample covariance,
-    - Ledoit-Wolf,
-    - EWMA,
-    - EWMA + Ledoit-Wolf.
+
+    * sample covariance,
+    * Ledoit-Wolf,
+    * EWMA,
+    * EWMA + Ledoit-Wolf.
 12. Rolling walk-forward backtesting.
 13. Rebalance modes:
-    - `calendar`,
-    - `threshold`,
-    - `calendar_or_threshold`.
+
+    * `calendar`,
+    * `threshold`,
+    * `calendar\\\\\\\_or\\\\\\\_threshold`.
 14. Turnover and transaction-cost diagnostics.
 15. Gross and net portfolio value tracking.
 16. Performance metrics and drawdown metrics.
@@ -92,9 +94,9 @@ The following should be presented only as future work or partial scaffolding:
 **Incorrect framing:**  
 “We have already built a fully AI-driven regime-aware sentiment allocation engine.”
 
----
+\---
 
-## 4. Asset Universe and Data Setup
+## 4\. Asset Universe and Data Setup
 
 ### 4.1 Default Dashboard Universe
 
@@ -106,22 +108,22 @@ TCS.NS, INFY.NS, WIPRO.NS, HCLTECH.NS, TECHM.NS,
 RELIANCE.NS, ONGC.NS, NTPC.NS, POWERGRID.NS,
 HINDUNILVR.NS, ITC.NS, NESTLEIND.NS, TATACONSUM.NS,
 SUNPHARMA.NS, DRREDDY.NS, CIPLA.NS,
-TATAMOTORS.NS, MARUTI.NS, M&M.NS,
+TATAMOTORS.NS, MARUTI.NS, M\\\\\\\&M.NS,
 LT.NS, ULTRACEMCO.NS, ASIANPAINT.NS, BHARTIARTL.NS,
 GOLDBEES.NS, SILVERBEES.NS
 ```
 
 This universe combines:
 
-- Indian banking stocks,
-- Indian IT stocks,
-- energy and utilities,
-- FMCG/consumer names,
-- pharma names,
-- automobile names,
-- infrastructure/materials/telecom names,
-- gold ETF exposure, and
-- silver ETF exposure.
+* Indian banking stocks,
+* Indian IT stocks,
+* energy and utilities,
+* FMCG/consumer names,
+* pharma names,
+* automobile names,
+* infrastructure/materials/telecom names,
+* gold ETF exposure, and
+* silver ETF exposure.
 
 The gold and silver ETFs are important because they may behave differently from equities and can improve diversification.
 
@@ -150,9 +152,9 @@ End date: run date
 
 The dashboard can be changed manually over a broad range, roughly from 2010 to 2026 depending on data availability and interface settings.
 
----
+\---
 
-## 5. Full Sequential Project Pipeline
+## 5\. Full Sequential Project Pipeline
 
 The project pipeline is:
 
@@ -177,9 +179,9 @@ The logic is sequential. Each stage depends on the previous stage being correct.
 
 For example, if prices are wrong, returns are wrong. If returns are wrong, covariance is wrong. If covariance is wrong, HRP/HERC allocations are wrong. If allocations are wrong, backtest results are misleading.
 
----
+\---
 
-## 6. Stage 1 — Data Acquisition and Data Understanding
+## 6\. Stage 1 — Data Acquisition and Data Understanding
 
 ### 6.1 What Happens in This Stage?
 
@@ -187,17 +189,17 @@ The system downloads historical market data for the selected tickers. The main i
 
 A price panel is a table where:
 
-- rows are dates,
-- columns are assets,
-- values are prices.
+* rows are dates,
+* columns are assets,
+* values are prices.
 
 Example:
 
-| Date | HDFCBANK.NS | INFY.NS | GOLDBEES.NS |
-|---|---:|---:|---:|
-| 2020-01-01 | 1000 | 720 | 36 |
-| 2020-01-02 | 1010 | 725 | 36.2 |
-| 2020-01-03 | 1005 | 730 | 36.5 |
+|Date|HDFCBANK.NS|INFY.NS|GOLDBEES.NS|
+|-|-:|-:|-:|
+|2020-01-01|1000|720|36|
+|2020-01-02|1010|725|36.2|
+|2020-01-03|1005|730|36.5|
 
 ### 6.2 Why Adjusted Close?
 
@@ -206,7 +208,7 @@ Suppose a stock splits 1:2. The raw price may suddenly fall from ₹1000 to ₹5
 So we prefer:
 
 ```text
-adjusted_close_price
+adjusted\\\\\\\_close\\\\\\\_price
 ```
 
 instead of raw close.
@@ -227,9 +229,9 @@ src/dashboard/app.py
 
 The dashboard allows asset selection, date selection, and ticker override.
 
----
+\---
 
-## 7. Stage 2 — Returns and Data Cleaning
+## 7\. Stage 2 — Returns and Data Cleaning
 
 ### 7.1 Why Convert Prices to Returns?
 
@@ -240,13 +242,13 @@ Portfolio models do not work directly with prices. A ₹10 movement in a ₹1000
 Formula:
 
 ```text
-simple_return_t = P_t / P_{t-1} - 1
+simple\\\\\\\_return\\\\\\\_t = P\\\\\\\_t / P\\\\\\\_{t-1} - 1
 ```
 
 Mathematical notation:
 
 ```text
-r_t = (P_t - P_{t-1}) / P_{t-1}
+r\\\\\\\_t = (P\\\\\\\_t - P\\\\\\\_{t-1}) / P\\\\\\\_{t-1}
 ```
 
 Example:
@@ -262,7 +264,7 @@ simple return = 105 / 100 - 1 = 0.05 = 5%
 Formula:
 
 ```text
-log_return_t = log(P_t / P_{t-1})
+log\\\\\\\_return\\\\\\\_t = log(P\\\\\\\_t / P\\\\\\\_{t-1})
 ```
 
 Example:
@@ -280,14 +282,14 @@ Simple returns are intuitive. Log returns are useful mathematically because they
 Daily volatility is scaled to annual volatility using 252 trading days:
 
 ```text
-annualized_volatility = std(daily_returns) * sqrt(252)
+annualized\\\\\\\_volatility = std(daily\\\\\\\_returns) \\\\\\\* sqrt(252)
 ```
 
 Example:
 
 ```text
 daily volatility = 1%
-annualized volatility = 1% * sqrt(252) ≈ 15.87%
+annualized volatility = 1% \\\\\\\* sqrt(252) ≈ 15.87%
 ```
 
 ### 7.5 Data Quality Rules
@@ -306,7 +308,7 @@ Default examples:
 ```text
 missing observation tolerance: 5%
 price anomaly threshold: absolute log return > 0.50
-winsorization range: [-20%, +20%]
+winsorization range: \\\\\\\[-20%, +20%]
 ```
 
 ### 7.6 Why Cleaning Matters
@@ -317,9 +319,9 @@ Example:
 
 If one data error shows a stock moving +500% in one day, then the model may think that stock is extremely volatile. This can distort allocation weights and clustering structure.
 
----
+\---
 
-## 8. Stage 3 — Risk, Volatility, Covariance, Correlation, and Distance
+## 8\. Stage 3 — Risk, Volatility, Covariance, Correlation, and Distance
 
 This is one of the most important parts of the project.
 
@@ -330,19 +332,19 @@ Volatility measures how much an asset’s returns fluctuate.
 Formula:
 
 ```text
-sigma_i = std(r_i)
+sigma\\\\\\\_i = std(r\\\\\\\_i)
 ```
 
 Annualized:
 
 ```text
-sigma_i_annual = std(daily_returns_i) * sqrt(252)
+sigma\\\\\\\_i\\\\\\\_annual = std(daily\\\\\\\_returns\\\\\\\_i) \\\\\\\* sqrt(252)
 ```
 
 Interpretation:
 
-- Higher volatility means returns fluctuate more.
-- Lower volatility means returns are more stable.
+* Higher volatility means returns fluctuate more.
+* Lower volatility means returns are more stable.
 
 But volatility alone is not enough. Two volatile assets can still diversify each other if they do not move together.
 
@@ -353,14 +355,14 @@ Covariance measures whether two assets move together in return units.
 Formula:
 
 ```text
-Sigma_ij = cov(r_i, r_j)
+Sigma\\\\\\\_ij = cov(r\\\\\\\_i, r\\\\\\\_j)
 ```
 
 Interpretation:
 
-- Positive covariance: assets tend to move in the same direction.
-- Negative covariance: assets tend to move in opposite directions.
-- Near-zero covariance: weak linear co-movement.
+* Positive covariance: assets tend to move in the same direction.
+* Negative covariance: assets tend to move in opposite directions.
+* Near-zero covariance: weak linear co-movement.
 
 Example:
 
@@ -373,7 +375,7 @@ Correlation standardizes covariance so it lies between -1 and +1.
 Formula:
 
 ```text
-rho_ij = Sigma_ij / (sigma_i * sigma_j)
+rho\\\\\\\_ij = Sigma\\\\\\\_ij / (sigma\\\\\\\_i \\\\\\\* sigma\\\\\\\_j)
 ```
 
 Interpretation:
@@ -395,13 +397,13 @@ If equity and gold have correlation 0.10 or negative, gold may improve diversifi
 Hierarchical clustering needs a distance measure. The project converts correlation into distance:
 
 ```text
-d_ij = sqrt((1 - rho_ij) / 2)
+d\\\\\\\_ij = sqrt((1 - rho\\\\\\\_ij) / 2)
 ```
 
 Interpretation:
 
-- If correlation is high, distance is low.
-- If correlation is low or negative, distance is high.
+* If correlation is high, distance is low.
+* If correlation is low or negative, distance is high.
 
 Example:
 
@@ -429,9 +431,9 @@ src/portfolio/
 src/analytics/
 ```
 
----
+\---
 
-## 9. Stage 4 — Covariance Estimation Engine
+## 9\. Stage 4 — Covariance Estimation Engine
 
 The project does not use only one covariance estimator. It supports multiple estimators so we can test how strategy performance changes under different risk assumptions.
 
@@ -440,7 +442,7 @@ The project does not use only one covariance estimator. It supports multiple est
 Portfolio risk is:
 
 ```text
-portfolio_variance = w' * Sigma * w
+portfolio\\\\\\\_variance = w' \\\\\\\* Sigma \\\\\\\* w
 ```
 
 where:
@@ -457,7 +459,7 @@ If the covariance matrix is unstable, optimized portfolios become unstable.
 Formula:
 
 ```text
-sample_covariance = cov(R)
+sample\\\\\\\_covariance = cov(R)
 ```
 
 where `R` is the returns matrix.
@@ -470,20 +472,20 @@ All historical observations are equally important.
 
 Pros:
 
-- Simple.
-- Easy to understand.
+* Simple.
+* Easy to understand.
 
 Cons:
 
-- Noisy in small samples.
-- Sensitive to extreme periods.
+* Noisy in small samples.
+* Sensitive to extreme periods.
 
 ### 9.3 Ledoit-Wolf Shrinkage
 
 Formula:
 
 ```text
-Sigma_LW = (1 - delta) * S + delta * F
+Sigma\\\\\\\_LW = (1 - delta) \\\\\\\* S + delta \\\\\\\* F
 ```
 
 where:
@@ -553,14 +555,14 @@ The covariance factory supports:
 
 ```text
 sample
-ledoit_wolf
+ledoit\\\\\\\_wolf
 ewma
-ewma_ledoit_wolf
+ewma\\\\\\\_ledoit\\\\\\\_wolf
 ```
 
----
+\---
 
-## 10. Stage 5 — Hierarchical Clustering
+## 10\. Stage 5 — Hierarchical Clustering
 
 ### 10.1 What Is Clustering?
 
@@ -602,8 +604,8 @@ A dendrogram is a tree diagram showing how assets are grouped.
 
 Interpretation:
 
-- Assets connected at a low height are very similar.
-- Assets connected at a high height are less similar.
+* Assets connected at a low height are very similar.
+* Assets connected at a high height are less similar.
 
 ### 10.4 Linkage Method
 
@@ -628,9 +630,9 @@ Example:
 
 If five banking stocks are highly correlated, holding all five is not the same as holding five independent assets. HRP/HERC use clustering to recognize this concentration.
 
----
+\---
 
-## 11. Stage 6 — Portfolio Construction Methods
+## 11\. Stage 6 — Portfolio Construction Methods
 
 The project implements six strategy concepts:
 
@@ -643,20 +645,20 @@ The project implements six strategy concepts:
 
 The first five decide composition inside the risky asset universe. Volatility targeting controls how much exposure is allocated to the risky portfolio versus defensive sleeve.
 
----
+\---
 
-## 12. Strategy 1 — Equal Weight
+## 12\. Strategy 1 — Equal Weight
 
 ### 12.1 Formula
 
 ```text
-w_i = 1 / N
+w\\\\\\\_i = 1 / N
 ```
 
 where:
 
 ```text
-w_i = weight of asset i
+w\\\\\\\_i = weight of asset i
 N   = number of assets
 ```
 
@@ -678,34 +680,34 @@ Do not estimate returns, do not estimate risk, just divide capital equally.
 
 ### 12.3 Pros
 
-- Very simple.
-- Hard to overfit.
-- Strong benchmark.
+* Very simple.
+* Hard to overfit.
+* Strong benchmark.
 
 ### 12.4 Cons
 
-- Ignores volatility.
-- Ignores correlation.
-- Can allocate too much to risky assets.
+* Ignores volatility.
+* Ignores correlation.
+* Can allocate too much to risky assets.
 
 ### 12.5 Role in Project
 
 Equal Weight is the default benchmark. Other strategies are compared against it.
 
----
+\---
 
-## 13. Strategy 2 — Inverse Volatility
+## 13\. Strategy 2 — Inverse Volatility
 
 ### 13.1 Formula
 
 ```text
-w_i = (1 / sigma_i) / sum_j(1 / sigma_j)
+w\\\\\\\_i = (1 / sigma\\\\\\\_i) / sum\\\\\\\_j(1 / sigma\\\\\\\_j)
 ```
 
 where:
 
 ```text
-sigma_i = volatility of asset i
+sigma\\\\\\\_i = volatility of asset i
 ```
 
 ### 13.2 Example
@@ -738,18 +740,18 @@ Lower-volatility assets get more weight. Higher-volatility assets get less weigh
 
 ### 13.4 Pros
 
-- Simple risk-aware allocation.
-- Does not need expected returns.
-- Usually more defensive than Equal Weight.
+* Simple risk-aware allocation.
+* Does not need expected returns.
+* Usually more defensive than Equal Weight.
 
 ### 13.5 Cons
 
-- Does not directly use correlation.
-- Can over-allocate to low-volatility assets even if they are highly correlated.
+* Does not directly use correlation.
+* Can over-allocate to low-volatility assets even if they are highly correlated.
 
----
+\---
 
-## 14. Strategy 3 — Mean-Variance / Max-Sharpe
+## 14\. Strategy 3 — Mean-Variance / Max-Sharpe
 
 ### 14.1 Background
 
@@ -760,7 +762,7 @@ The Max-Sharpe version tries to maximize return per unit of risk.
 ### 14.2 Portfolio Return
 
 ```text
-portfolio_return = w' * mu
+portfolio\\\\\\\_return = w' \\\\\\\* mu
 ```
 
 where:
@@ -773,26 +775,26 @@ mu = expected returns
 ### 14.3 Portfolio Risk
 
 ```text
-portfolio_volatility = sqrt(w' * Sigma * w)
+portfolio\\\\\\\_volatility = sqrt(w' \\\\\\\* Sigma \\\\\\\* w)
 ```
 
 ### 14.4 Sharpe Ratio
 
 ```text
-Sharpe = (portfolio_return - risk_free_rate) / portfolio_volatility
+Sharpe = (portfolio\\\\\\\_return - risk\\\\\\\_free\\\\\\\_rate) / portfolio\\\\\\\_volatility
 ```
 
 ### 14.5 Max-Sharpe Objective
 
 ```text
-maximize (w' * mu - rf) / sqrt(w' * Sigma * w)
+maximize (w' \\\\\\\* mu - rf) / sqrt(w' \\\\\\\* Sigma \\\\\\\* w)
 ```
 
 subject to:
 
 ```text
-sum(w_i) = 1
-min_weight <= w_i <= max_weight
+sum(w\\\\\\\_i) = 1
+min\\\\\\\_weight <= w\\\\\\\_i <= max\\\\\\\_weight
 optional target return constraint
 ```
 
@@ -806,23 +808,23 @@ Which combination gives the best expected return for the risk taken?
 
 ### 14.7 Pros
 
-- Theoretically powerful.
-- Directly uses expected return and covariance.
-- Can create efficient frontier portfolios.
+* Theoretically powerful.
+* Directly uses expected return and covariance.
+* Can create efficient frontier portfolios.
 
 ### 14.8 Cons
 
-- Highly sensitive to expected-return estimation.
-- Can produce unstable or concentrated weights.
-- Small changes in input assumptions can lead to large allocation changes.
+* Highly sensitive to expected-return estimation.
+* Can produce unstable or concentrated weights.
+* Small changes in input assumptions can lead to large allocation changes.
 
 ### 14.9 Role in This Project
 
 Mean-Variance / Max-Sharpe is implemented, but it is not central to the dashboard/sensitivity experiments. The main comparative emphasis is on Equal Weight, Inverse Volatility, HRP, HERC, covariance methods, rebalancing rules, transaction costs, and volatility targeting.
 
----
+\---
 
-## 15. Strategy 4 — Hierarchical Risk Parity (HRP)
+## 15\. Strategy 4 — Hierarchical Risk Parity (HRP)
 
 ### 15.1 What HRP Tries to Solve
 
@@ -847,15 +849,15 @@ HRP avoids direct expected-return forecasting. It uses the covariance/correlatio
 Formula:
 
 ```text
-cluster_variance_C = w_ivp,C' * Sigma_C * w_ivp,C
+cluster\\\\\\\_variance\\\\\\\_C = w\\\\\\\_ivp,C' \\\\\\\* Sigma\\\\\\\_C \\\\\\\* w\\\\\\\_ivp,C
 ```
 
 where:
 
 ```text
 C          = cluster
-Sigma_C    = covariance matrix inside cluster
-w_ivp,C    = inverse-variance portfolio weights inside cluster
+Sigma\\\\\\\_C    = covariance matrix inside cluster
+w\\\\\\\_ivp,C    = inverse-variance portfolio weights inside cluster
 ```
 
 ### 15.4 Recursive Allocation Formula
@@ -863,8 +865,8 @@ w_ivp,C    = inverse-variance portfolio weights inside cluster
 When HRP splits a cluster into left and right sub-clusters:
 
 ```text
-allocation_to_left = variance_right / (variance_left + variance_right)
-allocation_to_right = variance_left / (variance_left + variance_right)
+allocation\\\\\\\_to\\\\\\\_left = variance\\\\\\\_right / (variance\\\\\\\_left + variance\\\\\\\_right)
+allocation\\\\\\\_to\\\\\\\_right = variance\\\\\\\_left / (variance\\\\\\\_left + variance\\\\\\\_right)
 ```
 
 ### 15.5 Intuition
@@ -874,15 +876,15 @@ If the left cluster is riskier, it gets less capital. If the right cluster is le
 Example:
 
 ```text
-variance_left = 0.04
-variance_right = 0.01
+variance\\\\\\\_left = 0.04
+variance\\\\\\\_right = 0.01
 ```
 
 Then:
 
 ```text
-allocation_to_left = 0.01 / (0.04 + 0.01) = 20%
-allocation_to_right = 0.04 / (0.04 + 0.01) = 80%
+allocation\\\\\\\_to\\\\\\\_left = 0.01 / (0.04 + 0.01) = 20%
+allocation\\\\\\\_to\\\\\\\_right = 0.04 / (0.04 + 0.01) = 80%
 ```
 
 The lower-risk cluster receives higher allocation.
@@ -891,14 +893,14 @@ The lower-risk cluster receives higher allocation.
 
 HRP is useful when:
 
-- expected returns are unreliable,
-- covariance structure is meaningful,
-- we want more stable allocations,
-- we want to avoid concentration in correlated clusters.
+* expected returns are unreliable,
+* covariance structure is meaningful,
+* we want more stable allocations,
+* we want to avoid concentration in correlated clusters.
 
----
+\---
 
-## 16. Strategy 5 — Hierarchical Equal Risk Contribution (HERC)
+## 16\. Strategy 5 — Hierarchical Equal Risk Contribution (HERC)
 
 ### 16.1 What HERC Adds
 
@@ -906,26 +908,26 @@ HERC is another hierarchical allocation strategy. Like HRP, it uses clustering. 
 
 ### 16.2 Difference Between HRP and HERC
 
-| Aspect | HRP | HERC |
-|---|---|---|
-| Tree use | Uses quasi-diagonal ordering | Traverses explicit linkage tree |
-| Split logic | Recursive bisection | Sibling branch risk allocation |
-| Allocation basis | Cluster variance | Cluster risk |
-| Main idea | Reduce concentration by cluster variance | Equalize risk contribution across branches |
+|Aspect|HRP|HERC|
+|-|-|-|
+|Tree use|Uses quasi-diagonal ordering|Traverses explicit linkage tree|
+|Split logic|Recursive bisection|Sibling branch risk allocation|
+|Allocation basis|Cluster variance|Cluster risk|
+|Main idea|Reduce concentration by cluster variance|Equalize risk contribution across branches|
 
 ### 16.3 HERC Cluster Risk
 
 Formula:
 
 ```text
-cluster_risk_C = sqrt(w_iv,C' * Sigma_C * w_iv,C)
+cluster\\\\\\\_risk\\\\\\\_C = sqrt(w\\\\\\\_iv,C' \\\\\\\* Sigma\\\\\\\_C \\\\\\\* w\\\\\\\_iv,C)
 ```
 
 ### 16.4 HERC Branch Allocation
 
 ```text
-weight_left = parent_weight * risk_right / (risk_left + risk_right)
-weight_right = parent_weight * risk_left / (risk_left + risk_right)
+weight\\\\\\\_left = parent\\\\\\\_weight \\\\\\\* risk\\\\\\\_right / (risk\\\\\\\_left + risk\\\\\\\_right)
+weight\\\\\\\_right = parent\\\\\\\_weight \\\\\\\* risk\\\\\\\_left / (risk\\\\\\\_left + risk\\\\\\\_right)
 ```
 
 ### 16.5 Intuition
@@ -938,9 +940,9 @@ HERC is useful when the project wants to compare different hierarchical risk-bud
 
 HRP and HERC can produce different weights even with the same covariance estimator and same asset universe.
 
----
+\---
 
-## 17. Stage 7 — Rolling Walk-Forward Backtesting
+## 17\. Stage 7 — Rolling Walk-Forward Backtesting
 
 ### 17.1 Why Backtesting?
 
@@ -972,14 +974,14 @@ For each date t after the training window:
 ### 17.3 Portfolio Return Formula
 
 ```text
-r_p,t = w_{t-1}' * r_t
+r\\\\\\\_p,t = w\\\\\\\_{t-1}' \\\\\\\* r\\\\\\\_t
 ```
 
 where:
 
 ```text
-w_{t-1} = weights decided before return at time t
-r_t     = asset returns at time t
+w\\\\\\\_{t-1} = weights decided before return at time t
+r\\\\\\\_t     = asset returns at time t
 ```
 
 ### 17.4 Why This Avoids Look-Ahead Bias
@@ -1000,9 +1002,9 @@ Use today’s return to decide today’s weights.
 
 The second method creates look-ahead bias and gives unrealistically good results.
 
----
+\---
 
-## 18. Stage 8 — Rebalancing Logic
+## 18\. Stage 8 — Rebalancing Logic
 
 ### 18.1 Why Rebalancing Is Needed
 
@@ -1033,7 +1035,7 @@ The project supports:
 ```text
 calendar
 threshold
-calendar_or_threshold
+calendar\\\\\\\_or\\\\\\\_threshold
 ```
 
 ### 18.3 Calendar Rebalancing
@@ -1049,13 +1051,13 @@ If date is rebalance date:
 
 Pros:
 
-- Simple.
-- Predictable.
+* Simple.
+* Predictable.
 
 Cons:
 
-- May trade even when weights have barely changed.
-- May miss large drift between rebalance dates.
+* May trade even when weights have barely changed.
+* May miss large drift between rebalance dates.
 
 ### 18.4 Threshold Rebalancing
 
@@ -1064,7 +1066,7 @@ Rebalance only when weights drift too far from target.
 Formula:
 
 ```text
-max(abs(current_weights - target_weights)) >= threshold
+max(abs(current\\\\\\\_weights - target\\\\\\\_weights)) >= threshold
 ```
 
 Example:
@@ -1110,15 +1112,15 @@ Earlier, threshold rebalancing could mix two effects:
 The current design separates:
 
 ```text
-target_update_frequency = monthly
-rebalance_trigger = calendar / threshold / calendar_or_threshold
+target\\\\\\\_update\\\\\\\_frequency = monthly
+rebalance\\\\\\\_trigger = calendar / threshold / calendar\\\\\\\_or\\\\\\\_threshold
 ```
 
 This makes threshold rebalancing more interpretable.
 
----
+\---
 
-## 19. Stage 9 — Turnover and Transaction Costs
+## 19\. Stage 9 — Turnover and Transaction Costs
 
 ### 19.1 Turnover
 
@@ -1127,7 +1129,7 @@ Turnover measures how much of the portfolio is traded during rebalancing.
 Formula:
 
 ```text
-turnover = 0.5 * sum(abs(target_weights - current_weights))
+turnover = 0.5 \\\\\\\* sum(abs(target\\\\\\\_weights - current\\\\\\\_weights))
 ```
 
 Why multiply by 0.5?
@@ -1153,7 +1155,7 @@ Absolute differences:
 ```text
 A = 10%, B = 10%
 Sum = 20%
-Turnover = 0.5 * 20% = 10%
+Turnover = 0.5 \\\\\\\* 20% = 10%
 ```
 
 ### 19.2 Transaction Cost
@@ -1176,8 +1178,8 @@ Conversion:
 Formula:
 
 ```text
-cost_rate = (base_bps + slippage_bps) / 10000
-transaction_cost = turnover * portfolio_value * cost_rate
+cost\\\\\\\_rate = (base\\\\\\\_bps + slippage\\\\\\\_bps) / 10000
+transaction\\\\\\\_cost = turnover \\\\\\\* portfolio\\\\\\\_value \\\\\\\* cost\\\\\\\_rate
 ```
 
 Example:
@@ -1186,7 +1188,7 @@ Example:
 portfolio value = ₹10,00,000
 turnover = 10% = 0.10
 cost rate = 15 bps = 0.0015
-transaction cost = 0.10 * 10,00,000 * 0.0015 = ₹150
+transaction cost = 0.10 \\\\\\\* 10,00,000 \\\\\\\* 0.0015 = ₹150
 ```
 
 ### 19.3 Gross vs Net Portfolio Value
@@ -1206,16 +1208,16 @@ Correct statement:
 
 > The system tracks gross and net values, and transaction costs reduce net portfolio value. Cost diagnostics are included, but return-stream metrics should be interpreted carefully because they are not always fully reconstructed as daily net returns.
 
----
+\---
 
-## 20. Stage 10 — Performance Metrics
+## 20\. Stage 10 — Performance Metrics
 
 ### 20.1 Cumulative Return
 
 Formula:
 
 ```text
-cumulative_return = product(1 + r_t) - 1
+cumulative\\\\\\\_return = product(1 + r\\\\\\\_t) - 1
 ```
 
 Example:
@@ -1229,7 +1231,7 @@ Returns:
 Cumulative return:
 
 ```text
-(1.10 * 0.95 * 1.08) - 1 = 0.1286 = 12.86%
+(1.10 \\\\\\\* 0.95 \\\\\\\* 1.08) - 1 = 0.1286 = 12.86%
 ```
 
 ### 20.2 CAGR
@@ -1239,13 +1241,13 @@ CAGR means Compound Annual Growth Rate.
 Formula:
 
 ```text
-CAGR = (final_value / initial_value)^(1 / years) - 1
+CAGR = (final\\\\\\\_value / initial\\\\\\\_value)^(1 / years) - 1
 ```
 
 Code-style daily formula:
 
 ```text
-CAGR = product(1 + r_t)^(252 / n) - 1
+CAGR = product(1 + r\\\\\\\_t)^(252 / n) - 1
 ```
 
 Interpretation:
@@ -1259,7 +1261,7 @@ What annual growth rate would produce the same final value?
 ### 20.3 Annualized Volatility
 
 ```text
-annualized_volatility = std(r_t) * sqrt(252)
+annualized\\\\\\\_volatility = std(r\\\\\\\_t) \\\\\\\* sqrt(252)
 ```
 
 Interpretation:
@@ -1269,7 +1271,7 @@ Higher volatility means greater fluctuation in portfolio returns.
 ### 20.4 Sharpe Ratio
 
 ```text
-Sharpe = mean(r_t - rf / 252) / std(r_t - rf / 252) * sqrt(252)
+Sharpe = mean(r\\\\\\\_t - rf / 252) / std(r\\\\\\\_t - rf / 252) \\\\\\\* sqrt(252)
 ```
 
 Interpretation:
@@ -1281,7 +1283,7 @@ High Sharpe means the strategy generated good return relative to its volatility.
 ### 20.5 Sortino Ratio
 
 ```text
-Sortino = mean(r_t - target / 252) / downside_deviation * sqrt(252)
+Sortino = mean(r\\\\\\\_t - target / 252) / downside\\\\\\\_deviation \\\\\\\* sqrt(252)
 ```
 
 Sortino penalizes downside volatility only.
@@ -1297,13 +1299,13 @@ Drawdown measures the fall from a previous peak.
 Formula:
 
 ```text
-drawdown_t = portfolio_value_t / running_max(portfolio_value)_t - 1
+drawdown\\\\\\\_t = portfolio\\\\\\\_value\\\\\\\_t / running\\\\\\\_max(portfolio\\\\\\\_value)\\\\\\\_t - 1
 ```
 
 Maximum drawdown:
 
 ```text
-max_drawdown = min(drawdown_t)
+max\\\\\\\_drawdown = min(drawdown\\\\\\\_t)
 ```
 
 Example:
@@ -1339,13 +1341,13 @@ A strategy with high CAGR but very deep drawdown may have a lower Calmar ratio.
 Historical VaR:
 
 ```text
-VaR_95 = 5th percentile of returns
+VaR\\\\\\\_95 = 5th percentile of returns
 ```
 
 CVaR:
 
 ```text
-CVaR_95 = mean(returns <= VaR_95)
+CVaR\\\\\\\_95 = mean(returns <= VaR\\\\\\\_95)
 ```
 
 Interpretation:
@@ -1354,9 +1356,9 @@ VaR estimates a bad threshold loss. CVaR estimates the average loss conditional 
 
 These are historical descriptive metrics, not fully forward-looking stress tests.
 
----
+\---
 
-## 21. Stage 11 — Risk Contribution Analytics
+## 21\. Stage 11 — Risk Contribution Analytics
 
 ### 21.1 Why Risk Contribution?
 
@@ -1375,13 +1377,13 @@ Which assets are actually driving portfolio risk?
 ### 21.2 Portfolio Volatility
 
 ```text
-portfolio_volatility = sqrt(w' * Sigma * w)
+portfolio\\\\\\\_volatility = sqrt(w' \\\\\\\* Sigma \\\\\\\* w)
 ```
 
 ### 21.3 Marginal Risk Contribution (MRC)
 
 ```text
-MRC = Sigma * w / portfolio_volatility
+MRC = Sigma \\\\\\\* w / portfolio\\\\\\\_volatility
 ```
 
 MRC means how much portfolio risk changes if we increase an asset’s weight slightly.
@@ -1389,7 +1391,7 @@ MRC means how much portfolio risk changes if we increase an asset’s weight sli
 ### 21.4 Total Risk Contribution (TRC)
 
 ```text
-TRC_i = w_i * MRC_i
+TRC\\\\\\\_i = w\\\\\\\_i \\\\\\\* MRC\\\\\\\_i
 ```
 
 TRC is the actual risk contribution of asset `i`.
@@ -1397,7 +1399,7 @@ TRC is the actual risk contribution of asset `i`.
 ### 21.5 Percentage Risk Contribution (PRC)
 
 ```text
-PRC_i = TRC_i / portfolio_volatility
+PRC\\\\\\\_i = TRC\\\\\\\_i / portfolio\\\\\\\_volatility
 ```
 
 PRC shows each asset’s share of total portfolio risk.
@@ -1417,9 +1419,9 @@ then the asset is risk-heavy relative to its capital allocation.
 
 This is an explanation layer. It lets us say not only which strategy performed better, but why its risk behaved differently.
 
----
+\---
 
-## 22. Stage 12 — Benchmark Comparison
+## 22\. Stage 12 — Benchmark Comparison
 
 ### 22.1 Default Benchmark
 
@@ -1444,11 +1446,11 @@ The framework can compare strategy metrics against benchmark metrics.
 Examples:
 
 ```text
-excess_cagr = strategy_cagr - benchmark_cagr
-excess_sharpe = strategy_sharpe - benchmark_sharpe
-drawdown_difference = strategy_max_drawdown - benchmark_max_drawdown
-volatility_difference = strategy_volatility - benchmark_volatility
-final_value_difference = strategy_final_value - benchmark_final_value
+excess\\\\\\\_cagr = strategy\\\\\\\_cagr - benchmark\\\\\\\_cagr
+excess\\\\\\\_sharpe = strategy\\\\\\\_sharpe - benchmark\\\\\\\_sharpe
+drawdown\\\\\\\_difference = strategy\\\\\\\_max\\\\\\\_drawdown - benchmark\\\\\\\_max\\\\\\\_drawdown
+volatility\\\\\\\_difference = strategy\\\\\\\_volatility - benchmark\\\\\\\_volatility
+final\\\\\\\_value\\\\\\\_difference = strategy\\\\\\\_final\\\\\\\_value - benchmark\\\\\\\_final\\\\\\\_value
 ```
 
 ### 22.3 Why Benchmarking Is Important
@@ -1459,9 +1461,9 @@ Good viva line:
 
 > We use Equal Weight as a simple but strong benchmark because any sophisticated strategy should justify its complexity by improving risk-adjusted performance, drawdown, turnover, or robustness.
 
----
+\---
 
-## 23. Stage 13 — Volatility Targeting Overlay
+## 23\. Stage 13 — Volatility Targeting Overlay
 
 ### 23.1 What Volatility Targeting Does
 
@@ -1477,8 +1479,8 @@ How much should be shifted into a defensive sleeve?
 ### 23.2 Targeted Return Formula
 
 ```text
-r_targeted,t = exposure_t * risky_strategy_return_t
-               + (1 - exposure_t) * defensive_asset_return_t
+r\\\\\\\_targeted,t = exposure\\\\\\\_t \\\\\\\* risky\\\\\\\_strategy\\\\\\\_return\\\\\\\_t
+               + (1 - exposure\\\\\\\_t) \\\\\\\* defensive\\\\\\\_asset\\\\\\\_return\\\\\\\_t
 ```
 
 Interpretation:
@@ -1493,19 +1495,19 @@ If exposure is 70%, then:
 ### 23.3 Realized Volatility
 
 ```text
-realized_vol_t = std(risky_returns_{t-window:t}) * sqrt(252)
+realized\\\\\\\_vol\\\\\\\_t = std(risky\\\\\\\_returns\\\\\\\_{t-window:t}) \\\\\\\* sqrt(252)
 ```
 
 ### 23.4 Exposure Formula
 
 ```text
-exposure_t = clip(target_vol_t / realized_vol_{t-1}, exposure_floor, exposure_cap)
+exposure\\\\\\\_t = clip(target\\\\\\\_vol\\\\\\\_t / realized\\\\\\\_vol\\\\\\\_{t-1}, exposure\\\\\\\_floor, exposure\\\\\\\_cap)
 ```
 
 Interpretation:
 
-- If realized volatility is higher than target, reduce exposure.
-- If realized volatility is lower than target, increase exposure.
+* If realized volatility is higher than target, reduce exposure.
+* If realized volatility is lower than target, increase exposure.
 
 Example:
 
@@ -1527,12 +1529,12 @@ Default base target volatility:
 
 Adaptive regime targets:
 
-| Regime | Percentile rule | Target volatility |
-|---|---|---:|
-| Calm | percentile <= 40% | 12% |
-| Normal | 40% < percentile <= 80% | 10% |
-| Stress | 80% < percentile <= 95% | 6% |
-| Crisis | percentile > 95% | 3% |
+|Regime|Percentile rule|Target volatility|
+|-|-|-:|
+|Calm|percentile <= 40%|12%|
+|Normal|40% < percentile <= 80%|10%|
+|Stress|80% < percentile <= 95%|6%|
+|Crisis|percentile > 95%|3%|
 
 Important: These are rule-based realized-volatility regimes, not full Markov-switching macro regimes.
 
@@ -1592,9 +1594,9 @@ Good explanation:
 
 > HRP/HERC decide what risky basket to hold. Volatility targeting decides how much of that risky basket to hold.
 
----
+\---
 
-## 24. Stage 14 — Experiment Sensitivity Framework
+## 24\. Stage 14 — Experiment Sensitivity Framework
 
 ### 24.1 What the Experiment Framework Does
 
@@ -1675,7 +1677,7 @@ The default ranking favors strategies that produce good growth while keeping dra
 
 ### 24.4 Important Detail About Max Drawdown Sorting
 
-The code sorts objectives descending, including `max_drawdown`.
+The code sorts objectives descending, including `max\\\\\\\_drawdown`.
 
 Because max drawdown is negative, less negative is better.
 
@@ -1702,10 +1704,10 @@ src/experiments/sensitivity.py
 Experiment records may include:
 
 ```text
-total_turnover
-average_turnover
-total_transaction_cost
-number_of_rebalances
+total\\\\\\\_turnover
+average\\\\\\\_turnover
+total\\\\\\\_transaction\\\\\\\_cost
+number\\\\\\\_of\\\\\\\_rebalances
 ```
 
 These are not directly used in ranking unless they affect the selected objective through net portfolio value or returns.
@@ -1718,27 +1720,27 @@ Correct explanation:
 
 Use this table after running verified experiments. Do not fill it with unverified results.
 
-| Strategy | Covariance | Rebalance Mode | Threshold | Vol Target? | CAGR | Volatility | Sharpe | Sortino | Calmar | Max Drawdown | Final Value | Turnover | Transaction Cost | Rebalances |
-|---|---|---|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| Example | Example | Example | Example | Example | — | — | — | — | — | — | — | — | — | — |
+|Strategy|Covariance|Rebalance Mode|Threshold|Vol Target?|CAGR|Volatility|Sharpe|Sortino|Calmar|Max Drawdown|Final Value|Turnover|Transaction Cost|Rebalances|
+|-|-|-|-:|-|-:|-:|-:|-:|-:|-:|-:|-:|-:|-:|
+|Example|Example|Example|Example|Example|—|—|—|—|—|—|—|—|—|—|
 
 ### 24.7 Future Enhancement: Multi-Objective Decision Model
 
 A stronger version could compute:
 
 ```text
-score = 0.30 * normalized_Calmar
-      + 0.25 * normalized_Sharpe
-      + 0.20 * normalized_CAGR
-      + 0.15 * normalized_drawdown_score
-      + 0.10 * normalized_cost_score
+score = 0.30 \\\\\\\* normalized\\\\\\\_Calmar
+      + 0.25 \\\\\\\* normalized\\\\\\\_Sharpe
+      + 0.20 \\\\\\\* normalized\\\\\\\_CAGR
+      + 0.15 \\\\\\\* normalized\\\\\\\_drawdown\\\\\\\_score
+      + 0.10 \\\\\\\* normalized\\\\\\\_cost\\\\\\\_score
 ```
 
 But this is not current behavior.
 
----
+\---
 
-## 25. Dashboard Workflow
+## 25\. Dashboard Workflow
 
 ### 25.1 What the Dashboard Allows
 
@@ -1790,9 +1792,9 @@ sensitivity experiment panel
 validation for dates/assets/exposure/thresholds
 ```
 
----
+\---
 
-## 26. Module-Wise Understanding
+## 26\. Module-Wise Understanding
 
 ### 26.1 Data Module
 
@@ -1952,9 +1954,9 @@ Reference:
 src/dashboard/app.py
 ```
 
----
+\---
 
-## 27. Key Assumptions Across the Project
+## 27\. Key Assumptions Across the Project
 
 ### 27.1 Data Assumptions
 
@@ -2010,43 +2012,43 @@ Default cost = 10 bps base + 5 bps slippage
 Gross and net values tracked
 ```
 
----
+\---
 
-## 28. What Makes the Project Quantitative?
+## 28\. What Makes the Project Quantitative?
 
 This project is quantitative because decisions are made using measurable variables, formulas, and repeatable rules rather than subjective opinion.
 
 Examples:
 
-| Project Component | Quantitative Basis |
-|---|---|
-| Returns | Price ratios/log returns |
-| Volatility | Standard deviation |
-| Covariance | Co-movement of asset returns |
-| Correlation | Standardized covariance |
-| Clustering | Distance matrix from correlations |
-| HRP | Recursive allocation by cluster variance |
-| HERC | Recursive allocation by branch risk |
-| Backtesting | Historical simulation using rules |
-| Transaction costs | Turnover × cost rate |
-| Vol targeting | Target vol / realized vol |
-| Ranking | Objective metric such as Calmar |
+|Project Component|Quantitative Basis|
+|-|-|
+|Returns|Price ratios/log returns|
+|Volatility|Standard deviation|
+|Covariance|Co-movement of asset returns|
+|Correlation|Standardized covariance|
+|Clustering|Distance matrix from correlations|
+|HRP|Recursive allocation by cluster variance|
+|HERC|Recursive allocation by branch risk|
+|Backtesting|Historical simulation using rules|
+|Transaction costs|Turnover × cost rate|
+|Vol targeting|Target vol / realized vol|
+|Ranking|Objective metric such as Calmar|
 
 Good viva line:
 
 > The project is quantitative because every allocation and ranking decision is generated by explicit mathematical rules applied to market data, not by discretionary stock picking.
 
----
+\---
 
-## 29. How to Explain the Project in 60 Seconds
+## 29\. How to Explain the Project in 60 Seconds
 
 Use this in viva or presentation:
 
 > Our project, Adaptive Portfolio Risk Analytics, is a risk-aware portfolio analytics platform for Indian assets. It starts by downloading adjusted price data from Yahoo Finance, cleaning it, and converting prices into simple and log returns. Then it estimates risk through volatility, covariance, correlation, and correlation distance. Using this structure, it builds portfolios through Equal Weight, Inverse Volatility, Mean-Variance, HRP, and HERC. The strategies are evaluated using rolling walk-forward backtests with rebalancing rules, turnover, transaction costs, drawdowns, and benchmark-relative metrics. We also added risk-contribution analytics to explain which assets drive portfolio risk, and a volatility-targeting overlay that dynamically shifts exposure between the risky strategy and a defensive sleeve based on lagged realized volatility. Finally, the dashboard supports experiment sensitivity analysis, where strategies can be ranked by a selected objective such as Calmar. The current system is a strong research prototype; full Markov regimes, NLP sentiment, CPCV, and production deployment are future work.
 
----
+\---
 
-## 30. Likely Viva Questions and Strong Answers
+## 30\. Likely Viva Questions and Strong Answers
 
 ### Q1. What is the main objective of your project?
 
@@ -2148,9 +2150,9 @@ The strongest part is the end-to-end research workflow: data cleaning, covarianc
 **Answer:**  
 First, add CPCV/walk-forward robustness validation to reduce overfitting risk. Then use that validation layer to test regime detection and NLP sentiment signals. This order keeps the research scientifically defensible.
 
----
+\---
 
-## 31. Common Mistakes to Avoid While Presenting
+## 31\. Common Mistakes to Avoid While Presenting
 
 ### Mistake 1: Saying It Is Fully AI-Based
 
@@ -2222,137 +2224,137 @@ Say:
 The framework ranks strategies by the selected objective. We should state the winner only after verifying the specific experiment run and export.
 ```
 
----
+\---
 
-## 32. Formula Sheet
+## 32\. Formula Sheet
 
 ### Returns
 
 ```text
-simple_return_t = P_t / P_{t-1} - 1
-log_return_t = log(P_t / P_{t-1})
+simple\\\\\\\_return\\\\\\\_t = P\\\\\\\_t / P\\\\\\\_{t-1} - 1
+log\\\\\\\_return\\\\\\\_t = log(P\\\\\\\_t / P\\\\\\\_{t-1})
 ```
 
 ### Annualized Volatility
 
 ```text
-annualized_volatility = std(daily_returns) * sqrt(252)
+annualized\\\\\\\_volatility = std(daily\\\\\\\_returns) \\\\\\\* sqrt(252)
 ```
 
 ### Covariance
 
 ```text
-Sigma_ij = cov(r_i, r_j)
+Sigma\\\\\\\_ij = cov(r\\\\\\\_i, r\\\\\\\_j)
 ```
 
 ### Correlation
 
 ```text
-rho_ij = Sigma_ij / (sigma_i * sigma_j)
+rho\\\\\\\_ij = Sigma\\\\\\\_ij / (sigma\\\\\\\_i \\\\\\\* sigma\\\\\\\_j)
 ```
 
 ### Correlation Distance
 
 ```text
-d_ij = sqrt((1 - rho_ij) / 2)
+d\\\\\\\_ij = sqrt((1 - rho\\\\\\\_ij) / 2)
 ```
 
 ### Portfolio Return
 
 ```text
-r_p,t = w_{t-1}' * r_t
+r\\\\\\\_p,t = w\\\\\\\_{t-1}' \\\\\\\* r\\\\\\\_t
 ```
 
 ### Portfolio Variance
 
 ```text
-portfolio_variance = w' * Sigma * w
+portfolio\\\\\\\_variance = w' \\\\\\\* Sigma \\\\\\\* w
 ```
 
 ### Portfolio Volatility
 
 ```text
-portfolio_volatility = sqrt(w' * Sigma * w)
+portfolio\\\\\\\_volatility = sqrt(w' \\\\\\\* Sigma \\\\\\\* w)
 ```
 
 ### Equal Weight
 
 ```text
-w_i = 1 / N
+w\\\\\\\_i = 1 / N
 ```
 
 ### Inverse Volatility
 
 ```text
-w_i = (1 / sigma_i) / sum_j(1 / sigma_j)
+w\\\\\\\_i = (1 / sigma\\\\\\\_i) / sum\\\\\\\_j(1 / sigma\\\\\\\_j)
 ```
 
 ### Max-Sharpe Objective
 
 ```text
-maximize (w' * mu - rf) / sqrt(w' * Sigma * w)
+maximize (w' \\\\\\\* mu - rf) / sqrt(w' \\\\\\\* Sigma \\\\\\\* w)
 ```
 
 ### HRP Cluster Variance
 
 ```text
-cluster_variance_C = w_ivp,C' * Sigma_C * w_ivp,C
+cluster\\\\\\\_variance\\\\\\\_C = w\\\\\\\_ivp,C' \\\\\\\* Sigma\\\\\\\_C \\\\\\\* w\\\\\\\_ivp,C
 ```
 
 ### HRP Allocation
 
 ```text
-allocation_to_left = variance_right / (variance_left + variance_right)
-allocation_to_right = variance_left / (variance_left + variance_right)
+allocation\\\\\\\_to\\\\\\\_left = variance\\\\\\\_right / (variance\\\\\\\_left + variance\\\\\\\_right)
+allocation\\\\\\\_to\\\\\\\_right = variance\\\\\\\_left / (variance\\\\\\\_left + variance\\\\\\\_right)
 ```
 
 ### HERC Cluster Risk
 
 ```text
-cluster_risk_C = sqrt(w_iv,C' * Sigma_C * w_iv,C)
+cluster\\\\\\\_risk\\\\\\\_C = sqrt(w\\\\\\\_iv,C' \\\\\\\* Sigma\\\\\\\_C \\\\\\\* w\\\\\\\_iv,C)
 ```
 
 ### HERC Allocation
 
 ```text
-weight_left = parent_weight * risk_right / (risk_left + risk_right)
-weight_right = parent_weight * risk_left / (risk_left + risk_right)
+weight\\\\\\\_left = parent\\\\\\\_weight \\\\\\\* risk\\\\\\\_right / (risk\\\\\\\_left + risk\\\\\\\_right)
+weight\\\\\\\_right = parent\\\\\\\_weight \\\\\\\* risk\\\\\\\_left / (risk\\\\\\\_left + risk\\\\\\\_right)
 ```
 
 ### Cumulative Return
 
 ```text
-cumulative_return = product(1 + r_t) - 1
+cumulative\\\\\\\_return = product(1 + r\\\\\\\_t) - 1
 ```
 
 ### CAGR
 
 ```text
-CAGR = product(1 + r_t)^(252 / n) - 1
+CAGR = product(1 + r\\\\\\\_t)^(252 / n) - 1
 ```
 
 ### Sharpe Ratio
 
 ```text
-Sharpe = mean(r_t - rf / 252) / std(r_t - rf / 252) * sqrt(252)
+Sharpe = mean(r\\\\\\\_t - rf / 252) / std(r\\\\\\\_t - rf / 252) \\\\\\\* sqrt(252)
 ```
 
 ### Sortino Ratio
 
 ```text
-Sortino = mean(r_t - target / 252) / downside_deviation * sqrt(252)
+Sortino = mean(r\\\\\\\_t - target / 252) / downside\\\\\\\_deviation \\\\\\\* sqrt(252)
 ```
 
 ### Drawdown
 
 ```text
-drawdown_t = portfolio_value_t / running_max(portfolio_value)_t - 1
+drawdown\\\\\\\_t = portfolio\\\\\\\_value\\\\\\\_t / running\\\\\\\_max(portfolio\\\\\\\_value)\\\\\\\_t - 1
 ```
 
 ### Maximum Drawdown
 
 ```text
-max_drawdown = min(drawdown_t)
+max\\\\\\\_drawdown = min(drawdown\\\\\\\_t)
 ```
 
 ### Calmar Ratio
@@ -2364,57 +2366,57 @@ Calmar = CAGR / abs(Max Drawdown)
 ### VaR
 
 ```text
-VaR_95 = 5th percentile of returns
+VaR\\\\\\\_95 = 5th percentile of returns
 ```
 
 ### CVaR
 
 ```text
-CVaR_95 = mean(returns <= VaR_95)
+CVaR\\\\\\\_95 = mean(returns <= VaR\\\\\\\_95)
 ```
 
 ### Turnover
 
 ```text
-turnover = 0.5 * sum(abs(target_weights - current_weights))
+turnover = 0.5 \\\\\\\* sum(abs(target\\\\\\\_weights - current\\\\\\\_weights))
 ```
 
 ### Transaction Cost
 
 ```text
-cost_rate = (base_bps + slippage_bps) / 10000
-transaction_cost = turnover * portfolio_value * cost_rate
+cost\\\\\\\_rate = (base\\\\\\\_bps + slippage\\\\\\\_bps) / 10000
+transaction\\\\\\\_cost = turnover \\\\\\\* portfolio\\\\\\\_value \\\\\\\* cost\\\\\\\_rate
 ```
 
 ### Weight Drift
 
 ```text
-new_weight_i = old_weight_i * (1 + asset_return_i) / (1 + portfolio_return)
+new\\\\\\\_weight\\\\\\\_i = old\\\\\\\_weight\\\\\\\_i \\\\\\\* (1 + asset\\\\\\\_return\\\\\\\_i) / (1 + portfolio\\\\\\\_return)
 ```
 
 ### Threshold Rebalance Rule
 
 ```text
-max(abs(current_weights - target_weights)) >= threshold
+max(abs(current\\\\\\\_weights - target\\\\\\\_weights)) >= threshold
 ```
 
 ### Volatility Targeting Return
 
 ```text
-r_targeted,t = exposure_t * risky_strategy_return_t
-               + (1 - exposure_t) * defensive_asset_return_t
+r\\\\\\\_targeted,t = exposure\\\\\\\_t \\\\\\\* risky\\\\\\\_strategy\\\\\\\_return\\\\\\\_t
+               + (1 - exposure\\\\\\\_t) \\\\\\\* defensive\\\\\\\_asset\\\\\\\_return\\\\\\\_t
 ```
 
 ### Volatility Targeting Exposure
 
 ```text
-exposure_t = clip(target_vol_t / realized_vol_{t-1}, exposure_floor, exposure_cap)
+exposure\\\\\\\_t = clip(target\\\\\\\_vol\\\\\\\_t / realized\\\\\\\_vol\\\\\\\_{t-1}, exposure\\\\\\\_floor, exposure\\\\\\\_cap)
 ```
 
 ### Realized Volatility
 
 ```text
-realized_vol_t = std(risky_returns_{t-window:t}) * sqrt(252)
+realized\\\\\\\_vol\\\\\\\_t = std(risky\\\\\\\_returns\\\\\\\_{t-window:t}) \\\\\\\* sqrt(252)
 ```
 
 ### EWMA Alpha
@@ -2427,12 +2429,12 @@ alpha = 2 / 253 ≈ 0.0079 when span = 252
 ### Ledoit-Wolf
 
 ```text
-Sigma_LW = (1 - delta) * S + delta * F
+Sigma\\\\\\\_LW = (1 - delta) \\\\\\\* S + delta \\\\\\\* F
 ```
 
----
+\---
 
-## 33. Final Team Understanding Checklist
+## 33\. Final Team Understanding Checklist
 
 Before presentation, every teammate should be able to answer:
 
@@ -2462,9 +2464,9 @@ Before presentation, every teammate should be able to answer:
 24. How sensitivity ranking works.
 25. What is implemented vs future work.
 
----
+\---
 
-## 34. Final Project Positioning
+## 34\. Final Project Positioning
 
 The best positioning is:
 
@@ -2495,3 +2497,4 @@ Not liquidity/market-impact/tax aware yet.
 Final viva line:
 
 > The current project gives us a strong and defensible research infrastructure. The next step is not to add more complexity blindly, but to add CPCV and robustness validation first, then test regime and sentiment signals on top of that validation framework.
+
