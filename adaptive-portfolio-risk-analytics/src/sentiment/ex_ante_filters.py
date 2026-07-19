@@ -63,9 +63,7 @@ def flag_reaction_data_leakage(records_df: pd.DataFrame) -> pd.DataFrame:
         ]
         warnings.append("; ".join(matched))
     frame["reaction_warning_reason"] = warnings
-    frame["possible_reaction_data"] = frame[
-        "reaction_warning_reason"
-    ].ne("")
+    frame["possible_reaction_data"] = frame["reaction_warning_reason"].ne("")
     return frame
 
 
@@ -81,14 +79,8 @@ def apply_publication_lag(
         if "is_ex_ante_valid" in records_df
         else validate_ex_ante_records(records_df)
     )
-    publication = pd.to_datetime(
-        frame["publication_time"], errors="coerce", utc=True
-    )
-    frame["decision_available_date"] = (
-        publication.dt.normalize() + pd.Timedelta(days=int(lag_days))
-    )
-    frame.loc[
-        ~frame["is_ex_ante_valid"], "decision_available_date"
-    ] = pd.NaT
+    publication = pd.to_datetime(frame["publication_time"], errors="coerce", utc=True)
+    frame["decision_available_date"] = publication.dt.normalize() + pd.Timedelta(days=int(lag_days))
+    frame.loc[~frame["is_ex_ante_valid"], "decision_available_date"] = pd.NaT
     frame["publication_lag_days"] = int(lag_days)
     return frame

@@ -29,9 +29,9 @@ def _gdelt_records() -> pd.DataFrame:
                     "url": f"https://economictimes.indiatimes.com/news/{idx}-{copy_id}",
                     "language": "en",
                     "publication_time": day.tz_localize("UTC").isoformat(),
-                    "decision_available_date": (
-                        day + pd.Timedelta(days=1)
-                    ).tz_localize("UTC").isoformat(),
+                    "decision_available_date": (day + pd.Timedelta(days=1))
+                    .tz_localize("UTC")
+                    .isoformat(),
                     "retrieval_time": "2026-06-23T10:00:00Z",
                     "is_real_provider_data": True,
                     "is_ex_ante_valid": True,
@@ -89,12 +89,8 @@ def test_regime_comparison_only_outputs_valid_decision_label_dates() -> None:
     table = comparison["comparison_table"]
 
     assert not table.empty
-    assert set(table["composite_nlp_label"]).issubset(
-        set(VALID_COMPOSITE_NLP_LABELS)
-    )
+    assert set(table["composite_nlp_label"]).issubset(set(VALID_COMPOSITE_NLP_LABELS))
     assert len(table) == int(
-        composite["decision_composite_nlp_label"]
-        .isin(VALID_COMPOSITE_NLP_LABELS)
-        .sum()
+        composite["decision_composite_nlp_label"].isin(VALID_COMPOSITE_NLP_LABELS).sum()
     )
     assert comparison["predictiveness_claim"] is False

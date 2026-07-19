@@ -14,7 +14,7 @@ ADAPTIVE_POLICY_PRESETS = {
     "aggressive",
 }
 FULL_SAMPLE_HMM_ERROR = (
-    "Full-sample HMM is historical-only and cannot be used for " "trading-safe adaptive backtests."
+    "Full-sample HMM is historical-only and cannot be used for trading-safe adaptive backtests."
 )
 
 

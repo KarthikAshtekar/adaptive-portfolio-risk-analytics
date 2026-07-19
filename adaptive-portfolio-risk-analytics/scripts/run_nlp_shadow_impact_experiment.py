@@ -49,7 +49,11 @@ from src.sentiment.nlp_shadow_overlay import (
 
 OUTPUT_DIR = REPO_ROOT / "outputs" / "reports" / "phase_4a13_nlp_shadow_impact"
 PHASE_4A8_SIGNAL = (
-    REPO_ROOT / "outputs" / "reports" / "phase_4a8_multisource_nlp_monitoring" / "daily_nlp_signal.csv"
+    REPO_ROOT
+    / "outputs"
+    / "reports"
+    / "phase_4a8_multisource_nlp_monitoring"
+    / "daily_nlp_signal.csv"
 )
 PHASE_4A6_SIGNAL = (
     REPO_ROOT / "outputs" / "reports" / "phase_4a6_real_nlp_validation" / "daily_nlp_signal.csv"
@@ -288,7 +292,9 @@ def run_nlp_shadow_impact_experiment(
     )
 
 
-def _load_or_generate_returns(start: pd.Timestamp, end: pd.Timestamp) -> tuple[pd.DataFrame, str, str]:
+def _load_or_generate_returns(
+    start: pd.Timestamp, end: pd.Timestamp
+) -> tuple[pd.DataFrame, str, str]:
     context_start = start - pd.DateOffset(years=3)
     tickers = DEFAULT_REPLICATION_UNIVERSES["Core Diversified"]
     try:
@@ -308,7 +314,11 @@ def _load_or_generate_returns(start: pd.Timestamp, end: pd.Timestamp) -> tuple[p
             "Live market data unavailable or incomplete; deterministic offline "
             f"returns were used. Cause: {exc}"
         )
-        return _offline_returns(context_start, end, tickers), "deterministic_offline_fallback", warning
+        return (
+            _offline_returns(context_start, end, tickers),
+            "deterministic_offline_fallback",
+            warning,
+        )
 
 
 def _offline_returns(
@@ -345,7 +355,9 @@ def _build_hmm_decision_regimes(
 ) -> tuple[pd.Series, str]:
     if not HMM_AVAILABLE:
         rule = classify_rule_based_regime(features).shift(int(decision_lag_days)).fillna("Unknown")
-        return rule.reindex(returns.index).fillna("Unknown"), "fallback_rule_based_hmmlearn_unavailable"
+        return rule.reindex(returns.index).fillna(
+            "Unknown"
+        ), "fallback_rule_based_hmmlearn_unavailable"
     try:
         hmm_min_train = min(max(training_window, 63), max(training_window, len(returns) // 2))
         fitted = fit_hmm_walk_forward(
@@ -381,7 +393,10 @@ def _summarize_backtest(
         raise ValueError(f"{strategy} produced no evaluation-window returns")
     values = (1.0 + returns).cumprod() * INITIAL_CAPITAL
     values = pd.concat(
-        [pd.Series([INITIAL_CAPITAL], index=[returns.index[0] - pd.Timedelta(nanoseconds=1)]), values]
+        [
+            pd.Series([INITIAL_CAPITAL], index=[returns.index[0] - pd.Timedelta(nanoseconds=1)]),
+            values,
+        ]
     )
     metrics = PerformanceAnalytics.summary_table(returns)
     durations = calculate_drawdown_durations(values)
@@ -472,9 +487,9 @@ def _build_metric_comparison(
         output = {"strategy": row["strategy"]}
         for column in columns:
             output[column] = row.get(column, np.nan)
-            output[f"{column}_delta_vs_{baseline_strategy}"] = (
-                row.get(column, np.nan) - baseline_row.get(column, np.nan)
-            )
+            output[f"{column}_delta_vs_{baseline_strategy}"] = row.get(
+                column, np.nan
+            ) - baseline_row.get(column, np.nan)
         rows.append(output)
     return pd.DataFrame(rows)
 
@@ -486,7 +501,9 @@ def _build_drawdown_comparison(
 ) -> pd.DataFrame:
     rows: list[pd.DataFrame] = []
     for strategy, backtest in backtests.items():
-        returns = pd.to_numeric(backtest["portfolio_returns"], errors="coerce").loc[start:end].dropna()
+        returns = (
+            pd.to_numeric(backtest["portfolio_returns"], errors="coerce").loc[start:end].dropna()
+        )
         drawdown = compute_drawdown_series(returns)
         rows.append(
             pd.DataFrame(
@@ -653,10 +670,10 @@ def _write_html_report(
 </head>
 <body>
   <h1>Phase 4A.13 — Pain Ratio and NLP Shadow Impact Analysis</h1>
-  <p class="verdict"><strong>Verdict:</strong> {summary['verdict']}</p>
+  <p class="verdict"><strong>Verdict:</strong> {summary["verdict"]}</p>
   <p><strong>Production allocation active:</strong> No. NLP variants are shadow/experimental only.</p>
-  <p><strong>Look-ahead diagnostics passed:</strong> {summary['lookahead_passed']}</p>
-  <p><strong>Data source:</strong> {summary['data_source']}</p>
+  <p><strong>Look-ahead diagnostics passed:</strong> {summary["lookahead_passed"]}</p>
+  <p><strong>Data source:</strong> {summary["data_source"]}</p>
   <h2>Strategy metrics</h2>
   {metrics.to_html(index=False)}
   <h2>Pain Ratio comparison</h2>

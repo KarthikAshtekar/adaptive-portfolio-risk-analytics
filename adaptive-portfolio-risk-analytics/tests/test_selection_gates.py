@@ -73,4 +73,3 @@ def test_short_history_and_low_cpcv_coverage_fail() -> None:
     assert statuses["Sufficient data"] == GateStatus.FAIL
     assert statuses["CPCV coverage"] == GateStatus.FAIL
     assert statuses["CPCV worst fold"] == GateStatus.WARN
-

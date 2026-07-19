@@ -41,9 +41,7 @@ def test_composite_index_marks_poor_coverage_insufficient() -> None:
         decision_lag=1,
     )
 
-    assert set(result["decision_composite_nlp_label"]) == {
-        "insufficient_nlp_data"
-    }
+    assert set(result["decision_composite_nlp_label"]) == {"insufficient_nlp_data"}
 
 
 def test_composite_index_is_lagged_and_compares_with_regimes() -> None:
@@ -58,9 +56,7 @@ def test_composite_index_is_lagged_and_compares_with_regimes() -> None:
 
     comparison = compare_composite_nlp_to_regimes(result, regimes, regimes)
 
-    covered = result["decision_composite_nlp_label"].ne(
-        "insufficient_nlp_data"
-    )
+    covered = result["decision_composite_nlp_label"].ne("insufficient_nlp_data")
     assert covered.any()
     first_covered = result.index[covered][0]
     assert result.loc[first_covered, "decision_source_date"] < first_covered

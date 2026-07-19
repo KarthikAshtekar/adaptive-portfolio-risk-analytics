@@ -9,9 +9,9 @@ import pandas as pd
 from src.selection import select_strategy_for_profile
 
 
-APP_SOURCE = (
-    Path(__file__).resolve().parents[1] / "src" / "dashboard" / "app.py"
-).read_text(encoding="utf-8")
+APP_SOURCE = (Path(__file__).resolve().parents[1] / "src" / "dashboard" / "app.py").read_text(
+    encoding="utf-8"
+)
 
 
 def _function_source(name: str, next_name: str) -> str:

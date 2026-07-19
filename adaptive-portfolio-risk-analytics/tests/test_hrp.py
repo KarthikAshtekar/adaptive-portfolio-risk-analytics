@@ -74,8 +74,9 @@ def test_hrp_different_from_equal_weight_when_covariance_varies() -> None:
 
 def test_get_quasi_diagonal_order_returns_all_assets() -> None:
     returns = _sample_returns()
-    covariance_df = returns.cov()
-    linkage_matrix = DistanceMetrics.to_condensed(DistanceMetrics.correlation_distance(returns.corr().values))
+    linkage_matrix = DistanceMetrics.to_condensed(
+        DistanceMetrics.correlation_distance(returns.corr().values)
+    )
     linkage_matrix = np.asarray(linkage_matrix)
     # Use hierarchical linkage from scipy if needed for correct shape
     from scipy.cluster.hierarchy import linkage as scipy_linkage
@@ -99,7 +100,9 @@ def test_compute_cluster_variance_positive() -> None:
 def test_recursive_bisection_completes_successfully() -> None:
     returns = _sample_returns()
     covariance_df = returns.cov()
-    linkage_matrix = DistanceMetrics.to_condensed(DistanceMetrics.correlation_distance(returns.corr().values))
+    linkage_matrix = DistanceMetrics.to_condensed(
+        DistanceMetrics.correlation_distance(returns.corr().values)
+    )
     from scipy.cluster.hierarchy import linkage as scipy_linkage
 
     linkage_matrix = scipy_linkage(linkage_matrix, method="single")
@@ -114,7 +117,9 @@ def test_recursive_bisection_completes_successfully() -> None:
 def test_allocate_hrp_weights_reproducible() -> None:
     returns = _sample_returns()
     covariance_df = returns.cov()
-    condensed = DistanceMetrics.to_condensed(DistanceMetrics.correlation_distance(returns.corr().values))
+    condensed = DistanceMetrics.to_condensed(
+        DistanceMetrics.correlation_distance(returns.corr().values)
+    )
     from scipy.cluster.hierarchy import linkage as scipy_linkage
 
     linkage_matrix = scipy_linkage(condensed, method="single")

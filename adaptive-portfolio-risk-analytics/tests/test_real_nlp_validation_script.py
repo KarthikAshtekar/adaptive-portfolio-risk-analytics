@@ -50,6 +50,4 @@ def test_sparse_records_generate_insufficiency_report(tmp_path: Path) -> None:
     assert result["summary"]["predictiveness_claim"] is False
     assert (output / "report.html").is_file()
     assert (output / "summary.md").is_file()
-    assert "Insufficient real-data coverage" in (
-        output / "report.html"
-    ).read_text(encoding="utf-8")
+    assert "Insufficient real-data coverage" in (output / "report.html").read_text(encoding="utf-8")

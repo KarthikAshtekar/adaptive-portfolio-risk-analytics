@@ -30,7 +30,5 @@ def test_api_key_env_is_required_only_when_provider_enabled(
     enabled = validate_provider_config(enabled_config)
 
     assert enabled["is_valid"] is False
-    assert any(
-        "ALPHAVANTAGE_API_KEY" in error for error in enabled["errors"]
-    )
+    assert any("ALPHAVANTAGE_API_KEY" in error for error in enabled["errors"])
     assert all("secret" not in str(row).lower() for row in enabled["providers"])

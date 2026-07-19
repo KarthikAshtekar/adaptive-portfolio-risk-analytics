@@ -19,9 +19,7 @@ def test_ex_ante_validation_rejects_missing_timestamps() -> None:
     validated = validate_ex_ante_records(records)
 
     assert not validated.loc[0, "is_ex_ante_valid"]
-    assert "missing publication_time" in validated.loc[
-        0, "ex_ante_validation_errors"
-    ]
+    assert "missing publication_time" in validated.loc[0, "ex_ante_validation_errors"]
 
 
 def test_publication_lag_is_applied_after_publication_date() -> None:
@@ -37,9 +35,7 @@ def test_publication_lag_is_applied_after_publication_date() -> None:
 
     lagged = apply_publication_lag(validate_ex_ante_records(records), lag_days=1)
 
-    assert lagged.loc[0, "decision_available_date"] == pd.Timestamp(
-        "2024-01-06T00:00:00Z"
-    )
+    assert lagged.loc[0, "decision_available_date"] == pd.Timestamp("2024-01-06T00:00:00Z")
 
 
 def test_possible_market_reaction_language_is_flagged_not_deleted() -> None:

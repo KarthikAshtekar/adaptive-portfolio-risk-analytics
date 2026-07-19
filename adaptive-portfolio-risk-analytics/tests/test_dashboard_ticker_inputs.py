@@ -153,9 +153,7 @@ def test_adaptive_robustness_uses_selected_objective_and_limit(monkeypatch) -> N
 
     assert captured["objective"] == "sharpe"
     assert captured["max_adaptive_configs"] == 1
-    assert captured["experiment_configs"]["strategy_type"].eq(
-        "regime_adaptive"
-    ).any()
+    assert captured["experiment_configs"]["strategy_type"].eq("regime_adaptive").any()
     assert result["include_adaptive_in_cpcv"] is True
 
 

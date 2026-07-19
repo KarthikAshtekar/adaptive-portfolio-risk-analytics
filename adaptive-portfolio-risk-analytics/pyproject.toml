@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-exclude = [
+    ".git",
+    ".venv",
+    "data",
+    "htmlcov",
+    "logs",
+    "notebooks",
+    "outputs",
+]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/dashboard/app.py" = ["E402"]
+"scripts/run_nlp_shadow_impact_experiment.py" = ["E402"]
+
+[tool.ruff.format]
+line-ending = "native"
+quote-style = "double"
+

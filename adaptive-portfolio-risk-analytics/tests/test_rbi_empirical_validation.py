@@ -48,9 +48,7 @@ def test_empirical_validation_writes_metadata_complete_outputs(
         lookback_window=3,
     )
 
-    assert {path.name for path in output.glob("*.csv")} == set(
-        EMPIRICAL_OUTPUT_FILES
-    )
+    assert {path.name for path in output.glob("*.csv")} == set(EMPIRICAL_OUTPUT_FILES)
     for key in (
         "rbi_documents",
         "rbi_sentence_scores",
@@ -65,7 +63,5 @@ def test_empirical_validation_writes_metadata_complete_outputs(
         assert result[key]["lookback_window"].eq(3).all()
 
     macro = result["macro_stance_index"]
-    assert macro.loc[index[0], "decision_macro_label"] == (
-        "insufficient_macro_data"
-    )
+    assert macro.loc[index[0], "decision_macro_label"] == ("insufficient_macro_data")
     assert macro.loc[index[1], "decision_source_date"] < index[1]

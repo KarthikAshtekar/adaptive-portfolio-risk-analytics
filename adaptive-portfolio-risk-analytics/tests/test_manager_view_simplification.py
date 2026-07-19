@@ -11,15 +11,14 @@ from src.dashboard.modes import (
 )
 
 
-APP_SOURCE = (
-    Path(__file__).resolve().parents[1] / "src" / "dashboard" / "app.py"
-).read_text(encoding="utf-8")
+APP_SOURCE = (Path(__file__).resolve().parents[1] / "src" / "dashboard" / "app.py").read_text(
+    encoding="utf-8"
+)
 
 
 def _manager_sidebar_source() -> str:
     start = APP_SOURCE.index(
-        'if dashboard_mode == MANAGER_VIEW:\n'
-        '    with st.sidebar.expander("Portfolio Universe"'
+        'if dashboard_mode == MANAGER_VIEW:\n    with st.sidebar.expander("Portfolio Universe"'
     )
     end = APP_SOURCE.index(
         'else:\n    with st.sidebar.expander("Portfolio Scope"',
@@ -53,4 +52,3 @@ def test_research_and_developer_selection_diagnostics_remain_available() -> None
     assert "Strategy Selection Diagnostics" in APP_SOURCE
     assert "Selection Gate Results" in APP_SOURCE
     assert "Selection Artifact Diagnostics and Scoring" in APP_SOURCE
-

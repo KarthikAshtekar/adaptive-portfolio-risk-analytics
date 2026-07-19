@@ -58,13 +58,9 @@ def calculate_nlp_coverage(
     else:
         end = pd.Timestamp(end_date).normalize()
     business_days = (
-        len(pd.bdate_range(start, end))
-        if pd.notna(start) and pd.notna(end) and start <= end
-        else 0
+        len(pd.bdate_range(start, end)) if pd.notna(start) and pd.notna(end) and start <= end else 0
     )
-    article_day_coverage = (
-        float(distinct_dates / business_days) if business_days else 0.0
-    )
+    article_day_coverage = float(distinct_dates / business_days) if business_days else 0.0
 
     decision_label_coverage = 0.0
     if isinstance(composite_index, pd.DataFrame) and not composite_index.empty:
@@ -74,18 +70,10 @@ def calculate_nlp_coverage(
             else "composite_nlp_label"
         )
         if label_column in composite_index:
-            labels = composite_index[label_column].fillna(
-                "insufficient_nlp_data"
-            ).astype(str)
-            decision_label_coverage = float(
-                labels.isin(VALID_COMPOSITE_NLP_LABELS).mean()
-            )
+            labels = composite_index[label_column].fillna("insufficient_nlp_data").astype(str)
+            decision_label_coverage = float(labels.isin(VALID_COMPOSITE_NLP_LABELS).mean())
 
-    provider_values = (
-        frame.get("provider", pd.Series(dtype="string"))
-        .fillna("unknown")
-        .astype(str)
-    )
+    provider_values = frame.get("provider", pd.Series(dtype="string")).fillna("unknown").astype(str)
     source_mix_dict = provider_values.value_counts().to_dict()
     providers_with_data = int(provider_values[provider_values.ne("")].nunique())
     source_families = sorted(
@@ -97,19 +85,10 @@ def calculate_nlp_coverage(
     )
     if isinstance(composite_index, pd.DataFrame) and not composite_index.empty:
         mix_column = (
-            "decision_source_mix"
-            if "decision_source_mix" in composite_index
-            else "source_mix"
+            "decision_source_mix" if "decision_source_mix" in composite_index else "source_mix"
         )
         if mix_column in composite_index:
-            mixes = (
-                composite_index[mix_column]
-                .dropna()
-                .astype(str)
-                .str.lower()
-                .unique()
-                .tolist()
-            )
+            mixes = composite_index[mix_column].dropna().astype(str).str.lower().unique().tolist()
             families = set(source_families)
             for mix in mixes:
                 if "news" in mix:
@@ -119,31 +98,22 @@ def calculate_nlp_coverage(
             source_families = sorted(families)
     source_family_count = len(source_families)
     enabled_provider_count = providers_with_data
-    if (
-        isinstance(provider_diagnostics, pd.DataFrame)
-        and not provider_diagnostics.empty
-    ):
+    if isinstance(provider_diagnostics, pd.DataFrame) and not provider_diagnostics.empty:
         if "configured_enabled" in provider_diagnostics:
             enabled_provider_count = int(
                 provider_diagnostics["configured_enabled"].fillna(False).sum()
             )
         elif "enabled" in provider_diagnostics:
-            enabled_provider_count = int(
-                provider_diagnostics["enabled"].fillna(False).sum()
-            )
+            enabled_provider_count = int(provider_diagnostics["enabled"].fillna(False).sum())
         else:
             enabled_provider_count = int(len(provider_diagnostics))
     provider_coverage = (
-        float(providers_with_data / enabled_provider_count)
-        if enabled_provider_count
-        else 0.0
+        float(providers_with_data / enabled_provider_count) if enabled_provider_count else 0.0
     )
 
     latest = publication_dates.max() if not publication_dates.empty else pd.NaT
     staleness_days = (
-        int(max(0, (end - latest).days))
-        if pd.notna(end) and pd.notna(latest)
-        else None
+        int(max(0, (end - latest).days)) if pd.notna(end) and pd.notna(latest) else None
     )
     stale = staleness_days is not None and staleness_days > int(stale_after_days)
     meets_thresholds = (
@@ -174,18 +144,14 @@ def calculate_nlp_coverage(
         "record_count": record_count,
         "distinct_publication_dates": distinct_dates,
         "article_day_coverage": float(np.clip(article_day_coverage, 0.0, 1.0)),
-        "decision_label_coverage": float(
-            np.clip(decision_label_coverage, 0.0, 1.0)
-        ),
+        "decision_label_coverage": float(np.clip(decision_label_coverage, 0.0, 1.0)),
         "provider_coverage": float(np.clip(provider_coverage, 0.0, 1.0)),
         "source_mix": json.dumps(source_mix_dict, sort_keys=True),
         "source_mix_dict": source_mix_dict,
         "source_families": source_families,
         "source_family_count": int(source_family_count),
         "source_diversity_limited": bool(source_family_count < 2),
-        "latest_record_date": (
-            latest.date().isoformat() if pd.notna(latest) else None
-        ),
+        "latest_record_date": (latest.date().isoformat() if pd.notna(latest) else None),
         "staleness_days": staleness_days,
         "coverage_quality": coverage_quality,
         "business_day_count": int(business_days),

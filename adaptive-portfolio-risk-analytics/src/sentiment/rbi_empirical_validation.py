@@ -30,9 +30,7 @@ def _market_index(market_returns: object) -> pd.DatetimeIndex:
     elif isinstance(market_returns, (pd.Series, pd.DataFrame)):
         index = market_returns.index
     else:
-        raise TypeError(
-            "market_returns must be a Series, DataFrame, or DatetimeIndex"
-        )
+        raise TypeError("market_returns must be a Series, DataFrame, or DatetimeIndex")
     if not isinstance(index, pd.DatetimeIndex) or index.empty:
         raise ValueError("market_returns must have a non-empty DatetimeIndex")
     if index.tz is not None:
@@ -59,18 +57,11 @@ def _coverage_diagnostics(
     macro_index: pd.DataFrame,
     documents: pd.DataFrame,
 ) -> pd.DataFrame:
-    covered = (
-        macro_index["decision_macro_label"]
-        .astype(str)
-        .ne("insufficient_macro_data")
-    )
-    publication_days = (
-        macro_index.get(
-            "document_count",
-            pd.Series(0, index=macro_index.index),
-        )
-        .gt(0)
-    )
+    covered = macro_index["decision_macro_label"].astype(str).ne("insufficient_macro_data")
+    publication_days = macro_index.get(
+        "document_count",
+        pd.Series(0, index=macro_index.index),
+    ).gt(0)
     dates = pd.to_datetime(
         documents.get("publication_date", pd.Series(dtype="datetime64[ns]")),
         errors="coerce",
@@ -203,8 +194,6 @@ def run_rbi_empirical_validation(
         "scoring_method": scoring_method,
         "decision_lag": int(decision_lag),
         "lookback_window": int(lookback_window),
-        "corpus_sufficiency_status": (
-            "ready" if not documents.empty else "manual_action_required"
-        ),
+        "corpus_sufficiency_status": ("ready" if not documents.empty else "manual_action_required"),
         "manual_action_required": bool(documents.empty),
     }

@@ -58,9 +58,7 @@ def split_rbi_documents_into_sentences(
         candidates: list[str] = []
         for block in blocks:
             candidates.extend(
-                sentence.strip()
-                for sentence in SENTENCE_BOUNDARY.split(block)
-                if sentence.strip()
+                sentence.strip() for sentence in SENTENCE_BOUNDARY.split(block) if sentence.strip()
             )
         sentence_order = 0
         for candidate in candidates:
@@ -71,16 +69,12 @@ def split_rbi_documents_into_sentences(
                 or _is_boilerplate(cleaned)
             ):
                 continue
-            sentence_id = (
-                f"{getattr(document, 'document_id')}_s{sentence_order:04d}"
-            )
+            sentence_id = f"{getattr(document, 'document_id')}_s{sentence_order:04d}"
             rows.append(
                 {
                     "sentence_id": sentence_id,
                     "document_id": getattr(document, "document_id"),
-                    "publication_date": pd.Timestamp(
-                        getattr(document, "publication_date")
-                    ),
+                    "publication_date": pd.Timestamp(getattr(document, "publication_date")),
                     "document_type": getattr(document, "document_type", "unknown"),
                     "document_title": getattr(document, "title", ""),
                     "source": getattr(document, "source", "RBI"),

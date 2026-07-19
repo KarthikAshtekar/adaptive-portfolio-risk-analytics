@@ -42,9 +42,7 @@ def _write_config(path: Path, *, gdelt_enabled: bool) -> Path:
     return path
 
 
-def test_no_live_mode_avoids_network_calls(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_no_live_mode_avoids_network_calls(tmp_path: Path, monkeypatch) -> None:
     config = _write_config(tmp_path / "providers.yaml", gdelt_enabled=True)
 
     def fail_network(*args, **kwargs):

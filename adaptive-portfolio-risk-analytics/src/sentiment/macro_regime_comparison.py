@@ -147,21 +147,11 @@ def compare_macro_to_regimes(
     )
 
     def risk_off_confirmation(regimes: pd.Series) -> float:
-        stress = regimes.astype(str).str.lower().isin(
-            {"stress", "crisis", "risk-off", "risk_off"}
-        )
+        stress = regimes.astype(str).str.lower().isin({"stress", "crisis", "risk-off", "risk_off"})
         covered = stress & labels.ne("insufficient_macro_data")
-        return (
-            float(labels.loc[covered].eq("risk_off_macro").mean())
-            if covered.any()
-            else np.nan
-        )
+        return float(labels.loc[covered].eq("risk_off_macro").mean()) if covered.any() else np.nan
 
-    disagreement_mask = (
-        comparison[["agreement_rule_based", "agreement_hmm"]]
-        .eq(False)
-        .any(axis=1)
-    )
+    disagreement_mask = comparison[["agreement_rule_based", "agreement_hmm"]].eq(False).any(axis=1)
     disagreements = comparison.loc[disagreement_mask].copy()
     disagreements.insert(0, "date", disagreements.index)
     covered = labels.ne("insufficient_macro_data")
@@ -191,15 +181,9 @@ def compare_macro_to_regimes(
         ignore_index=True,
     )
     return {
-        "agreement_with_rule_based": _agreement_rate(
-            comparison["agreement_rule_based"]
-        ),
-        "agreement_with_hmm_walk_forward": _agreement_rate(
-            comparison["agreement_hmm"]
-        ),
-        "stress_crisis_risk_off_confirmation_rule_based": risk_off_confirmation(
-            rule
-        ),
+        "agreement_with_rule_based": _agreement_rate(comparison["agreement_rule_based"]),
+        "agreement_with_hmm_walk_forward": _agreement_rate(comparison["agreement_hmm"]),
+        "stress_crisis_risk_off_confirmation_rule_based": risk_off_confirmation(rule),
         "stress_crisis_risk_off_confirmation_hmm": risk_off_confirmation(hmm),
         "lead_lag_diagnostics": _lead_lag_table(
             labels,

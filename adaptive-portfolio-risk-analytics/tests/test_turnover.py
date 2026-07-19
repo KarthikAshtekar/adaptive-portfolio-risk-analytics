@@ -35,7 +35,9 @@ def test_turnover_aligns_series_labels_correctly() -> None:
 
 
 def test_turnover_summary_has_expected_keys() -> None:
-    turnover_series = pd.Series([0.0, 0.15, 0.05], index=pd.date_range("2020-01-31", periods=3, freq="ME"))
+    turnover_series = pd.Series(
+        [0.0, 0.15, 0.05], index=pd.date_range("2020-01-31", periods=3, freq="ME")
+    )
 
     summary = summarize_turnover(turnover_series)
 

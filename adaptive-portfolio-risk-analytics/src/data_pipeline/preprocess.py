@@ -153,8 +153,10 @@ class DataQualityProcessor:
         if method not in self._price_repair_methods:
             raise ValueError(f"unknown price repair method: {method}")
 
-        clean_prices_df, repair_report_df, anomaly_report_df, iterations = self._price_repair_methods[method](
-            prices_df.copy(),
+        clean_prices_df, repair_report_df, anomaly_report_df, iterations = (
+            self._price_repair_methods[method](
+                prices_df.copy(),
+            )
         )
 
         self._last_prices_shape = clean_prices_df.shape
@@ -259,8 +261,12 @@ class DataQualityProcessor:
                     "return_outlier_method": self._last_return_outlier_method,
                     "return_outlier_threshold": self.return_outlier_threshold,
                     "return_stabilization_method": self._last_return_stabilization_method,
-                    "lower_bound": stabilization_summary.get("lower_bound", self.winsorize_bounds[0]),
-                    "upper_bound": stabilization_summary.get("upper_bound", self.winsorize_bounds[1]),
+                    "lower_bound": stabilization_summary.get(
+                        "lower_bound", self.winsorize_bounds[0]
+                    ),
+                    "upper_bound": stabilization_summary.get(
+                        "upper_bound", self.winsorize_bounds[1]
+                    ),
                 }
             ]
         )
@@ -414,9 +420,11 @@ class DataQualityProcessor:
         )
         report_df.columns = ["date", "asset", "return", "score"]
         report_df["method"] = method
-        return report_df[["date", "asset", "return", "score", "method"]].sort_values(
-            ["date", "asset"]
-        ).reset_index(drop=True)
+        return (
+            report_df[["date", "asset", "return", "score", "method"]]
+            .sort_values(["date", "asset"])
+            .reset_index(drop=True)
+        )
 
     def _stabilize_returns_winsorize(
         self,
@@ -512,7 +520,9 @@ class DataPreprocessor:
         missing_before = int(data.isna().sum().sum())
         missing_percentages = data.isna().mean()
         dropped_assets = missing_percentages[missing_percentages > MISSING_DATA_DROP_THRESHOLD]
-        retained_assets = missing_percentages.index[missing_percentages <= MISSING_DATA_DROP_THRESHOLD]
+        retained_assets = missing_percentages.index[
+            missing_percentages <= MISSING_DATA_DROP_THRESHOLD
+        ]
         asset_missingness_report = DataPreprocessor._build_missingness_report(
             data,
             dropped_assets.index,

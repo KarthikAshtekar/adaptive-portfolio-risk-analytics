@@ -44,9 +44,7 @@ def _fetch_index_page_diagnostics(path: Path = DEFAULT_FETCH_DIAGNOSTICS) -> dic
             "skipped_index_pages": 0,
             "index_page_reason_counts": {},
         }
-    index_mask = frame["is_index_page"].astype(str).str.lower().isin(
-        {"true", "1", "yes"}
-    )
+    index_mask = frame["is_index_page"].astype(str).str.lower().isin({"true", "1", "yes"})
     skipped = frame.loc[index_mask].copy()
     reason_counts = (
         skipped.get("index_page_reason", pd.Series(dtype="string"))
@@ -87,16 +85,12 @@ def build_rbi_corpus_status(
     index_diagnostics = _fetch_index_page_diagnostics()
     document_type_count = len(document_type_counts)
     mpc_minutes_count = int(document_type_counts.get("mpc_minutes", 0))
-    monetary_policy_statement_count = int(
-        document_type_counts.get("monetary_policy_statement", 0)
-    )
+    monetary_policy_statement_count = int(document_type_counts.get("monetary_policy_statement", 0))
     governor_speech_count = int(document_type_counts.get("governor_speech", 0))
     financial_stability_report_count = int(
         document_type_counts.get("financial_stability_report", 0)
     )
-    policy_core_documents = int(
-        mpc_minutes_count + monetary_policy_statement_count
-    )
+    policy_core_documents = int(mpc_minutes_count + monetary_policy_statement_count)
     status = {
         "manifest_path": str(Path(manifest_path)),
         "valid_document_count": int(len(valid)),
@@ -126,9 +120,7 @@ def build_rbi_corpus_status(
         and status["document_type_count"] >= MIN_DOCUMENT_TYPES
         and status["policy_core_documents"] >= MIN_POLICY_CORE_DOCUMENTS
     )
-    status["manual_action_required"] = not bool(
-        status["minimum_requirements_passed"]
-    )
+    status["manual_action_required"] = not bool(status["minimum_requirements_passed"])
     rows = [
         {
             "metric": "valid_document_count",
@@ -146,8 +138,7 @@ def build_rbi_corpus_status(
             "metric": "distinct_publication_dates",
             "actual": status["distinct_publication_dates"],
             "threshold": MIN_DISTINCT_PUBLICATION_DATES,
-            "passes": status["distinct_publication_dates"]
-            >= MIN_DISTINCT_PUBLICATION_DATES,
+            "passes": status["distinct_publication_dates"] >= MIN_DISTINCT_PUBLICATION_DATES,
         },
         {
             "metric": "document_type_count",
@@ -240,9 +231,7 @@ def build_rbi_corpus_status(
     for column in ("metric", "category", "actual", "threshold", "passes"):
         if column not in diagnostics:
             diagnostics[column] = ""
-    return status, diagnostics.loc[
-        :, ["metric", "category", "actual", "threshold", "passes"]
-    ]
+    return status, diagnostics.loc[:, ["metric", "category", "actual", "threshold", "passes"]]
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -268,15 +257,9 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Distinct publication dates: {status['distinct_publication_dates']}")
     print(f"Document type counts: {status['document_type_counts']}")
     print(f"MPC minutes count: {status['mpc_minutes_count']}")
-    print(
-        "Monetary policy statement count: "
-        f"{status['monetary_policy_statement_count']}"
-    )
+    print(f"Monetary policy statement count: {status['monetary_policy_statement_count']}")
     print(f"Governor speech count: {status['governor_speech_count']}")
-    print(
-        "Financial stability report count: "
-        f"{status['financial_stability_report_count']}"
-    )
+    print(f"Financial stability report count: {status['financial_stability_report_count']}")
     print(f"Policy core documents: {status['policy_core_documents']}")
     print(
         "Date range: "
@@ -291,13 +274,9 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Skipped index pages: {status['skipped_index_pages']}")
     print(f"Index page reason counts: {status['index_page_reason_counts']}")
     print(
-        "Minimum requirements passed: "
-        + ("yes" if status["minimum_requirements_passed"] else "no")
+        "Minimum requirements passed: " + ("yes" if status["minimum_requirements_passed"] else "no")
     )
-    print(
-        "Manual action required: "
-        + ("yes" if status["manual_action_required"] else "no")
-    )
+    print("Manual action required: " + ("yes" if status["manual_action_required"] else "no"))
     if status["manual_action_required"]:
         print("RBI manual action required; current signal remains news-only monitoring.")
     return 0

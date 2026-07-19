@@ -100,4 +100,3 @@ SCENARIO_CATEGORIES = (
     "Low CPCV Confidence",
     "Insufficient Data",
 )
-

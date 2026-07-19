@@ -51,9 +51,6 @@ def test_reaction_warning_reduces_source_quality_score() -> None:
     scored = score_source_quality(records).set_index("record_id")
 
     assert (
-        scored.loc["reaction", "source_quality_score"]
-        < scored.loc["clean", "source_quality_score"]
+        scored.loc["reaction", "source_quality_score"] < scored.loc["clean", "source_quality_score"]
     )
-    assert "possible reaction data" in scored.loc[
-        "reaction", "source_quality_warning"
-    ]
+    assert "possible reaction data" in scored.loc["reaction", "source_quality_warning"]

@@ -135,20 +135,21 @@ class PerformanceAnalytics:
                 risk_free_rate=risk_free_rate,
             ),
         }
+
     @staticmethod
     def summary_dataframe(
-    returns: pd.Series,
-    risk_free_rate: float = 0.02,
+        returns: pd.Series,
+        risk_free_rate: float = 0.02,
     ) -> pd.DataFrame:
 
         metrics = PerformanceAnalytics.summary_table(
-        returns,
-        risk_free_rate=risk_free_rate,
+            returns,
+            risk_free_rate=risk_free_rate,
         )
 
         return pd.DataFrame(
             {
-            "Metric": metrics.keys(),
-            "Value": metrics.values(),
+                "Metric": metrics.keys(),
+                "Value": metrics.values(),
             }
         )

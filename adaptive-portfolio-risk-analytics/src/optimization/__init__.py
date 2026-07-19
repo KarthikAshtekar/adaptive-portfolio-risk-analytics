@@ -1,7 +1,5 @@
 """Portfolio allocation exports."""
 
-from src.clustering.herc_allocator import HERCAllocator
-
 from .base import BaseAllocator
 from .equal_weight import EqualWeightAllocator
 from .mean_variance import MeanVarianceAllocator
@@ -20,9 +18,19 @@ PortfolioOptimizer = BaseAllocator
 EqualWeightOptimizer = EqualWeightAllocator
 MeanVarianceOptimizer = MeanVarianceAllocator
 InverseVolatilityOptimizer = InverseVolatilityAllocator
-DynamicAllocationOptimizer = DynamicAllocationAllocator
 HRPOptimizer = HRPAllocator
-HERCOptimizer = HERCAllocator
+DynamicAllocationOptimizer = DynamicAllocationAllocator
+
+
+def __getattr__(name: str):
+    """Load clustering-backed HERC exports without creating an import cycle."""
+
+    if name in {"HERCAllocator", "HERCOptimizer"}:
+        from src.clustering.herc_allocator import HERCAllocator
+
+        return HERCAllocator
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 __all__ = [
     "BaseAllocator",

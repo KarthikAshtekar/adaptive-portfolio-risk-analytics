@@ -21,8 +21,7 @@ def _entry(
         "title": title,
         "summary": "",
         "source_url": (
-            "https://www.rbi.org.in/commonman/English/Scripts/"
-            f"PressReleases.aspx?Id={url_id}"
+            f"https://www.rbi.org.in/commonman/English/Scripts/PressReleases.aspx?Id={url_id}"
         ),
         "source_channel": source_channel,
         "feed_url": "https://www.rbi.org.in/commonman/English/Scripts/PressReleases.aspx",
@@ -164,9 +163,10 @@ def test_target_document_types_exclude_governor_speeches(
     diagnostics = pd.read_csv(tmp_path / "diagnostics" / "fetch_diagnostics.csv")
 
     assert summary["downloaded_documents"] == 1
-    assert "governor_speech" not in pd.read_csv(
-        tmp_path / "rbi_real" / "manifest.csv"
-    )["document_type"].tolist()
+    assert (
+        "governor_speech"
+        not in pd.read_csv(tmp_path / "rbi_real" / "manifest.csv")["document_type"].tolist()
+    )
     skipped = diagnostics.loc[diagnostics["document_type"].eq("governor_speech")]
     assert skipped.loc[skipped.index[0], "skip_reason"] == "non_target_document_type"
     assert str(skipped.loc[skipped.index[0], "target_document_type_match"]).lower() == "false"
@@ -227,9 +227,7 @@ def test_targeted_mode_keeps_annual_report_index_filter(
         lambda url: {
             "url": url,
             "ok": True,
-            "content": f"<html><body>{annual_index_text}</body></html>".encode(
-                "utf-8"
-            ),
+            "content": f"<html><body>{annual_index_text}</body></html>".encode("utf-8"),
             "http_status": 200,
             "content_type": "text/html",
             "error": "",

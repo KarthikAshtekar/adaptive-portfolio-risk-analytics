@@ -58,11 +58,7 @@ def normalized_frame(
     records: list[dict[str, Any]] | pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     """Return a schema-stable normalized provider frame."""
-    frame = (
-        records.copy()
-        if isinstance(records, pd.DataFrame)
-        else pd.DataFrame(records or [])
-    )
+    frame = records.copy() if isinstance(records, pd.DataFrame) else pd.DataFrame(records or [])
     for column in NORMALIZED_SENTIMENT_COLUMNS:
         if column not in frame:
             frame[column] = pd.NA
@@ -70,11 +66,7 @@ def normalized_frame(
         :,
         [
             *NORMALIZED_SENTIMENT_COLUMNS,
-            *[
-                column
-                for column in frame.columns
-                if column not in NORMALIZED_SENTIMENT_COLUMNS
-            ],
+            *[column for column in frame.columns if column not in NORMALIZED_SENTIMENT_COLUMNS],
         ],
     ].copy()
     for column in ("timestamp", "publication_time", "retrieval_time"):
@@ -148,9 +140,7 @@ class SentimentProvider(ABC):
                 row_errors.append("missing title and text")
             errors.append("; ".join(row_errors))
         frame["provider_validation_errors"] = errors
-        frame["provider_record_valid"] = frame[
-            "provider_validation_errors"
-        ].eq("")
+        frame["provider_record_valid"] = frame["provider_validation_errors"].eq("")
         valid = frame.loc[frame["provider_record_valid"]].copy()
         invalid = frame.loc[~frame["provider_record_valid"]].copy()
         diagnostics = {

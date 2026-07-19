@@ -36,9 +36,7 @@ def _rbi_macro(index: pd.DatetimeIndex, score: float = 0.4) -> pd.DataFrame:
 
 
 def _covered_mix(result: pd.DataFrame) -> set[str]:
-    covered = result.loc[
-        result["decision_composite_nlp_label"].ne("insufficient_nlp_data")
-    ]
+    covered = result.loc[result["decision_composite_nlp_label"].ne("insufficient_nlp_data")]
     return set(covered["decision_source_mix"].dropna().astype(str))
 
 

@@ -44,7 +44,9 @@ def test_decision_for_day_t_does_not_use_day_t_score() -> None:
     market_index = pd.bdate_range("2024-01-05", periods=5)
     baseline = _scored_records()
     altered = baseline.copy()
-    altered.loc[altered["timestamp"].dt.date == pd.Timestamp("2024-01-09").date(), "sentiment_score"] = 1.0
+    altered.loc[
+        altered["timestamp"].dt.date == pd.Timestamp("2024-01-09").date(), "sentiment_score"
+    ] = 1.0
 
     baseline_signal = build_daily_sentiment_signal(
         baseline,
@@ -70,4 +72,3 @@ def test_decision_for_day_t_does_not_use_day_t_score() -> None:
         decision_lag=1,
     )
     assert checks["all_checks_passed"] is True
-

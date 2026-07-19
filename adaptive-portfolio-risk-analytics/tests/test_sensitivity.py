@@ -50,7 +50,14 @@ def test_max_drawdown_ranking_handles_less_negative_is_better() -> None:
 def test_summarize_by_parameter_returns_expected_columns() -> None:
     summary = summarize_by_parameter(_results(), parameter="covariance_method", metric="calmar")
 
-    assert {"covariance_method", "calmar_mean", "calmar_std", "calmar_min", "calmar_max", "num_runs"} == set(summary.columns)
+    assert {
+        "covariance_method",
+        "calmar_mean",
+        "calmar_std",
+        "calmar_min",
+        "calmar_max",
+        "num_runs",
+    } == set(summary.columns)
 
 
 def test_parameter_sensitivity_returns_expected_columns() -> None:

@@ -217,9 +217,7 @@ def compare_hrp_herc_weights(
             "HERC Weight": herc_weights.reindex(clean_returns.columns).values,
         }
     )
-    comparison_df["Difference"] = (
-        comparison_df["HERC Weight"] - comparison_df["HRP Weight"]
-    )
+    comparison_df["Difference"] = comparison_df["HERC Weight"] - comparison_df["HRP Weight"]
     return comparison_df
 
 

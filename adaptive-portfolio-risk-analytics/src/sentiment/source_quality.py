@@ -80,9 +80,7 @@ def classify_data_provenance(records_df: pd.DataFrame) -> pd.DataFrame:
             f"fixture marker detected: {marker}",
         )
     frame["is_real_provider_data"] = ~fixture
-    frame["data_provenance"] = np.where(
-        fixture, "fixture_or_placeholder", "real_candidate"
-    )
+    frame["data_provenance"] = np.where(fixture, "fixture_or_placeholder", "real_candidate")
     frame["data_provenance_warning"] = reasons
     return frame
 
@@ -116,9 +114,7 @@ def score_source_quality(records_df: pd.DataFrame) -> pd.DataFrame:
     for column in ("entity", "ticker", "query", "sector"):
         entity_or_topic |= _text(frame, column).ne("")
     frame["has_entity_or_topic"] = entity_or_topic
-    frame["language_supported"] = (
-        _text(frame, "language").str.lower().isin(SUPPORTED_LANGUAGES)
-    )
+    frame["language_supported"] = _text(frame, "language").str.lower().isin(SUPPORTED_LANGUAGES)
 
     duplicate_key = (
         _text(frame, "url").str.lower()
@@ -130,9 +126,7 @@ def score_source_quality(records_df: pd.DataFrame) -> pd.DataFrame:
     frame["duplicate_risk"] = duplicate_key.duplicated(keep=False)
     if "possible_reaction_data" not in frame:
         frame["possible_reaction_data"] = False
-    frame["reaction_data_warning"] = (
-        frame["possible_reaction_data"].fillna(False).astype(bool)
-    )
+    frame["reaction_data_warning"] = frame["possible_reaction_data"].fillna(False).astype(bool)
 
     positive_dimensions = [
         "official_source",
@@ -143,15 +137,12 @@ def score_source_quality(records_df: pd.DataFrame) -> pd.DataFrame:
         "language_supported",
     ]
     positive = frame[positive_dimensions].astype(float).sum(axis=1)
-    safe_risks = (
-        (~frame["duplicate_risk"]).astype(float)
-        + (~frame["reaction_data_warning"]).astype(float)
-    )
+    safe_risks = (~frame["duplicate_risk"]).astype(float) + (
+        ~frame["reaction_data_warning"]
+    ).astype(float)
     frame["source_quality_score"] = (positive + safe_risks) / 8.0
     evidence_present = (
-        _text(frame, "source").ne("")
-        | _text(frame, "provider").ne("")
-        | frame["has_url"]
+        _text(frame, "source").ne("") | _text(frame, "provider").ne("") | frame["has_url"]
     )
     frame["source_quality_label"] = np.select(
         [

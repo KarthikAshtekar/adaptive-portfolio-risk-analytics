@@ -96,8 +96,7 @@ def add_risk_scores_from_sentiment(
     risk_scores = -sentiment
     scored["risk_score"] = risk_scores
     scored["risk_label"] = [
-        _risk_label_from_score(score, neutral_threshold)
-        for score in risk_scores
+        _risk_label_from_score(score, neutral_threshold) for score in risk_scores
     ]
     return scored
 
@@ -137,9 +136,7 @@ def score_sentiment_records(
         scores.append(float(np.clip(score, -1.0, 1.0)))
 
     scored["sentiment_score"] = scores
-    scored["sentiment_label"] = [
-        _label_score(score, neutral_threshold) for score in scores
-    ]
+    scored["sentiment_label"] = [_label_score(score, neutral_threshold) for score in scores]
     scored = add_risk_scores_from_sentiment(
         scored,
         neutral_threshold=neutral_threshold,

@@ -10,6 +10,8 @@ from typing import Any, Callable, Dict, Optional
 
 import yaml
 
+from src.paths import CONFIG_DIR
+
 _load_dotenv: Callable[[], bool] | None
 try:
     from dotenv import load_dotenv as _imported_load_dotenv
@@ -40,9 +42,10 @@ class ConfigManager:
         Parameters
         ----------
         config_dir : str, optional
-            Path to configuration directory. Defaults to ./config
+            Path to configuration directory. Defaults to the repository's
+            ``config`` directory, independent of the current working directory.
         """
-        self.config_dir = Path(config_dir or "./config")
+        self.config_dir = Path(config_dir).expanduser() if config_dir else CONFIG_DIR
         self.config: Dict[str, Any] = {}
         self._load_configs()
 

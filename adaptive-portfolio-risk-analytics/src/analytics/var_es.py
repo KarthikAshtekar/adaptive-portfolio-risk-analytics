@@ -89,7 +89,9 @@ def calculate_var_exceptions(
     if rolling_window is not None:
         if rolling_window < 2 or len(clean_returns) <= rolling_window:
             return empty_result
-        rolling_threshold = clean_returns.rolling(rolling_window).quantile(tail_probability).shift(1)
+        rolling_threshold = (
+            clean_returns.rolling(rolling_window).quantile(tail_probability).shift(1)
+        )
         comparable = pd.DataFrame(
             {
                 "return": clean_returns,
@@ -111,7 +113,9 @@ def calculate_var_exceptions(
 
     actual_exceptions = int(breaches.sum())
     expected_exceptions = float(n_observations * tail_probability)
-    exception_rate = float(actual_exceptions / n_observations) if n_observations > 0 else float("nan")
+    exception_rate = (
+        float(actual_exceptions / n_observations) if n_observations > 0 else float("nan")
+    )
     exception_ratio = (
         float(actual_exceptions / expected_exceptions)
         if expected_exceptions > 0.0

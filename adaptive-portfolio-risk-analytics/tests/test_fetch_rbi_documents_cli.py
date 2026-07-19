@@ -167,4 +167,3 @@ def test_validate_after_reports_corpus_status(tmp_path: Path, monkeypatch) -> No
     assert summary["downloaded_documents"] == 1
     assert summary["validation"]["valid_document_count"] == 1
     assert summary["validation"]["manual_action_required"] is True
-

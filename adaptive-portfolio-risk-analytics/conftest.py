@@ -3,8 +3,6 @@
 import pytest
 import numpy as np
 import pandas as pd
-from pathlib import Path
-import sys
 
 # Tests should run via package/module resolution from project root (no sys.path hacks).
 

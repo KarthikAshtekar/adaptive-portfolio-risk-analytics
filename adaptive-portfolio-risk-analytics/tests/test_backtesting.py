@@ -382,9 +382,9 @@ def test_transaction_costs_reduce_portfolio_value() -> None:
     assert initial_capital * (1.0 + results["portfolio_returns"]).prod() == pytest.approx(
         results["portfolio_values"].iloc[-1]
     )
-    assert initial_capital * (
-        1.0 + results["gross_portfolio_returns"]
-    ).prod() == pytest.approx(results["gross_portfolio_values"].iloc[-1])
+    assert initial_capital * (1.0 + results["gross_portfolio_returns"]).prod() == pytest.approx(
+        results["gross_portfolio_values"].iloc[-1]
+    )
 
 
 def test_existing_result_keys_remain_present() -> None:

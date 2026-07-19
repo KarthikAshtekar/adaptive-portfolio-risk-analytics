@@ -1,13 +1,11 @@
 """
 Adaptive Portfolio Allocation and Risk Analytics Platform
 
-A professional-grade quantitative portfolio optimization and risk analytics system
-for institutional portfolio management and research.
+An evidence-gated portfolio construction and risk analytics research platform.
 """
 
 __version__ = "1.3.0"
-__author__ = "Quantitative Finance Team"
-__email__ = "team@example.com"
+__author__ = "Karthik Ashtekar"
 
 from src.config import get_config, ConfigManager
 from src.logging_config import get_logger, LoggerSetup

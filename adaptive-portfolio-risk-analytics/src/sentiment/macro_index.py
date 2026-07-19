@@ -29,9 +29,7 @@ def _assign_to_market_dates(
     ).dt.tz_convert(None)
     assigned["publication_date"] = dates
     assigned = assigned.loc[dates.notna()].copy()
-    normalized = assigned["publication_date"].dt.normalize().to_numpy(
-        dtype="datetime64[ns]"
-    )
+    normalized = assigned["publication_date"].dt.normalize().to_numpy(dtype="datetime64[ns]")
     positions = market_index.values.searchsorted(normalized, side="left")
     valid = positions < len(market_index)
     assigned = assigned.loc[valid].copy()
@@ -79,9 +77,7 @@ def build_macro_stance_index(
     }
     missing = required.difference(scored_sentences.columns)
     if missing:
-        raise ValueError(
-            f"scored_sentences are missing required columns: {sorted(missing)}"
-        )
+        raise ValueError(f"scored_sentences are missing required columns: {sorted(missing)}")
 
     assigned = _assign_to_market_dates(scored_sentences, index)
     daily = pd.DataFrame(index=index)
@@ -90,12 +86,8 @@ def build_macro_stance_index(
         ("hawkish", "hawkish_count"),
         ("dovish", "dovish_count"),
     ):
-        values = (
-            assigned["stance_label"].astype(str).str.lower().eq(label).astype(int)
-        )
-        daily[column] = (
-            values.groupby(assigned["market_date"]).sum().reindex(index, fill_value=0)
-        )
+        values = assigned["stance_label"].astype(str).str.lower().eq(label).astype(int)
+        daily[column] = values.groupby(assigned["market_date"]).sum().reindex(index, fill_value=0)
     daily["uncertainty_count"] = (
         assigned["certainty_label"]
         .astype(str)
@@ -117,10 +109,7 @@ def build_macro_stance_index(
         .reindex(index, fill_value=0)
     )
     daily["daily_sentence_count"] = (
-        assigned.groupby("market_date")
-        .size()
-        .reindex(index, fill_value=0)
-        .astype(int)
+        assigned.groupby("market_date").size().reindex(index, fill_value=0).astype(int)
     )
     daily["daily_document_count"] = (
         assigned.groupby("market_date")["document_id"]
@@ -132,35 +121,30 @@ def build_macro_stance_index(
         assigned.groupby("market_date")["publication_date"].max().reindex(index)
     )
 
-    rolling = daily[
-        [
-            "hawkish_count",
-            "dovish_count",
-            "uncertainty_count",
-            "forward_looking_count",
-            "daily_sentence_count",
+    rolling = (
+        daily[
+            [
+                "hawkish_count",
+                "dovish_count",
+                "uncertainty_count",
+                "forward_looking_count",
+                "daily_sentence_count",
+            ]
         ]
-    ].rolling(int(lookback_window), min_periods=1).sum()
+        .rolling(int(lookback_window), min_periods=1)
+        .sum()
+    )
     result = pd.DataFrame(index=index)
     result.index.name = "date"
     denominator = rolling["daily_sentence_count"].replace(0, np.nan)
     result["hawkish_share"] = rolling["hawkish_count"] / denominator
     result["dovish_share"] = rolling["dovish_count"] / denominator
     result["uncertainty_share"] = rolling["uncertainty_count"] / denominator
-    result["forward_looking_share"] = (
-        rolling["forward_looking_count"] / denominator
-    )
-    result["net_stance_score"] = (
-        result["hawkish_share"] - result["dovish_share"]
-    )
-    result["macro_risk_score"] = (
-        result["net_stance_score"] + result["uncertainty_share"]
-    )
+    result["forward_looking_share"] = rolling["forward_looking_count"] / denominator
+    result["net_stance_score"] = result["hawkish_share"] - result["dovish_share"]
+    result["macro_risk_score"] = result["net_stance_score"] + result["uncertainty_share"]
     result["document_count"] = (
-        daily["daily_document_count"]
-        .rolling(int(lookback_window), min_periods=1)
-        .sum()
-        .astype(int)
+        daily["daily_document_count"].rolling(int(lookback_window), min_periods=1).sum().astype(int)
     )
     result["sentence_count"] = rolling["daily_sentence_count"].astype(int)
     result["coverage_flag"] = np.where(
@@ -181,13 +165,9 @@ def build_macro_stance_index(
         )
     ]
     result["decision_macro_label"] = (
-        result["macro_label"]
-        .shift(int(decision_lag))
-        .fillna("insufficient_macro_data")
+        result["macro_label"].shift(int(decision_lag)).fillna("insufficient_macro_data")
     )
-    result["decision_macro_risk_score"] = result["macro_risk_score"].shift(
-        int(decision_lag)
-    )
+    result["decision_macro_risk_score"] = result["macro_risk_score"].shift(int(decision_lag))
     for column in (
         "hawkish_share",
         "dovish_share",
@@ -203,9 +183,7 @@ def build_macro_stance_index(
         result["sentence_count"].shift(int(decision_lag)).fillna(0).astype(int)
     )
     result["decision_coverage_flag"] = (
-        result["coverage_flag"]
-        .shift(int(decision_lag))
-        .fillna("insufficient_macro_data")
+        result["coverage_flag"].shift(int(decision_lag)).fillna("insufficient_macro_data")
     )
     publication_days = (
         daily["latest_publication_date"].astype("int64") // 86_400_000_000_000
@@ -278,9 +256,7 @@ def build_current_macro_summary(
     current = macro_index.iloc[-1]
     sentence_count = int(current.get("decision_sentence_count", 0) or 0)
     document_count = int(current.get("decision_document_count", 0) or 0)
-    label = str(
-        current.get("decision_macro_label", "insufficient_macro_data")
-    )
+    label = str(current.get("decision_macro_label", "insufficient_macro_data"))
     confirmation = macro_confirmation_status(
         quantitative_regime,
         label,

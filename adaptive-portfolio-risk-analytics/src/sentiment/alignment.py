@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import numpy as np
 import pandas as pd
 
 
@@ -53,7 +52,9 @@ def build_alignment_checks(
         pd.to_datetime(
             scored_records.get("timestamp", pd.Series(dtype="object")),
             errors="coerce",
-        ).isna().sum()
+        )
+        .isna()
+        .sum()
     )
     aligned_index = sentiment_signal.index.equals(index)
     expected_labels = (
@@ -62,9 +63,7 @@ def build_alignment_checks(
         .fillna("unknown")
         .astype(str)
     )
-    lag_matches = expected_labels.equals(
-        sentiment_signal["decision_sentiment_label"].astype(str)
-    )
+    lag_matches = expected_labels.equals(sentiment_signal["decision_sentiment_label"].astype(str))
 
     decision_timestamps = pd.to_datetime(
         sentiment_signal.get(
@@ -75,15 +74,9 @@ def build_alignment_checks(
     )
     decision_dates = pd.Series(index, index=index)
     no_future_timestamp = bool(
-        (
-            decision_timestamps.isna()
-            | (decision_timestamps.dt.normalize() < decision_dates)
-        ).all()
+        (decision_timestamps.isna() | (decision_timestamps.dt.normalize() < decision_dates)).all()
     )
-    records_before_end = bool(
-        assigned.empty
-        or assigned["market_date"].le(index.max()).all()
-    )
+    records_before_end = bool(assigned.empty or assigned["market_date"].le(index.max()).all())
     checks = pd.DataFrame(
         [
             {"check": "valid_input_timestamps", "passed": invalid_timestamp_count == 0},

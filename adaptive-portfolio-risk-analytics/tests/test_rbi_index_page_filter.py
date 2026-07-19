@@ -97,9 +97,7 @@ def test_index_page_is_excluded_from_manifest_by_default(
         lambda url: {
             "url": url,
             "ok": True,
-            "content": f"<html><body>{ANNUAL_REPORT_INDEX_TEXT}</body></html>".encode(
-                "utf-8"
-            ),
+            "content": f"<html><body>{ANNUAL_REPORT_INDEX_TEXT}</body></html>".encode("utf-8"),
             "http_status": 200,
             "content_type": "text/html",
             "error": "",
@@ -123,13 +121,15 @@ def test_index_page_is_excluded_from_manifest_by_default(
     assert summary["skipped_index_pages"] == 1
     assert manifest.empty
     assert diagnostics.loc[0, "download_status"] == "skipped"
-    assert diagnostics.loc[0, "is_index_page"] is True or str(
-        diagnostics.loc[0, "is_index_page"]
-    ).lower() == "true"
+    assert (
+        diagnostics.loc[0, "is_index_page"] is True
+        or str(diagnostics.loc[0, "is_index_page"]).lower() == "true"
+    )
     assert diagnostics.loc[0, "skip_reason"] == "index_or_navigation_page"
-    assert diagnostics.loc[0, "included_in_manifest"] is False or str(
-        diagnostics.loc[0, "included_in_manifest"]
-    ).lower() == "false"
+    assert (
+        diagnostics.loc[0, "included_in_manifest"] is False
+        or str(diagnostics.loc[0, "included_in_manifest"]).lower() == "false"
+    )
 
 
 def test_valid_mpc_minutes_are_not_excluded() -> None:

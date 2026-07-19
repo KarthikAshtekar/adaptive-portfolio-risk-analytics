@@ -5,9 +5,9 @@ from pathlib import Path
 from src.dashboard.modes import DEFAULT_MANAGER_ADAPTIVE_OVERLAY
 
 
-APP_SOURCE = (
-    Path(__file__).resolve().parents[1] / "src" / "dashboard" / "app.py"
-).read_text(encoding="utf-8")
+APP_SOURCE = (Path(__file__).resolve().parents[1] / "src" / "dashboard" / "app.py").read_text(
+    encoding="utf-8"
+)
 
 
 def test_dashboard_has_one_global_research_objective_widget() -> None:

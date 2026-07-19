@@ -54,9 +54,7 @@ class SentimentRecord:
         if not str(self.title).strip() and not str(self.text).strip():
             raise ValueError("title or text must not be empty")
         if self.sentiment_label not in SENTIMENT_LABELS:
-            raise ValueError(
-                f"sentiment_label must be one of {SENTIMENT_LABELS}"
-            )
+            raise ValueError(f"sentiment_label must be one of {SENTIMENT_LABELS}")
         object.__setattr__(self, "timestamp", timestamp)
 
     def to_dict(self) -> dict[str, Any]:
@@ -88,9 +86,7 @@ class RBIDocument:
         if not str(self.document_id).strip():
             raise ValueError("document_id must not be empty")
         if self.document_type not in RBI_DOCUMENT_TYPES:
-            raise ValueError(
-                f"document_type must be one of {RBI_DOCUMENT_TYPES}"
-            )
+            raise ValueError(f"document_type must be one of {RBI_DOCUMENT_TYPES}")
         if not str(self.language).strip():
             raise ValueError("language must not be empty")
         object.__setattr__(self, "publication_date", publication_date)
@@ -130,9 +126,7 @@ class RBISentenceScore:
         if self.stance_label not in RBI_STANCE_LABELS:
             raise ValueError(f"stance_label must be one of {RBI_STANCE_LABELS}")
         if self.certainty_label not in RBI_CERTAINTY_LABELS:
-            raise ValueError(
-                f"certainty_label must be one of {RBI_CERTAINTY_LABELS}"
-            )
+            raise ValueError(f"certainty_label must be one of {RBI_CERTAINTY_LABELS}")
         if self.time_label not in RBI_TIME_LABELS:
             raise ValueError(f"time_label must be one of {RBI_TIME_LABELS}")
         if int(self.sentence_order) < 0:

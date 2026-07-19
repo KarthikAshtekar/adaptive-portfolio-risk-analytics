@@ -25,8 +25,7 @@ DEFAULT_MANIFEST = REPO_ROOT / "data" / "sentiment" / "rbi_real" / "manifest.csv
 DEFAULT_DIAGNOSTICS_DIR = REPO_ROOT / "outputs" / "reports" / "rbi_official_fetcher"
 DEFAULT_SOURCES = "press_releases,publications,speeches"
 DEFAULT_KEYWORDS = (
-    "monetary policy,mpc minutes,financial stability,governor speech,"
-    "inflation,liquidity"
+    "monetary policy,mpc minutes,financial stability,governor speech,inflation,liquidity"
 )
 DEFAULT_EXCLUDE_KEYWORDS = ",".join(fetcher.DEFAULT_RBI_EXCLUDE_KEYWORDS)
 
@@ -182,11 +181,7 @@ def _target_fields(
 def _target_summary_counts(
     diagnostics: list[dict[str, object]],
 ) -> dict[str, int]:
-    target_rows = [
-        row
-        for row in diagnostics
-        if bool(row.get("target_policy_docs_mode", False))
-    ]
+    target_rows = [row for row in diagnostics if bool(row.get("target_policy_docs_mode", False))]
     found_statuses = {"downloaded", "skipped_existing"}
     targeted_found = [
         row
@@ -199,9 +194,7 @@ def _target_summary_counts(
             1 for row in targeted_found if row.get("document_type") == "mpc_minutes"
         ),
         "targeted_monetary_policy_statements_found": sum(
-            1
-            for row in targeted_found
-            if row.get("document_type") == "monetary_policy_statement"
+            1 for row in targeted_found if row.get("document_type") == "monetary_policy_statement"
         ),
         "targeted_documents_downloaded": sum(
             1 for row in target_rows if row.get("download_status") == "downloaded"
@@ -325,9 +318,7 @@ def run_fetch(
         target_document_types,
     )
     source_spec = (
-        fetcher.resolve_rbi_target_policy_sources(sources)
-        if target_policy_docs
-        else sources
+        fetcher.resolve_rbi_target_policy_sources(sources) if target_policy_docs else sources
     )
 
     fetched_entries = fetcher.fetch_rbi_document_index(
@@ -492,12 +483,9 @@ def run_fetch(
             if existing_row
             else destination
         )
-        if (
-            not refresh
-            and (
-                (document_id in existing_ids and destination.is_file())
-                or (existing_row is not None and existing_local_path.is_file())
-            )
+        if not refresh and (
+            (document_id in existing_ids and destination.is_file())
+            or (existing_row is not None and existing_local_path.is_file())
         ):
             skip_path = existing_local_path if existing_local_path.is_file() else destination
             cached_text = skip_path.read_text(encoding="utf-8")
@@ -520,7 +508,10 @@ def run_fetch(
                 skipped_index_pages += 1
                 manifest_rows_removed += _remove_manifest_matches(
                     manifest,
-                    document_ids={document_id, str(existing_row.get("document_id", "")) if existing_row else ""},
+                    document_ids={
+                        document_id,
+                        str(existing_row.get("document_id", "")) if existing_row else "",
+                    },
                     source_urls={source_url},
                 )
                 diagnostics.append(
@@ -530,12 +521,8 @@ def run_fetch(
                         download_status="skipped",
                         local_path=_repo_relative(skip_path, manifest.parent),
                         text_char_count=len(cached_text),
-                        substantive_sentence_count=int(
-                            quality["substantive_sentence_count"]
-                        ),
-                        boilerplate_ratio_estimate=float(
-                            quality["boilerplate_ratio_estimate"]
-                        ),
+                        substantive_sentence_count=int(quality["substantive_sentence_count"]),
+                        boilerplate_ratio_estimate=float(quality["boilerplate_ratio_estimate"]),
                         is_index_page=True,
                         index_page_reason=index_reason,
                         **_target_fields(
@@ -559,12 +546,8 @@ def run_fetch(
                     download_status="skipped_existing",
                     local_path=_repo_relative(skip_path, manifest.parent),
                     text_char_count=len(cached_text),
-                    substantive_sentence_count=int(
-                        quality["substantive_sentence_count"]
-                    ),
-                    boilerplate_ratio_estimate=float(
-                        quality["boilerplate_ratio_estimate"]
-                    ),
+                    substantive_sentence_count=int(quality["substantive_sentence_count"]),
+                    boilerplate_ratio_estimate=float(quality["boilerplate_ratio_estimate"]),
                     **_target_fields(
                         entry,
                         document_type=final_document_type,
@@ -672,12 +655,8 @@ def run_fetch(
                     content_type=str(result.get("content_type", "")),
                     local_path=local_path,
                     text_char_count=len(text),
-                    substantive_sentence_count=int(
-                        quality["substantive_sentence_count"]
-                    ),
-                    boilerplate_ratio_estimate=float(
-                        quality["boilerplate_ratio_estimate"]
-                    ),
+                    substantive_sentence_count=int(quality["substantive_sentence_count"]),
+                    boilerplate_ratio_estimate=float(quality["boilerplate_ratio_estimate"]),
                     **entry_target_fields,
                     included_in_manifest=False,
                     skip_reason="non_target_document_type",
@@ -701,12 +680,8 @@ def run_fetch(
                     content_type=str(result.get("content_type", "")),
                     local_path=local_path,
                     text_char_count=len(text),
-                    substantive_sentence_count=int(
-                        quality["substantive_sentence_count"]
-                    ),
-                    boilerplate_ratio_estimate=float(
-                        quality["boilerplate_ratio_estimate"]
-                    ),
+                    substantive_sentence_count=int(quality["substantive_sentence_count"]),
+                    boilerplate_ratio_estimate=float(quality["boilerplate_ratio_estimate"]),
                     is_index_page=True,
                     index_page_reason=index_reason,
                     **entry_target_fields,
@@ -755,12 +730,8 @@ def run_fetch(
                 content_type=str(result.get("content_type", "")),
                 local_path=local_path,
                 text_char_count=len(text),
-                substantive_sentence_count=int(
-                    quality["substantive_sentence_count"]
-                ),
-                boilerplate_ratio_estimate=float(
-                    quality["boilerplate_ratio_estimate"]
-                ),
+                substantive_sentence_count=int(quality["substantive_sentence_count"]),
+                boilerplate_ratio_estimate=float(quality["boilerplate_ratio_estimate"]),
                 **entry_target_fields,
                 included_in_manifest=True,
                 extraction_method=extraction_method,
@@ -826,8 +797,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--exclude-keywords",
         default=DEFAULT_EXCLUDE_KEYWORDS,
         help=(
-            "Comma-separated title keywords for irrelevant RBI releases to skip "
-            "with diagnostics."
+            "Comma-separated title keywords for irrelevant RBI releases to skip with diagnostics."
         ),
     )
     parser.add_argument(
@@ -889,14 +859,8 @@ def main(argv: list[str] | None = None) -> int:
     print("RBI official fetch complete.")
     print(f"Fetched index entries: {summary['fetched_index_entries']}")
     print(f"Relevant entries: {summary['relevant_entries']}")
-    print(
-        "Excluded irrelevant press releases: "
-        f"{summary['excluded_irrelevant_press_releases']}"
-    )
-    print(
-        "Target policy docs mode: "
-        + ("yes" if summary["target_policy_docs_mode"] else "no")
-    )
+    print(f"Excluded irrelevant press releases: {summary['excluded_irrelevant_press_releases']}")
+    print("Target policy docs mode: " + ("yes" if summary["target_policy_docs_mode"] else "no"))
     print(f"Target document types: {summary['target_document_types']}")
     print(f"Targeted MPC minutes found: {summary['targeted_mpc_minutes_found']}")
     print(
@@ -915,16 +879,12 @@ def main(argv: list[str] | None = None) -> int:
     if "validation" in summary:
         validation = summary["validation"]
         print(f"Valid document count: {validation['valid_document_count']}")
-        print(
-            "Distinct publication dates: "
-            f"{validation['distinct_publication_dates']}"
-        )
+        print(f"Distinct publication dates: {validation['distinct_publication_dates']}")
         print(f"Document type counts: {validation['document_type_counts']}")
         if "policy_core_documents" in validation:
             print(f"Policy core documents: {validation['policy_core_documents']}")
         print(
-            "Manual action required: "
-            + ("yes" if validation["manual_action_required"] else "no")
+            "Manual action required: " + ("yes" if validation["manual_action_required"] else "no")
         )
     print("Allocation impact: None. NLP remains monitoring-only.")
     return 0

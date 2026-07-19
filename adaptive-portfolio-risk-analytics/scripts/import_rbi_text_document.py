@@ -62,8 +62,7 @@ def _validate_import_args(
         raise ValueError("document_id must contain only letters, numbers, '.', '_' or '-'")
     if document_type not in REAL_RBI_DOCUMENT_TYPES:
         raise ValueError(
-            "invalid document_type; supported values are: "
-            + ", ".join(REAL_RBI_DOCUMENT_TYPES)
+            "invalid document_type; supported values are: " + ", ".join(REAL_RBI_DOCUMENT_TYPES)
         )
     for field_name, value in {
         "publication_date": publication_date,
@@ -120,8 +119,7 @@ def import_rbi_text_document(
     duplicate_count = int(duplicate_mask.sum())
     if duplicate_count and not overwrite:
         raise ValueError(
-            f"document_id already exists in manifest: {document_id}; "
-            "pass --overwrite to replace it"
+            f"document_id already exists in manifest: {document_id}; pass --overwrite to replace it"
         )
 
     destination = manifest.parent / "raw" / f"{document_id}.txt"
@@ -201,10 +199,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Manifest: {Path(result['manifest_path']).resolve()}")
     print(f"Valid documents: {summary['valid_document_count']}")
     print(f"Invalid documents: {summary['invalid_document_count']}")
-    print(
-        "Overwrote existing row: "
-        + ("yes" if result["overwrote_existing"] else "no")
-    )
+    print("Overwrote existing row: " + ("yes" if result["overwrote_existing"] else "no"))
     return 0
 
 

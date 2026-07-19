@@ -187,11 +187,7 @@ def research_objective_label(metric: str | None) -> str:
     """Return the explicit net label for an internal objective metric."""
     normalized = str(metric or "").strip().lower()
     return next(
-        (
-            label
-            for label, objective in RESEARCH_OBJECTIVES.items()
-            if objective == normalized
-        ),
+        (label for label, objective in RESEARCH_OBJECTIVES.items() if objective == normalized),
         net_metric_label(normalized),
     )
 
@@ -221,11 +217,7 @@ def net_metric_label(metric: str) -> str:
 def adaptive_overlay_name(regime_source: str, policy_preset: str) -> str:
     """Build the first-class display name used by manager comparisons."""
     source = str(regime_source).strip().lower()
-    source_label = (
-        "HMM Walk-Forward"
-        if "hmm" in source
-        else "Rule-Based"
-    )
+    source_label = "HMM Walk-Forward" if "hmm" in source else "Rule-Based"
     preset = str(policy_preset).strip().replace("_", " ").title()
     if preset == "Balanced Default":
         preset = "Balanced"

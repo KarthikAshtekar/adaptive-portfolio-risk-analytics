@@ -103,23 +103,20 @@ def test_no_cache_ignores_existing_cache_and_replaces_success(tmp_path) -> None:
     assert diagnostic["cache_ignored"] == True  # noqa: E712
     assert diagnostic["cache_hit"] == False  # noqa: E712
     assert diagnostic["cache_written"] == True  # noqa: E712
-    assert (
-        list(refreshed["provider_query_diagnostics"].columns)
-        == [
-            "provider",
-            "query",
-            "request_url",
-            "http_status",
-            "response_bytes",
-            "parsed_article_count",
-            "normalized_record_count",
-            "rate_limited",
-            "retry_count",
-            "success",
-            "error",
-            "warning",
-        ]
-    )
+    assert list(refreshed["provider_query_diagnostics"].columns) == [
+        "provider",
+        "query",
+        "request_url",
+        "http_status",
+        "response_bytes",
+        "parsed_article_count",
+        "normalized_record_count",
+        "rate_limited",
+        "retry_count",
+        "success",
+        "error",
+        "warning",
+    ]
 
 
 def test_non_json_provider_error_does_not_overwrite_good_cache(tmp_path) -> None:

@@ -55,9 +55,7 @@ def test_index_has_required_columns_and_one_session_lag() -> None:
     assert required.issubset(macro.columns)
     assert macro.loc["2024-01-05", "decision_macro_label"] == "insufficient_macro_data"
     assert macro.loc["2024-01-08", "decision_macro_label"] == "risk_off_macro"
-    assert macro.loc["2024-01-08", "decision_source_date"] < pd.Timestamp(
-        "2024-01-08"
-    )
+    assert macro.loc["2024-01-08", "decision_source_date"] < pd.Timestamp("2024-01-08")
 
 
 def test_day_t_document_does_not_change_day_t_decision() -> None:

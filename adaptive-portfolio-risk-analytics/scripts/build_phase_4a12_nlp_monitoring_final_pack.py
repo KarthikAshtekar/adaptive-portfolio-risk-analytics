@@ -17,9 +17,7 @@ if str(REPO_ROOT) not in sys.path:
 from scripts.check_rbi_corpus_status import build_rbi_corpus_status  # noqa: E402
 
 
-OUTPUT_DIR = (
-    REPO_ROOT / "outputs" / "reports" / "phase_4a12_nlp_monitoring_final_pack"
-)
+OUTPUT_DIR = REPO_ROOT / "outputs" / "reports" / "phase_4a12_nlp_monitoring_final_pack"
 PHASE_4A6_DIR = REPO_ROOT / "outputs" / "reports" / "phase_4a6_real_nlp_validation"
 PHASE_4A8_DIR = REPO_ROOT / "outputs" / "reports" / "phase_4a8_multisource_nlp_monitoring"
 RBI_FETCHER_DIR = REPO_ROOT / "outputs" / "reports" / "rbi_official_fetcher"
@@ -45,7 +43,11 @@ def _source_mix_counts() -> dict[str, int]:
     if "source_mix" in source_mix:
         return {
             str(key): int(value)
-            for key, value in source_mix["source_mix"].fillna("none").value_counts().to_dict().items()
+            for key, value in source_mix["source_mix"]
+            .fillna("none")
+            .value_counts()
+            .to_dict()
+            .items()
         }
     daily = _read_csv(PHASE_4A8_DIR / "daily_nlp_signal.csv")
     if "source_mix" in daily:
@@ -119,10 +121,7 @@ def _news_summary() -> pd.DataFrame:
 def _copy_snapshots() -> None:
     source_mix_counts = _source_mix_counts()
     pd.DataFrame(
-        [
-            {"source_mix": key, "count": value}
-            for key, value in sorted(source_mix_counts.items())
-        ]
+        [{"source_mix": key, "count": value} for key, value in sorted(source_mix_counts.items())]
     ).to_csv(OUTPUT_DIR / "source_mix_summary.csv", index=False)
 
     status, diagnostics = build_rbi_corpus_status(RBI_MANIFEST)
@@ -133,13 +132,9 @@ def _copy_snapshots() -> None:
             "invalid_document_count": status["invalid_document_count"],
             "distinct_publication_dates": status["distinct_publication_dates"],
             "mpc_minutes_count": status["mpc_minutes_count"],
-            "monetary_policy_statement_count": status[
-                "monetary_policy_statement_count"
-            ],
+            "monetary_policy_statement_count": status["monetary_policy_statement_count"],
             "governor_speech_count": status["governor_speech_count"],
-            "financial_stability_report_count": status[
-                "financial_stability_report_count"
-            ],
+            "financial_stability_report_count": status["financial_stability_report_count"],
             "policy_core_documents": status["policy_core_documents"],
             "manual_action_required": status["manual_action_required"],
             "document_type_counts": json.dumps(
@@ -177,12 +172,12 @@ and strategy scoring.
 ## Current validation snapshot
 
 - Verdict: B. Useful for monitoring only.
-- Real RBI documents: {status['valid_document_count']}.
-- Policy core documents: {status['policy_core_documents']}.
-- MPC minutes: {status['mpc_minutes_count']}.
-- Monetary policy statements: {status['monetary_policy_statement_count']}.
-- Governor speeches: {status['governor_speech_count']}.
-- Financial stability reports: {status['financial_stability_report_count']}.
+- Real RBI documents: {status["valid_document_count"]}.
+- Policy core documents: {status["policy_core_documents"]}.
+- MPC minutes: {status["mpc_minutes_count"]}.
+- Monetary policy statements: {status["monetary_policy_statement_count"]}.
+- Governor speeches: {status["governor_speech_count"]}.
+- Financial stability reports: {status["financial_stability_report_count"]}.
 - Source mix: `{json.dumps(source_mix, sort_keys=True)}`.
 - Allocation impact: None.
 

@@ -50,11 +50,7 @@ def render_allocation_table(
     Render portfolio allocation table.
     """
 
-    df = (
-        weights.rename("Weight")
-        .reset_index()
-        .rename(columns={"index": "Asset"})
-    )
+    df = weights.rename("Weight").reset_index().rename(columns={"index": "Asset"})
 
     df["Weight (%)"] = df["Weight"] * 100
 

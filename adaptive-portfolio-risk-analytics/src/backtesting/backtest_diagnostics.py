@@ -39,7 +39,10 @@ def build_rebalance_summary(
         else {}
     )
     max_weight_drift_by_reason = (
-        rebalance_log_df.groupby("rebalance_reason")["max_weight_drift"].max().sort_index().to_dict()
+        rebalance_log_df.groupby("rebalance_reason")["max_weight_drift"]
+        .max()
+        .sort_index()
+        .to_dict()
         if "rebalance_reason" in rebalance_log_df
         else {}
     )
@@ -54,12 +57,8 @@ def build_rebalance_summary(
         "average_max_weight_drift": float(rebalance_log_df["max_weight_drift"].mean()),
         "calendar_rebalances": int(reason_counts.get("calendar", 0)),
         "threshold_rebalances": int(reason_counts.get("threshold", 0)),
-        "calendar_or_threshold_rebalances": int(
-            reason_counts.get("calendar_or_threshold", 0)
-        ),
-        "rebalance_reason_counts": {
-            str(key): int(value) for key, value in reason_counts.items()
-        },
+        "calendar_or_threshold_rebalances": int(reason_counts.get("calendar_or_threshold", 0)),
+        "rebalance_reason_counts": {str(key): int(value) for key, value in reason_counts.items()},
         "average_turnover_by_reason": {
             str(key): float(value) for key, value in average_turnover_by_reason.items()
         },
@@ -74,7 +73,9 @@ def compare_cost_drag(
     net_portfolio_values: pd.Series,
 ) -> dict[str, float]:
     """Compare gross and net portfolio values to quantify cost drag."""
-    if not isinstance(gross_portfolio_values, pd.Series) or not isinstance(net_portfolio_values, pd.Series):
+    if not isinstance(gross_portfolio_values, pd.Series) or not isinstance(
+        net_portfolio_values, pd.Series
+    ):
         raise TypeError("gross_portfolio_values and net_portfolio_values must be pandas Series")
     if gross_portfolio_values.empty or net_portfolio_values.empty:
         return {

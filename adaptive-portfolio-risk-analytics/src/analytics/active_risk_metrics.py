@@ -51,7 +51,9 @@ def calculate_beta(strategy_returns, benchmark_returns) -> float:
     if benchmark_variance <= VARIANCE_EPSILON or not np.isfinite(benchmark_variance):
         return float("nan")
 
-    covariance = float(np.cov(aligned["strategy"].values, aligned["benchmark"].values, ddof=1)[0, 1])
+    covariance = float(
+        np.cov(aligned["strategy"].values, aligned["benchmark"].values, ddof=1)[0, 1]
+    )
     return float(covariance / benchmark_variance)
 
 

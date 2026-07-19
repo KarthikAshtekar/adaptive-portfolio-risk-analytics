@@ -29,9 +29,12 @@ class AlphaVantageNewsProvider(SentimentProvider):
     ) -> None:
         super().__init__()
         self.api_key = api_key or os.getenv("ALPHAVANTAGE_API_KEY", "")
-        env_enabled = os.getenv(
-            "ALPHAVANTAGE_NEWS_ENABLED", "false"
-        ).strip().lower() in {"1", "true", "yes", "on"}
+        env_enabled = os.getenv("ALPHAVANTAGE_NEWS_ENABLED", "false").strip().lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
         self.enabled = env_enabled if enabled is None else bool(enabled)
         self.response_loader = response_loader
 
@@ -74,18 +77,10 @@ class AlphaVantageNewsProvider(SentimentProvider):
         if symbols:
             params["tickers"] = ",".join(symbols)
         if query:
-            params["topics"] = (
-                ",".join(query)
-                if isinstance(query, (list, tuple))
-                else str(query)
-            )
+            params["topics"] = ",".join(query) if isinstance(query, (list, tuple)) else str(query)
         try:
             response = self._response(params)
-            records = (
-                response.get("feed", [])
-                if isinstance(response, dict)
-                else response or []
-            )
+            records = response.get("feed", []) if isinstance(response, dict) else response or []
             self.last_diagnostics = {
                 "provider": self.provider_name,
                 "status": "success" if records else "empty",
@@ -115,9 +110,7 @@ class AlphaVantageNewsProvider(SentimentProvider):
             title = str(raw.get("title") or "").strip()
             rows.append(
                 {
-                    "record_id": stable_record_id(
-                        self.provider_name, url, publication, title
-                    ),
+                    "record_id": stable_record_id(self.provider_name, url, publication, title),
                     "timestamp": publication,
                     "publication_time": publication,
                     "retrieval_time": retrieval,
@@ -136,9 +129,7 @@ class AlphaVantageNewsProvider(SentimentProvider):
                     "provider_sentiment_score": pd.to_numeric(
                         raw.get("overall_sentiment_score"), errors="coerce"
                     ),
-                    "provider_sentiment_label": raw.get(
-                        "overall_sentiment_label", ""
-                    ),
+                    "provider_sentiment_label": raw.get("overall_sentiment_label", ""),
                 }
             )
         return normalized_frame(rows)

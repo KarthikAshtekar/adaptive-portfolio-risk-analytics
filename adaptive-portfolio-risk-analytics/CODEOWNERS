@@ -15,6 +15,7 @@ config/ @KarthikAshtekar
 # Core infrastructure
 src/config.py @KarthikAshtekar
 src/logging_config.py @KarthikAshtekar
+src/paths.py @KarthikAshtekar
 src/types.py @KarthikAshtekar
 src/utils.py @KarthikAshtekar
 
@@ -27,11 +28,17 @@ src/covariance/ @KarthikAshtekar
 # Clustering methods
 src/clustering/ @KarthikAshtekar
 
-# Regime detection
-src/regime_detection/ @KarthikAshtekar
+# Regime detection and adaptive allocation
+src/regime/ @KarthikAshtekar
+src/adaptive/ @KarthikAshtekar
 
 # NLP and sentiment analysis
-src/nlp/ @KarthikAshtekar
+src/sentiment/ @KarthikAshtekar
+
+# Experiments, validation, and strategy selection
+src/experiments/ @KarthikAshtekar
+src/validation/ @KarthikAshtekar
+src/selection/ @KarthikAshtekar
 
 # Optimization
 src/optimization/ @KarthikAshtekar

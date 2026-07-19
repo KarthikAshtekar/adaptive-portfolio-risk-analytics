@@ -67,18 +67,14 @@ class RBIProvider(SentimentProvider):
         self.feed_urls = feed_urls or [
             item.strip() for item in configured_urls.split(",") if item.strip()
         ]
-        self.local_manifest_path = (
-            Path(
-                local_manifest_path
-                or os.getenv(
-                    "RBI_LOCAL_MANIFEST_PATH",
-                    "data/sentiment/rbi_real/manifest.csv",
-                )
+        self.local_manifest_path = Path(
+            local_manifest_path
+            or os.getenv(
+                "RBI_LOCAL_MANIFEST_PATH",
+                "data/sentiment/rbi_real/manifest.csv",
             )
         )
-        self.local_corpus_path = (
-            Path(local_corpus_path) if local_corpus_path is not None else None
-        )
+        self.local_corpus_path = Path(local_corpus_path) if local_corpus_path is not None else None
         self.feed_loader = feed_loader
 
     def _read_feed(self, url: str) -> str:
@@ -95,9 +91,8 @@ class RBIProvider(SentimentProvider):
     def _parse_feed(xml_text: str, feed_url: str) -> list[dict[str, object]]:
         root = ET.fromstring(xml_text)
         records: list[dict[str, object]] = []
-        for item in root.findall(".//item") + root.findall(
-            ".//{http://www.w3.org/2005/Atom}entry"
-        ):
+        for item in root.findall(".//item") + root.findall(".//{http://www.w3.org/2005/Atom}entry"):
+
             def first_text(*names: str) -> str:
                 for name in names:
                     node = item.find(name)
@@ -176,9 +171,7 @@ class RBIProvider(SentimentProvider):
         if self.feeds_enabled:
             for feed_url in self.feed_urls:
                 try:
-                    records.extend(
-                        self._parse_feed(self._read_feed(feed_url), feed_url)
-                    )
+                    records.extend(self._parse_feed(self._read_feed(feed_url), feed_url))
                 except Exception as exc:
                     failures.append(f"{feed_url}: {exc}")
         live_count = len(records)
@@ -204,9 +197,7 @@ class RBIProvider(SentimentProvider):
         retrieval = pd.Timestamp(datetime.now(timezone.utc))
         rows: list[dict[str, object]] = []
         for raw in raw_records or []:
-            publication = pd.to_datetime(
-                raw.get("publication_time"), errors="coerce", utc=True
-            )
+            publication = pd.to_datetime(raw.get("publication_time"), errors="coerce", utc=True)
             title = str(raw.get("title") or "").strip()
             url = str(raw.get("url") or "").strip()
             rows.append(
@@ -218,8 +209,7 @@ class RBIProvider(SentimentProvider):
                     "retrieval_time": retrieval,
                     "source": "Reserve Bank of India",
                     "provider": self.provider_name,
-                    "document_type": raw.get("document_type")
-                    or _document_type(title),
+                    "document_type": raw.get("document_type") or _document_type(title),
                     "entity": "Reserve Bank of India",
                     "ticker": "",
                     "sector": "central_bank",

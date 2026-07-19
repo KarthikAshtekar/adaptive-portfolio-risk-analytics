@@ -24,7 +24,9 @@ from src.selection.gates import GateResult, GateStatus
 
 
 def _series(frame: pd.DataFrame, column: str, *, higher_is_better: bool = True) -> pd.Series:
-    values = pd.to_numeric(frame.get(column, pd.Series(index=frame.index, dtype=float)), errors="coerce")
+    values = pd.to_numeric(
+        frame.get(column, pd.Series(index=frame.index, dtype=float)), errors="coerce"
+    )
     if values.notna().sum() <= 1 or values.max() == values.min():
         result = pd.Series(0.5, index=frame.index, dtype=float)
         return result.where(values.notna())
@@ -41,7 +43,9 @@ def classify_strategy_roles(
     gates_by_strategy = gates_by_strategy or {}
     roles: dict[str, str] = {}
     for strategy, row in candidates.iterrows():
-        failed = any(gate.status == GateStatus.FAIL for gate in gates_by_strategy.get(str(strategy), []))
+        failed = any(
+            gate.status == GateStatus.FAIL for gate in gates_by_strategy.get(str(strategy), [])
+        )
         if failed:
             roles[str(strategy)] = REJECTED_ROLE
         elif str(strategy) == EQUAL_WEIGHT:
@@ -128,4 +132,3 @@ def score_candidates(
         }
     )
     return result.sort_values("selection_score", ascending=False)
-

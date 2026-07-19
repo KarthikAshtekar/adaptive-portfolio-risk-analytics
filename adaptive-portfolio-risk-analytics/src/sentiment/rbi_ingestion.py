@@ -32,10 +32,7 @@ def _read_csv_text(path: Path) -> str:
     )
     if preferred is not None:
         return "\n".join(frame[preferred].dropna().astype(str))
-    return "\n".join(
-        " ".join(row.dropna().astype(str))
-        for _, row in frame.iterrows()
-    )
+    return "\n".join(" ".join(row.dropna().astype(str)) for _, row in frame.iterrows())
 
 
 def _read_pdf_text(path: Path) -> str:
@@ -79,9 +76,7 @@ def load_rbi_documents(
     if "local_path" not in frame:
         frame["local_path"] = frame["file_path"]
     if "source_url" not in frame:
-        frame["source_url"] = (
-            frame["url"] if "url" in frame else pd.NA
-        )
+        frame["source_url"] = frame["url"] if "url" in frame else pd.NA
     for column in OPTIONAL_MANIFEST_COLUMNS:
         if column not in frame:
             frame[column] = pd.NA
@@ -99,15 +94,9 @@ def load_rbi_documents(
         if not pd.isna(publication_date):
             publication_date = publication_date.tz_convert(None).normalize()
         raw_type = str(row.get("document_type", "unknown")).strip().lower()
-        document_type = (
-            raw_type if raw_type in RBI_DOCUMENT_TYPES else "unknown"
-        )
+        document_type = raw_type if raw_type in RBI_DOCUMENT_TYPES else "unknown"
         raw_path = row.get("local_path", "")
-        relative_path = (
-            ""
-            if pd.isna(raw_path)
-            else str(raw_path).strip()
-        )
+        relative_path = "" if pd.isna(raw_path) else str(raw_path).strip()
         resolved_path = (root / relative_path).resolve()
         error: str | None = None
         text = ""
@@ -134,9 +123,7 @@ def load_rbi_documents(
             seen_ids.add(document_id)
         raw_source = row.get("source", "RBI")
         source = (
-            "RBI"
-            if pd.isna(raw_source) or not str(raw_source).strip()
-            else str(raw_source).strip()
+            "RBI" if pd.isna(raw_source) or not str(raw_source).strip() else str(raw_source).strip()
         )
         raw_language = row.get("language", "en")
         language = (

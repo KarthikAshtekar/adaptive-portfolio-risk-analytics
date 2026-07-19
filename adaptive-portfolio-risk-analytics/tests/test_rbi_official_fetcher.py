@@ -100,18 +100,14 @@ def test_document_type_classifier_maps_required_types() -> None:
         == "monetary_policy_statement"
     )
     assert (
-        classify_rbi_document_type("Deputy Governor speech on inflation", "")
-        == "governor_speech"
+        classify_rbi_document_type("Deputy Governor speech on inflation", "") == "governor_speech"
     )
     assert (
-        classify_rbi_document_type("Financial Stability Report", "")
-        == "financial_stability_report"
+        classify_rbi_document_type("Financial Stability Report", "") == "financial_stability_report"
     )
     assert classify_rbi_document_type("Annual Report 2025-26", "") == "annual_report"
     assert (
-        classify_rbi_document_type(
-            "RBI releases data", "https://www.rbi.org.in/pressreleases"
-        )
+        classify_rbi_document_type("RBI releases data", "https://www.rbi.org.in/pressreleases")
         == "press_release"
     )
     assert (
@@ -191,8 +187,7 @@ def test_manifest_update_preserves_required_columns(tmp_path: Path) -> None:
         source_url="https://www.rbi.org.in/official",
         retrieval_date="2026-06-25",
         notes=(
-            "fetched_by=rbi_official_fetcher; source_channel=press_releases; "
-            "extraction_method=html"
+            "fetched_by=rbi_official_fetcher; source_channel=press_releases; extraction_method=html"
         ),
     )
 

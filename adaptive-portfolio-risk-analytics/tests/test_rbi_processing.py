@@ -43,6 +43,4 @@ def test_sentence_processing_preserves_order_metadata_and_stable_ids() -> None:
 
 
 def test_clean_rbi_sentence_removes_excess_whitespace() -> None:
-    assert clean_rbi_sentence("  Policy   remains\tvigilant.  ") == (
-        "Policy remains vigilant."
-    )
+    assert clean_rbi_sentence("  Policy   remains\tvigilant.  ") == ("Policy remains vigilant.")

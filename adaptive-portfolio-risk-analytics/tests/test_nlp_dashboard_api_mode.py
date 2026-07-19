@@ -11,9 +11,9 @@ from src.selection import select_strategy_for_profile
 from src.sentiment.providers import EarningsCallProvider, GDELTProvider
 
 
-APP_SOURCE = (
-    Path(__file__).resolve().parents[1] / "src" / "dashboard" / "app.py"
-).read_text(encoding="utf-8")
+APP_SOURCE = (Path(__file__).resolve().parents[1] / "src" / "dashboard" / "app.py").read_text(
+    encoding="utf-8"
+)
 
 
 def _function_source(name: str, next_name: str) -> str:
@@ -60,18 +60,10 @@ def test_dashboard_nlp_builder_runs_offline_with_fixture_providers(
 ) -> None:
     root = Path(__file__).resolve().parents[1]
     providers = [
-        EarningsCallProvider(
-            root / "data" / "sentiment" / "earnings_calls" / "manifest.csv"
-        ),
+        EarningsCallProvider(root / "data" / "sentiment" / "earnings_calls" / "manifest.csv"),
         GDELTProvider(
             enabled=True,
-            fixture_path=(
-                root
-                / "data"
-                / "sentiment"
-                / "provider_fixtures"
-                / "gdelt_sample.json"
-            ),
+            fixture_path=(root / "data" / "sentiment" / "provider_fixtures" / "gdelt_sample.json"),
         ),
     ]
     index = pd.bdate_range("2024-01-01", "2026-06-19")

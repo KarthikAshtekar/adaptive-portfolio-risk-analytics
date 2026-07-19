@@ -87,10 +87,14 @@ def test_validator_flags_missing_files_duplicates_and_empty_documents(
 
     assert result["summary"]["invalid_document_count"] == 3
     assert result["summary"]["duplicate_record_count"] >= 2
-    assert result["invalid_documents"]["validation_errors"].str.contains(
-        "local file not found|document text is empty|duplicate document_id",
-        regex=True,
-    ).any()
+    assert (
+        result["invalid_documents"]["validation_errors"]
+        .str.contains(
+            "local file not found|document text is empty|duplicate document_id",
+            regex=True,
+        )
+        .any()
+    )
 
 
 def test_real_corpus_loader_returns_only_valid_documents(

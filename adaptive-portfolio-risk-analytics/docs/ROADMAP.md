@@ -1,97 +1,52 @@
-# Development Roadmap
+# Roadmap
 
-## Phase 1: Core Implementation (Foundation)
-- [ ] Data pipeline (ingest, preprocess, validate)
-- [ ] Covariance estimators (Ledoit-Wolf, Gerber)
-- [ ] Basic clustering (distance metrics, hierarchical)
-- [ ] Equal weight and Mean-Variance optimizers
-- [ ] Unit tests for core modules
-- [ ] Basic documentation
+This roadmap starts from the current implementation rather than the original scaffold plan.
 
-## Phase 2: Advanced Optimization (Mid-term)
-- [ ] HRP algorithm (full implementation)
-- [ ] HERC algorithm
-- [ ] Inverse volatility optimization
-- [ ] Dynamic allocation strategies
-- [ ] Integration tests
-- [ ] Backtesting framework (rolling window)
+## Implemented and tested
 
-## Phase 3: Regime & Sentiment (Macro Intelligence)
-- [ ] Markov-switching regime detection
-- [ ] Volatility targeting implementation
-- [ ] RBI sentiment extraction
-- [ ] Earnings call sentiment analysis
-- [ ] Uncertainty scoring
-- [ ] Sentiment aggregation pipeline
+- Centralized Yahoo Finance ingestion, inspection, preprocessing, and missingness diagnostics.
+- Sample, Ledoit-Wolf, EWMA, and EWMA plus Ledoit-Wolf covariance estimation.
+- Equal Weight, Inverse Volatility, Mean-Variance, HRP, and HERC allocation engines.
+- Rolling net/gross backtests with drift-aware rebalancing, turnover, transaction costs, and
+  slippage.
+- Risk contribution, VaR/ES, drawdown, Pain Ratio, stress, liquidity, and active-risk analytics.
+- Fixed/adaptive sensitivity experiments and CPCV-style purge/embargo validation.
+- Rule-based and HMM walk-forward regime research with lag-safe adaptive policies.
+- Strategy-selection evidence gates and Manager/Research/Developer dashboard modes.
+- Governed sentiment ingestion, RBI/news monitoring, optional local FinBERT fallback, and NLP
+  shadow overlays.
 
-## Phase 4: Risk & Analytics (Metrics)
-- [ ] VaR and CVaR calculation
-- [ ] Sharpe, Sortino, Calmar ratios
-- [ ] Maximum drawdown analysis
-- [ ] Stress testing framework
-- [ ] Risk attribution
-- [ ] Performance analytics
+## Hardening priorities
 
-## Phase 5: Validation & Backtesting (Testing)
-- [ ] CPCV implementation
-- [ ] Transaction cost modeling
-- [ ] Full backtesting simulation
-- [ ] Walk-forward validation
-- [ ] Robust test coverage
+- Split the large Streamlit orchestration module into tested page/component modules without
+  changing the current entrypoint.
+- Add browser-level dashboard smoke/interaction tests and broader plotting tests.
+- Add eligibility penalties for low CPCV successful-fold coverage.
+- Expand replication across independent universes, regions, and longer histories.
+- Version market data and experiment inputs so saved metrics can be reproduced exactly.
+- Strengthen live-source tests for official RBI/GDELT/Alpha Vantage adapters with recorded,
+  timestamped fixtures and explicit network-test markers.
+- Execute and freeze the currently unexecuted stage notebooks where deterministic local inputs are
+  available.
 
-## Phase 6: Dashboard & Visualization (UI)
-- [ ] Streamlit dashboard layout
-- [ ] Portfolio overview page
-- [ ] Optimization interface
-- [ ] Backtesting visualizations
-- [ ] Risk dashboard
-- [ ] Interactive charts
+## Partial or scaffolded work
 
-## Phase 7: Production & Deployment (Operations)
-- [ ] Performance optimization
-- [ ] Caching strategies
-- [ ] Distributed computing support
-- [ ] Real-time data streaming
-- [ ] API development
-- [ ] Docker containerization
+- `FeatureEngineer` implements rolling volatility features, while technical, macro, and sentiment
+  feature methods remain incomplete.
+- Alpha Vantage market-price ingestion is an extension point; sentiment-provider support is more
+  developed but live-key validation is environment-dependent.
+- `DynamicAllocationAllocator` remains a non-functional legacy extension point; regime-adaptive
+  allocation is implemented separately under `src/adaptive`.
+- The compatibility `CPCVBacktester` is not the implemented validator API.
+- Optional FinBERT execution depends on locally available model files; deterministic lexicon
+  fallback is the reliable baseline.
 
-## Phase 8: Enhancement & Research (Future)
-- [ ] Machine learning models
-- [ ] Advanced NLP models (FinBERT)
-- [ ] Multi-asset class support
-- [ ] Real-time trading signals
-- [ ] Portfolio insurance
-- [ ] Derivatives integration
+## Future research and engineering
 
-## Current Priority Tasks
-
-### High Priority
-1. Implement HRP algorithm completely
-2. Add full Ledoit-Wolf covariance
-3. Create rolling backtester
-4. Build test suite
-5. Complete dashboard skeleton
-
-### Medium Priority
-1. Implement HERC algorithm
-2. Add CPCV validation
-3. Build sentiment pipeline
-4. Add regime detection
-5. Complete documentation
-
-### Low Priority
-1. Advanced optimization constraints
-2. Machine learning integration
-3. Real-time monitoring
-4. API development
-5. Performance optimization
-
-## Success Metrics
-
-- [ ] 90%+ test coverage
-- [ ] All core algorithms functional
-- [ ] Dashboard responsive and intuitive
-- [ ] Backtest results reproducible
-- [ ] Documentation complete
-- [ ] Performance benchmarks met
-- [ ] Ready for production use
+- Gerber or other robust covariance estimators under the same factory contract.
+- Liquidity-aware nonlinear market-impact and capacity modeling.
+- Independent live-data governance, model registry, drift monitoring, and reproducible data
+  snapshots.
+- Broker/order-management integration only after research controls, review, and compliance design.
+- Longer real NLP histories and explicit promotion gates before any allocation influence.
+- API/container deployment if a maintained service boundary becomes a project requirement.

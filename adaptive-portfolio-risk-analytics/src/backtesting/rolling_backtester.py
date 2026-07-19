@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from src.analytics import PerformanceAnalytics, RiskAnalytics
+from src.analytics import PerformanceAnalytics
 from src.optimization import BaseAllocator, EqualWeightAllocator
 
 from .backtest_diagnostics import build_rebalance_summary, compare_cost_drag
@@ -163,7 +163,11 @@ class RollingBacktester(BaseBacktester):
             return threshold_flag, "threshold" if threshold_flag else None, max_weight_drift
         if self.rebalance_mode == "calendar_or_threshold":
             if calendar_flag:
-                return True, "calendar" if not threshold_flag else "calendar_or_threshold", max_weight_drift
+                return (
+                    True,
+                    "calendar" if not threshold_flag else "calendar_or_threshold",
+                    max_weight_drift,
+                )
             if threshold_flag:
                 return True, "threshold", max_weight_drift
             return False, None, max_weight_drift

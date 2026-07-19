@@ -79,9 +79,7 @@ def test_early_warning_overlay_only_partially_derisks() -> None:
         features=features,
     )
 
-    triggered = decisions.loc[
-        decisions["overlay_action"].eq("early_warning_partial_defensive")
-    ]
+    triggered = decisions.loc[decisions["overlay_action"].eq("early_warning_partial_defensive")]
     assert not triggered.empty
     assert triggered["allocation_after_overlay"].eq("partial_defensive").all()
 

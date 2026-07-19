@@ -7,15 +7,14 @@ from pathlib import Path
 from src.dashboard.app import NLP_INTAKE_INACTIVE_MESSAGE
 
 
-APP_SOURCE = (
-    Path(__file__).resolve().parents[1] / "src" / "dashboard" / "app.py"
-).read_text(encoding="utf-8")
+APP_SOURCE = (Path(__file__).resolve().parents[1] / "src" / "dashboard" / "app.py").read_text(
+    encoding="utf-8"
+)
 
 
 def test_manager_marks_nlp_inactive_or_illustrative() -> None:
     assert NLP_INTAKE_INACTIVE_MESSAGE == (
-        "NLP monitoring is inactive or illustrative until real text coverage "
-        "is sufficient."
+        "NLP monitoring is inactive or illustrative until real text coverage is sufficient."
     )
 
 

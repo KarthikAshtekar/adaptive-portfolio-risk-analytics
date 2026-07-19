@@ -6,8 +6,10 @@ from pathlib import Path
 
 import pandas as pd
 
+from src.paths import PROJECT_ROOT
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+
+REPO_ROOT = PROJECT_ROOT
 PLACEHOLDER_MARKER = "DO_NOT_USE_PLACEHOLDER"
 NON_REAL_MARKERS = (
     PLACEHOLDER_MARKER.lower(),
@@ -78,9 +80,7 @@ NEWS_DOCUMENT_TYPES = {
 }
 DEFAULT_MANIFESTS = {
     "rbi": REPO_ROOT / "data" / "sentiment" / "rbi_real" / "manifest.csv",
-    "earnings": (
-        REPO_ROOT / "data" / "sentiment" / "earnings_calls" / "manifest.csv"
-    ),
+    "earnings": (REPO_ROOT / "data" / "sentiment" / "earnings_calls" / "manifest.csv"),
     "news": REPO_ROOT / "data" / "sentiment" / "news_real" / "manifest.csv",
 }
 
@@ -98,9 +98,10 @@ def placeholder_mask(frame: pd.DataFrame) -> pd.Series:
 
 def is_explicit_placeholder(record: dict[str, object]) -> bool:
     """Return True only for rows carrying the required placeholder marker."""
-    return PLACEHOLDER_MARKER.lower() in " ".join(
-        str(value or "") for value in record.values()
-    ).lower()
+    return (
+        PLACEHOLDER_MARKER.lower()
+        in " ".join(str(value or "") for value in record.values()).lower()
+    )
 
 
 def _read_text(path: Path) -> str:
@@ -194,9 +195,7 @@ def validate_corpus_manifest(
     date_column = "publication_time" if corpus == "news" else "publication_date"
     source_column = "url" if corpus == "news" else "source_url"
     retrieval_column = "retrieval_time" if corpus == "news" else "retrieval_date"
-    duplicate_ids = (
-        frame[id_column].str.strip().str.lower().duplicated(keep=False)
-    )
+    duplicate_ids = frame[id_column].str.strip().str.lower().duplicated(keep=False)
     duplicate_identity = (
         frame[[date_column, "title", source_column]]
         .apply(lambda series: series.str.strip().str.lower())
@@ -210,13 +209,9 @@ def validate_corpus_manifest(
         errors: list[str] = []
         is_placeholder = bool(placeholders.iloc[position])
         publication = pd.to_datetime(values[date_column], errors="coerce", utc=True)
-        retrieval = pd.to_datetime(
-            values[retrieval_column], errors="coerce", utc=True
-        )
+        retrieval = pd.to_datetime(values[retrieval_column], errors="coerce", utc=True)
         if missing_columns:
-            errors.append(
-                f"missing required columns: {', '.join(missing_columns)}"
-            )
+            errors.append(f"missing required columns: {', '.join(missing_columns)}")
         if not values[id_column]:
             errors.append(f"missing {id_column}")
         if values[date_column] and pd.isna(publication):
@@ -317,9 +312,7 @@ def validate_corpus_manifest(
     )
     valid_records = frame.iloc[valid_indices].reset_index(drop=True)
     invalid_count = int(row_status["validation_status"].eq("invalid").sum())
-    placeholder_count = int(
-        row_status["validation_status"].eq("placeholder_excluded").sum()
-    )
+    placeholder_count = int(row_status["validation_status"].eq("placeholder_excluded").sum())
     valid_count = int(len(valid_records))
     manual_action = bool(valid_count == 0 or invalid_count > 0 or missing_columns)
     corpus_status = "ready" if not manual_action else "manual_action_required"
@@ -364,39 +357,20 @@ def validate_nlp_corpus_intake(
     paths = {
         "rbi": Path(rbi_manifest) if rbi_manifest else DEFAULT_MANIFESTS["rbi"],
         "earnings": (
-            Path(earnings_manifest)
-            if earnings_manifest
-            else DEFAULT_MANIFESTS["earnings"]
+            Path(earnings_manifest) if earnings_manifest else DEFAULT_MANIFESTS["earnings"]
         ),
-        "news": (
-            Path(news_manifest) if news_manifest else DEFAULT_MANIFESTS["news"]
-        ),
+        "news": (Path(news_manifest) if news_manifest else DEFAULT_MANIFESTS["news"]),
     }
-    results = {
-        corpus: validate_corpus_manifest(corpus, path)
-        for corpus, path in paths.items()
-    }
-    status = pd.DataFrame(
-        [results[corpus]["summary"] for corpus in ("rbi", "earnings", "news")]
-    )
+    results = {corpus: validate_corpus_manifest(corpus, path) for corpus, path in paths.items()}
+    status = pd.DataFrame([results[corpus]["summary"] for corpus in ("rbi", "earnings", "news")])
     return {
         "corpora": results,
         "intake_status": status,
-        "valid_records": {
-            corpus: results[corpus]["valid_records"]
-            for corpus in results
-        },
-        "row_diagnostics": {
-            corpus: results[corpus]["rows"] for corpus in results
-        },
-        "manual_action_required": bool(
-            status["manual_action_required"].fillna(True).any()
-        ),
-        "all_corpora_ready": bool(
-            status["corpus_status"].eq("ready").all()
-        ),
+        "valid_records": {corpus: results[corpus]["valid_records"] for corpus in results},
+        "row_diagnostics": {corpus: results[corpus]["rows"] for corpus in results},
+        "manual_action_required": bool(status["manual_action_required"].fillna(True).any()),
+        "all_corpora_ready": bool(status["corpus_status"].eq("ready").all()),
         "valid_real_records_by_corpus": {
-            row.corpus: int(row.valid_record_count)
-            for row in status.itertuples(index=False)
+            row.corpus: int(row.valid_record_count) for row in status.itertuples(index=False)
         },
     }

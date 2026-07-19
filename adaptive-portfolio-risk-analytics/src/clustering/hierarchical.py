@@ -52,9 +52,7 @@ def assign_clusters(linkage_matrix: np.ndarray, n_clusters: int) -> np.ndarray:
     return fcluster(linkage_matrix, n_clusters, criterion="maxclust")
 
 
-def get_cluster_members(
-    assets: list[str], cluster_labels: np.ndarray
-) -> dict[int, list[str]]:
+def get_cluster_members(assets: list[str], cluster_labels: np.ndarray) -> dict[int, list[str]]:
     """Map assets to cluster memberships."""
     if len(assets) != len(cluster_labels):
         raise ValueError("assets and cluster_labels must have the same length")

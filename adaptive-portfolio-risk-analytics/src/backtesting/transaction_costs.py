@@ -33,6 +33,7 @@ class TransactionCostModel:
 
         return float(turnover) * float(portfolio_value) * cost_rate
 
+
 class TransactionCostCalculator:
     """Backward-compatible transaction cost adapter for rebalancing."""
 

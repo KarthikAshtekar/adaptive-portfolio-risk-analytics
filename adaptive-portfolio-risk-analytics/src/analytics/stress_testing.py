@@ -47,9 +47,7 @@ def calculate_historical_stress_performance(
         var_result = calculate_historical_var(period_returns, confidence_level=0.95)
         es_result = calculate_historical_es(period_returns, confidence_level=0.95)
         values_for_duration = (
-            period_values
-            if not period_values.empty
-            else (1.0 + period_returns).cumprod()
+            period_values if not period_values.empty else (1.0 + period_returns).cumprod()
         )
         durations = calculate_drawdown_durations(values_for_duration)
 
@@ -173,7 +171,9 @@ def calculate_hypothetical_stress_table(
                 }
             )
 
-        finite_results = {key: value for key, value in scenario_results.items() if np.isfinite(value)}
+        finite_results = {
+            key: value for key, value in scenario_results.items() if np.isfinite(value)
+        }
         if finite_results:
             worst_strategy = min(finite_results, key=finite_results.get)
             most_defensive_strategy = max(finite_results, key=finite_results.get)
@@ -336,7 +336,12 @@ def _clean_returns(returns) -> pd.Series:
         series = returns.iloc[:, 0].copy()
     else:
         series = pd.Series(returns)
-    return pd.to_numeric(series, errors="coerce").replace([np.inf, -np.inf], np.nan).dropna().sort_index()
+    return (
+        pd.to_numeric(series, errors="coerce")
+        .replace([np.inf, -np.inf], np.nan)
+        .dropna()
+        .sort_index()
+    )
 
 
 def _clean_values(values) -> pd.Series:
@@ -350,7 +355,12 @@ def _clean_values(values) -> pd.Series:
         series = values.iloc[:, 0].copy()
     else:
         series = pd.Series(values)
-    return pd.to_numeric(series, errors="coerce").replace([np.inf, -np.inf], np.nan).dropna().sort_index()
+    return (
+        pd.to_numeric(series, errors="coerce")
+        .replace([np.inf, -np.inf], np.nan)
+        .dropna()
+        .sort_index()
+    )
 
 
 def _clean_weights(weights) -> pd.Series:

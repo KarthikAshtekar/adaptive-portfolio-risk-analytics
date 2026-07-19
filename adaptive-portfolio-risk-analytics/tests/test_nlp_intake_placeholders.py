@@ -38,9 +38,7 @@ def test_placeholder_rows_are_excluded_from_real_intake(tmp_path: Path) -> None:
 
     assert result["summary"]["placeholder_record_count"] == 1
     assert result["summary"]["valid_record_count"] == 0
-    assert result["rows"]["validation_status"].eq(
-        "placeholder_excluded"
-    ).all()
+    assert result["rows"]["validation_status"].eq("placeholder_excluded").all()
 
 
 def test_collection_ignores_placeholder_earnings_rows(tmp_path: Path) -> None:

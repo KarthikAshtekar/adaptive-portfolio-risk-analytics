@@ -16,8 +16,7 @@ def _entry(title: str, url_suffix: str = "1") -> dict[str, object]:
         "title": title,
         "summary": "",
         "source_url": (
-            "https://www.rbi.org.in/Scripts/BS_PressReleaseDisplay.aspx?"
-            f"prid={url_suffix}"
+            f"https://www.rbi.org.in/Scripts/BS_PressReleaseDisplay.aspx?prid={url_suffix}"
         ),
         "source_channel": "press_releases",
         "feed_url": "https://www.rbi.org.in/pressreleases_rss.xml",
@@ -25,9 +24,7 @@ def _entry(title: str, url_suffix: str = "1") -> dict[str, object]:
 
 
 def test_t_bill_auction_result_is_excluded() -> None:
-    matched = rbi_entry_exclude_keyword_match(
-        _entry("Result of Treasury Bills Auction Result")
-    )
+    matched = rbi_entry_exclude_keyword_match(_entry("Result of Treasury Bills Auction Result"))
 
     assert matched in {"treasury bills", "auction result"}
 
@@ -50,25 +47,18 @@ def test_customer_liability_amendment_direction_is_excluded() -> None:
 
 def test_mpc_minutes_are_not_excluded() -> None:
     assert (
-        rbi_entry_exclude_keyword_match(
-            _entry("Minutes of the Monetary Policy Committee Meeting")
-        )
+        rbi_entry_exclude_keyword_match(_entry("Minutes of the Monetary Policy Committee Meeting"))
         == ""
     )
 
 
 def test_monetary_policy_statement_is_not_excluded() -> None:
-    assert (
-        rbi_entry_exclude_keyword_match(_entry("Monetary Policy Statement, 2026-27"))
-        == ""
-    )
+    assert rbi_entry_exclude_keyword_match(_entry("Monetary Policy Statement, 2026-27")) == ""
 
 
 def test_governor_speech_is_not_excluded() -> None:
     assert (
-        rbi_entry_exclude_keyword_match(
-            _entry("Governor speech on monetary policy transmission")
-        )
+        rbi_entry_exclude_keyword_match(_entry("Governor speech on monetary policy transmission"))
         == ""
     )
 

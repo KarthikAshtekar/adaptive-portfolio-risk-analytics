@@ -90,12 +90,8 @@ def compare_sentiment_to_regimes(
     if "decision_sentiment_label" not in sentiment_signal:
         raise ValueError("sentiment_signal must contain decision_sentiment_label")
     sentiment = sentiment_signal["decision_sentiment_label"].astype("object")
-    rule = _coerce_regimes(rule_based_regimes, "rule_based_regime").reindex(
-        sentiment_signal.index
-    )
-    hmm = _coerce_regimes(hmm_regimes, "hmm_regime").reindex(
-        sentiment_signal.index
-    )
+    rule = _coerce_regimes(rule_based_regimes, "rule_based_regime").reindex(sentiment_signal.index)
+    hmm = _coerce_regimes(hmm_regimes, "hmm_regime").reindex(sentiment_signal.index)
 
     comparison = pd.DataFrame(index=sentiment_signal.index)
     comparison.index.name = "date"
@@ -122,12 +118,8 @@ def compare_sentiment_to_regimes(
         axis=1,
     )
 
-    stress_mask = comparison["rule_based_regime"].astype(str).str.lower().isin(
-        {"stress", "crisis"}
-    )
-    stress_with_sentiment = stress_mask & comparison["sentiment_label"].astype(
-        str
-    ).ne("unknown")
+    stress_mask = comparison["rule_based_regime"].astype(str).str.lower().isin({"stress", "crisis"})
+    stress_with_sentiment = stress_mask & comparison["sentiment_label"].astype(str).ne("unknown")
     risk_off_rule_agreement = (
         float(
             comparison.loc[stress_with_sentiment, "sentiment_label"]
@@ -139,12 +131,14 @@ def compare_sentiment_to_regimes(
         if stress_with_sentiment.any()
         else np.nan
     )
-    hmm_stress_mask = comparison["hmm_regime"].astype(str).str.lower().isin(
-        {"stress", "crisis", "risk-off", "risk_off"}
+    hmm_stress_mask = (
+        comparison["hmm_regime"]
+        .astype(str)
+        .str.lower()
+        .isin({"stress", "crisis", "risk-off", "risk_off"})
     )
-    hmm_stress_with_sentiment = (
-        hmm_stress_mask
-        & comparison["sentiment_label"].astype(str).ne("unknown")
+    hmm_stress_with_sentiment = hmm_stress_mask & comparison["sentiment_label"].astype(str).ne(
+        "unknown"
     )
     risk_off_hmm_agreement = (
         float(
@@ -158,11 +152,7 @@ def compare_sentiment_to_regimes(
         else np.nan
     )
 
-    disagreement_mask = (
-        comparison[["agreement_rule_based", "agreement_hmm"]]
-        .eq(False)
-        .any(axis=1)
-    )
+    disagreement_mask = comparison[["agreement_rule_based", "agreement_hmm"]].eq(False).any(axis=1)
     disagreement = comparison.loc[disagreement_mask].copy()
     disagreement.insert(0, "date", disagreement.index)
 
@@ -189,9 +179,7 @@ def compare_sentiment_to_regimes(
     decision_coverage_ratio = float(valid_sentiment.mean()) if len(valid_sentiment) else 0.0
 
     return {
-        "agreement_with_rule_based": _agreement_rate(
-            comparison["agreement_rule_based"]
-        ),
+        "agreement_with_rule_based": _agreement_rate(comparison["agreement_rule_based"]),
         "agreement_with_hmm": _agreement_rate(comparison["agreement_hmm"]),
         "risk_off_agreement_rule_based": risk_off_rule_agreement,
         "risk_off_agreement_hmm": risk_off_hmm_agreement,

@@ -27,7 +27,9 @@ def calculate_liquidity_diagnostics(
 
     latest_prices = prices_df[common_assets].ffill().iloc[-1]
     average_daily_volume = volumes_df[common_assets].tail(lookback_days).mean()
-    target = _prepare_weights(target_weights if target_weights is not None else weights, common_assets)
+    target = _prepare_weights(
+        target_weights if target_weights is not None else weights, common_assets
+    )
     current = _prepare_weights(current_weights, common_assets)
 
     if current_weights is None and target_weights is None and weights is not None:
@@ -42,11 +44,17 @@ def calculate_liquidity_diagnostics(
         {
             "asset": common_assets,
             "latest_price": latest_prices.reindex(common_assets).astype(float).values,
-            "average_daily_volume": average_daily_volume.reindex(common_assets).astype(float).values,
-            "average_daily_traded_value": average_daily_traded_value.reindex(common_assets).astype(float).values,
+            "average_daily_volume": average_daily_volume.reindex(common_assets)
+            .astype(float)
+            .values,
+            "average_daily_traded_value": average_daily_traded_value.reindex(common_assets)
+            .astype(float)
+            .values,
             "current_weight": current.reindex(common_assets).astype(float).values,
             "target_weight": target.reindex(common_assets).astype(float).values,
-            "estimated_trade_value": estimated_trade_value.reindex(common_assets).astype(float).values,
+            "estimated_trade_value": estimated_trade_value.reindex(common_assets)
+            .astype(float)
+            .values,
             "participation_rate": participation_rate.reindex(common_assets).astype(float).values,
         }
     )

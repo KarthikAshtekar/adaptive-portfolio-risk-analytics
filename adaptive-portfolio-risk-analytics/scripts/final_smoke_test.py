@@ -104,12 +104,7 @@ def main() -> int:
     else:
         print("PASS README contains v1.3.0 label")
 
-    phase4a_dir = (
-        REPO_ROOT
-        / "outputs"
-        / "reports"
-        / "phase_4a_sentiment_confirmation"
-    )
+    phase4a_dir = REPO_ROOT / "outputs" / "reports" / "phase_4a_sentiment_confirmation"
     for filename in (
         "report.html",
         "summary.md",
@@ -120,18 +115,10 @@ def main() -> int:
     ):
         if not (phase4a_dir / filename).is_file():
             failures.append(f"missing Phase 4A report artifact: {filename}")
-    if not any(
-        item.startswith("missing Phase 4A report artifact:")
-        for item in failures
-    ):
+    if not any(item.startswith("missing Phase 4A report artifact:") for item in failures):
         print("PASS Phase 4A report artifacts exist")
 
-    phase4a2_dir = (
-        REPO_ROOT
-        / "outputs"
-        / "reports"
-        / "phase_4a2_rbi_macro_sentiment"
-    )
+    phase4a2_dir = REPO_ROOT / "outputs" / "reports" / "phase_4a2_rbi_macro_sentiment"
     for filename in (
         "report.html",
         "summary.md",
@@ -144,18 +131,10 @@ def main() -> int:
     ):
         if not (phase4a2_dir / filename).is_file():
             failures.append(f"missing Phase 4A.2 report artifact: {filename}")
-    if not any(
-        item.startswith("missing Phase 4A.2 report artifact:")
-        for item in failures
-    ):
+    if not any(item.startswith("missing Phase 4A.2 report artifact:") for item in failures):
         print("PASS Phase 4A.2 report artifacts exist")
 
-    phase4a3_dir = (
-        REPO_ROOT
-        / "outputs"
-        / "reports"
-        / "phase_4a3_real_rbi_macro_validation"
-    )
+    phase4a3_dir = REPO_ROOT / "outputs" / "reports" / "phase_4a3_real_rbi_macro_validation"
     for filename in (
         "report.html",
         "summary.md",
@@ -170,18 +149,10 @@ def main() -> int:
     ):
         if not (phase4a3_dir / filename).is_file():
             failures.append(f"missing Phase 4A.3 report artifact: {filename}")
-    if not any(
-        item.startswith("missing Phase 4A.3 report artifact:")
-        for item in failures
-    ):
+    if not any(item.startswith("missing Phase 4A.3 report artifact:") for item in failures):
         print("PASS Phase 4A.3 report artifacts exist")
 
-    phase4a5_dir = (
-        REPO_ROOT
-        / "outputs"
-        / "reports"
-        / "phase_4a5_api_sentiment_ingestion"
-    )
+    phase4a5_dir = REPO_ROOT / "outputs" / "reports" / "phase_4a5_api_sentiment_ingestion"
     for filename in (
         "report.html",
         "summary.md",
@@ -196,18 +167,10 @@ def main() -> int:
     ):
         if not (phase4a5_dir / filename).is_file():
             failures.append(f"missing Phase 4A.5 report artifact: {filename}")
-    if not any(
-        item.startswith("missing Phase 4A.5 report artifact:")
-        for item in failures
-    ):
+    if not any(item.startswith("missing Phase 4A.5 report artifact:") for item in failures):
         print("PASS Phase 4A.5 report artifacts exist")
 
-    phase4a6_dir = (
-        REPO_ROOT
-        / "outputs"
-        / "reports"
-        / "phase_4a6_real_nlp_validation"
-    )
+    phase4a6_dir = REPO_ROOT / "outputs" / "reports" / "phase_4a6_real_nlp_validation"
     for filename in (
         "report.html",
         "summary.md",
@@ -231,18 +194,10 @@ def main() -> int:
     ):
         if not (phase4a6_dir / filename).is_file():
             failures.append(f"missing Phase 4A.6 report artifact: {filename}")
-    if not any(
-        item.startswith("missing Phase 4A.6 report artifact:")
-        for item in failures
-    ):
+    if not any(item.startswith("missing Phase 4A.6 report artifact:") for item in failures):
         print("PASS Phase 4A.6 report artifacts exist")
 
-    phase4a8_dir = (
-        REPO_ROOT
-        / "outputs"
-        / "reports"
-        / "phase_4a8_multisource_nlp_monitoring"
-    )
+    phase4a8_dir = REPO_ROOT / "outputs" / "reports" / "phase_4a8_multisource_nlp_monitoring"
     if phase4a8_dir.is_dir():
         for filename in (
             "report.html",
@@ -258,18 +213,10 @@ def main() -> int:
         ):
             if not (phase4a8_dir / filename).is_file():
                 failures.append(f"missing Phase 4A.8 report artifact: {filename}")
-        if not any(
-            item.startswith("missing Phase 4A.8 report artifact:")
-            for item in failures
-        ):
+        if not any(item.startswith("missing Phase 4A.8 report artifact:") for item in failures):
             print("PASS Phase 4A.8 report artifacts exist")
 
-    intake_dir = (
-        REPO_ROOT
-        / "outputs"
-        / "reports"
-        / "nlp_corpus_intake_validation"
-    )
+    intake_dir = REPO_ROOT / "outputs" / "reports" / "nlp_corpus_intake_validation"
     for filename in (
         "intake_status.csv",
         "rbi_status.csv",
@@ -295,17 +242,10 @@ def main() -> int:
     for relative in intake_paths:
         if not (REPO_ROOT / relative).is_file():
             failures.append(f"missing NLP intake file: {relative}")
-    if not any(
-        item.startswith("missing NLP intake") for item in failures
-    ):
+    if not any(item.startswith("missing NLP intake") for item in failures):
         print("PASS Phase 4A.7 intake workflow artifacts exist")
 
-    fetcher_dir = (
-        REPO_ROOT
-        / "outputs"
-        / "reports"
-        / "rbi_official_fetcher"
-    )
+    fetcher_dir = REPO_ROOT / "outputs" / "reports" / "rbi_official_fetcher"
     if fetcher_dir.is_dir():
         for filename in (
             "fetch_summary.md",
@@ -315,18 +255,10 @@ def main() -> int:
         ):
             if not (fetcher_dir / filename).is_file():
                 failures.append(f"missing RBI fetcher artifact: {filename}")
-        if not any(
-            item.startswith("missing RBI fetcher artifact:")
-            for item in failures
-        ):
+        if not any(item.startswith("missing RBI fetcher artifact:") for item in failures):
             print("PASS Phase 4A.9 RBI fetcher artifacts exist")
 
-    phase4a12_dir = (
-        REPO_ROOT
-        / "outputs"
-        / "reports"
-        / "phase_4a12_nlp_monitoring_final_pack"
-    )
+    phase4a12_dir = REPO_ROOT / "outputs" / "reports" / "phase_4a12_nlp_monitoring_final_pack"
     for filename in (
         "report.html",
         "summary.md",
@@ -343,18 +275,10 @@ def main() -> int:
     ):
         if not (phase4a12_dir / filename).is_file():
             failures.append(f"missing Phase 4A.12 final-pack artifact: {filename}")
-    if not any(
-        item.startswith("missing Phase 4A.12 final-pack artifact:")
-        for item in failures
-    ):
+    if not any(item.startswith("missing Phase 4A.12 final-pack artifact:") for item in failures):
         print("PASS Phase 4A.12 NLP monitoring final-pack artifacts exist")
 
-    phase4a13_dir = (
-        REPO_ROOT
-        / "outputs"
-        / "reports"
-        / "phase_4a13_nlp_shadow_impact"
-    )
+    phase4a13_dir = REPO_ROOT / "outputs" / "reports" / "phase_4a13_nlp_shadow_impact"
     if phase4a13_dir.is_dir():
         for filename in (
             "report.html",
@@ -369,40 +293,21 @@ def main() -> int:
         ):
             if not (phase4a13_dir / filename).is_file():
                 failures.append(f"missing Phase 4A.13 artifact: {filename}")
-        if not any(
-            item.startswith("missing Phase 4A.13 artifact:")
-            for item in failures
-        ):
+        if not any(item.startswith("missing Phase 4A.13 artifact:") for item in failures):
             print("PASS Phase 4A.13 NLP shadow-impact artifacts exist")
 
-    v1_3_0_dir = (
-        REPO_ROOT
-        / "outputs"
-        / "reports"
-        / "v1_3_0_final_integrated_release"
-    )
+    v1_3_0_dir = REPO_ROOT / "outputs" / "reports" / "v1_3_0_final_integrated_release"
     for filename in REQUIRED_V1_3_0_RELEASE_FILES:
         if not (v1_3_0_dir / filename).is_file():
             failures.append(f"missing v1.3.0 final release artifact: {filename}")
-    if not any(
-        item.startswith("missing v1.3.0 final release artifact:")
-        for item in failures
-    ):
+    if not any(item.startswith("missing v1.3.0 final release artifact:") for item in failures):
         print("PASS v1.3.0 final integrated release-pack artifacts exist")
 
-    team_handoff_dir = (
-        REPO_ROOT
-        / "outputs"
-        / "reports"
-        / "team_report_handoff_pack"
-    )
+    team_handoff_dir = REPO_ROOT / "outputs" / "reports" / "team_report_handoff_pack"
     for filename in REQUIRED_TEAM_HANDOFF_FILES:
         if not (team_handoff_dir / filename).is_file():
             failures.append(f"missing team handoff artifact: {filename}")
-    if not any(
-        item.startswith("missing team handoff artifact:")
-        for item in failures
-    ):
+    if not any(item.startswith("missing team handoff artifact:") for item in failures):
         print("PASS team report handoff artifacts exist")
 
     if failures:

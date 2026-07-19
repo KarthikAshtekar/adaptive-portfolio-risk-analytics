@@ -357,14 +357,10 @@ def _extract_series(values, ticker: str | None, *, value_name: str) -> pd.Series
             return values[ticker].copy()
         if values.shape[1] == 1:
             return values.iloc[:, 0].copy()
-        raise ValueError(
-            f"{value_name} DataFrame must contain ticker '{ticker}' or one column"
-        )
+        raise ValueError(f"{value_name} DataFrame must contain ticker '{ticker}' or one column")
     if values is None:
         raise ValueError(f"{value_name} were not supplied")
-    raise TypeError(
-        f"{value_name} must be a pandas Series, DataFrame, mapping, or None"
-    )
+    raise TypeError(f"{value_name} must be a pandas Series, DataFrame, mapping, or None")
 
 
 def _download_ticker_prices(
@@ -397,9 +393,7 @@ def _normalize_source(source: str) -> str:
     normalized = aliases.get(normalized, normalized)
     if normalized not in SUPPORTED_DEFENSIVE_SOURCES:
         supported = ", ".join(sorted(SUPPORTED_DEFENSIVE_SOURCES))
-        raise ValueError(
-            f"unsupported defensive source '{source}'. Supported: {supported}"
-        )
+        raise ValueError(f"unsupported defensive source '{source}'. Supported: {supported}")
     return normalized
 
 

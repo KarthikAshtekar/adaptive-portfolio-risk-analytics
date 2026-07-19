@@ -50,7 +50,9 @@ def test_exposure_is_bounded_between_floor_and_cap() -> None:
         exposure_floor=0.25,
         exposure_cap=1.0,
     )
-    results = apply_volatility_targeting(risky_returns, _defensive_returns(risky_returns.index), config)
+    results = apply_volatility_targeting(
+        risky_returns, _defensive_returns(risky_returns.index), config
+    )
     exposure = results["exposure_series"]
 
     assert (exposure >= config.exposure_floor - 1e-12).all()

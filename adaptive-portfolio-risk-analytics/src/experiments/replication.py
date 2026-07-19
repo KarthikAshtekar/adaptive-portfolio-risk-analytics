@@ -127,8 +127,7 @@ def run_replication_study(
     selected_costs = _normalize_cost_scenarios(cost_scenarios)
     selected_sleeves = list(defensive_sleeves or DEFAULT_DEFENSIVE_SLEEVES)
     selected_presets = [
-        str(value).strip().lower()
-        for value in (policy_presets or ("Conservative", "Balanced"))
+        str(value).strip().lower() for value in (policy_presets or ("Conservative", "Balanced"))
     ]
     selected_sources = [
         str(value).strip().lower()
@@ -137,9 +136,7 @@ def run_replication_study(
     _validate_objective(objective)
 
     adaptive_variants = [
-        (preset, source)
-        for preset in selected_presets
-        for source in selected_sources
+        (preset, source) for preset in selected_presets for source in selected_sources
     ]
     runs_per_scenario = len(FIXED_STRATEGIES) + len(adaptive_variants)
     scenarios = [
@@ -284,9 +281,7 @@ def run_replication_study(
                         "defensive_annual_rate": _sleeve_settings(
                             str(scenario["defensive_sleeve"])
                         )[1],
-                        "defensive_ticker": _sleeve_settings(
-                            str(scenario["defensive_sleeve"])
-                        )[2],
+                        "defensive_ticker": _sleeve_settings(str(scenario["defensive_sleeve"]))[2],
                         "defensive_fallback_used": False,
                         "status": "success",
                         "failure_reason": None,
@@ -413,9 +408,7 @@ def summarize_replication_results(
         return pd.DataFrame()
 
     successful = results_df.loc[results_df["status"].eq("success")].copy()
-    adaptive = successful.loc[
-        successful["strategy_type"].eq("regime_adaptive")
-    ].copy()
+    adaptive = successful.loc[successful["strategy_type"].eq("regime_adaptive")].copy()
     fixed = successful.loc[successful["strategy_type"].eq("fixed")].copy()
     if adaptive.empty:
         return pd.DataFrame()
@@ -426,9 +419,7 @@ def summarize_replication_results(
         if finite.empty:
             continue
         best = finite.loc[pd.to_numeric(finite[objective], errors="coerce").idxmax()]
-        baseline = {
-            key: value for key, value in zip(SCENARIO_KEYS, scenario_values)
-        }
+        baseline = {key: value for key, value in zip(SCENARIO_KEYS, scenario_values)}
         baseline.update(
             {
                 "fixed_objective": best[objective],
@@ -449,9 +440,8 @@ def summarize_replication_results(
         how="left",
         validate="many_to_one",
     )
-    paired["objective_win"] = (
-        pd.to_numeric(paired[objective], errors="coerce")
-        > pd.to_numeric(paired["fixed_objective"], errors="coerce")
+    paired["objective_win"] = pd.to_numeric(paired[objective], errors="coerce") > pd.to_numeric(
+        paired["fixed_objective"], errors="coerce"
     )
     paired["calmar_win"] = paired["calmar"] > paired["fixed_calmar"]
     if "pain_index" not in paired:
@@ -471,14 +461,11 @@ def summarize_replication_results(
     paired["stress_protection_win"] = (
         paired["stress_period_return"] > paired["fixed_stress_period_return"]
     ) | paired["drawdown_win"]
-    paired["final_value_ratio"] = (
-        paired["final_value"] / paired["fixed_final_value"]
-    )
+    paired["final_value_ratio"] = paired["final_value"] / paired["fixed_final_value"]
 
     all_rows = []
     failed = results_df.loc[
-        results_df["strategy_type"].eq("regime_adaptive")
-        & ~results_df["status"].eq("success")
+        results_df["strategy_type"].eq("regime_adaptive") & ~results_df["status"].eq("success")
     ]
     for strategy, group in paired.groupby("strategy", sort=True):
         cost_slope = _cost_sensitivity_slope(group)
@@ -498,11 +485,7 @@ def summarize_replication_results(
             else float(pd.to_numeric(high_cost["calmar"], errors="coerce").median())
             >= 0.75 * float(pd.to_numeric(group["calmar"], errors="coerce").median())
         )
-        if (
-            objective_win_rate > 0.50
-            and final_value_ratio >= 0.95
-            and high_cost_stable
-        ):
+        if objective_win_rate > 0.50 and final_value_ratio >= 0.95 and high_cost_stable:
             classification = "First-class main strategy"
         elif drawdown_win_rate > 0.50 and final_value_ratio < 1.0:
             classification = "Risk-control overlay"
@@ -535,12 +518,8 @@ def summarize_replication_results(
                 "average_cagr": float(group["cagr"].mean()),
                 "average_final_value": float(group["final_value"].mean()),
                 "average_turnover": float(group["turnover"].mean()),
-                "average_transaction_cost": float(
-                    group["transaction_cost"].mean()
-                ),
-                "stress_protection_win_rate": float(
-                    group["stress_protection_win"].mean()
-                ),
+                "average_transaction_cost": float(group["transaction_cost"].mean()),
+                "stress_protection_win_rate": float(group["stress_protection_win"].mean()),
                 "cost_sensitivity_slope": cost_slope,
                 "average_final_value_ratio_vs_best_fixed": final_value_ratio,
                 "number_of_successful_runs": successful_count,
@@ -548,11 +527,15 @@ def summarize_replication_results(
                 "classification": classification,
             }
         )
-    return pd.DataFrame(all_rows).sort_values(
-        ["selected_objective_win_rate", "stress_protection_win_rate"],
-        ascending=False,
-        kind="mergesort",
-    ).reset_index(drop=True)
+    return (
+        pd.DataFrame(all_rows)
+        .sort_values(
+            ["selected_objective_win_rate", "stress_protection_win_rate"],
+            ascending=False,
+            kind="mergesort",
+        )
+        .reset_index(drop=True)
+    )
 
 
 def run_policy_tuning_study(
@@ -742,9 +725,7 @@ def _normalize_cost_scenarios(cost_scenarios) -> list[dict[str, float | str]]:
             name = f"{base:g} bps + {slippage:g} bps"
         if base < 0.0 or slippage < 0.0:
             raise ValueError("cost scenarios must be non-negative")
-        normalized.append(
-            {"name": name, "base_bps": base, "slippage_bps": slippage}
-        )
+        normalized.append({"name": name, "base_bps": base, "slippage_bps": slippage})
     return normalized
 
 
@@ -789,19 +770,11 @@ def _bounded_scenarios(
     baseline_universe = universe_values[0]
     baseline_window = window_values[0]
     baseline_cost = next(
-        (
-            value
-            for value in cost_values
-            if str(value).startswith("10 bps + 5 bps")
-        ),
+        (value for value in cost_values if str(value).startswith("10 bps + 5 bps")),
         cost_values[0],
     )
     baseline_sleeve = next(
-        (
-            value
-            for value in sleeve_values
-            if str(value).lower() == "synthetic_4pct"
-        ),
+        (value for value in sleeve_values if str(value).lower() == "synthetic_4pct"),
         sleeve_values[0],
     )
 
@@ -852,8 +825,7 @@ def _bounded_scenarios(
         dimension: {
             scenario[dimension]
             for scenario in scenarios
-            if scenario[dimension]
-            not in {selected_row[dimension] for selected_row in selected}
+            if scenario[dimension] not in {selected_row[dimension] for selected_row in selected}
         }
         for dimension in dimensions
     }
@@ -881,10 +853,7 @@ def _bounded_scenarios(
             scenario_limit - len(selected),
             dtype=int,
         )
-        selected.extend(
-            remaining[int(position)]
-            for position in dict.fromkeys(positions)
-        )
+        selected.extend(remaining[int(position)] for position in dict.fromkeys(positions))
     return selected[:scenario_limit]
 
 
@@ -897,12 +866,7 @@ def _load_universe_returns(
     tickers = [str(value) for value in universe]
     earliest_start = min(value[1] for value in windows) - pd.DateOffset(years=3)
     latest_end = max(
-        [
-            value[2]
-            for value in windows
-            if value[2] is not None
-        ]
-        or [pd.Timestamp(date.today())]
+        [value[2] for value in windows if value[2] is not None] or [pd.Timestamp(date.today())]
     )
     download_end = (latest_end.date() + timedelta(days=1)).isoformat()
     market_data = YahooFinanceProvider().get_market_data(
@@ -922,9 +886,7 @@ def _context_for_scenario(
     evaluation_start = pd.Timestamp(scenario["start_date"])
     requested_end = scenario.get("end_date")
     evaluation_end = (
-        pd.Timestamp(requested_end)
-        if requested_end is not None
-        else returns.index.max()
+        pd.Timestamp(requested_end) if requested_end is not None else returns.index.max()
     )
     context_start = evaluation_start - pd.DateOffset(years=3)
     context = returns.loc[context_start:evaluation_end].copy()
@@ -972,9 +934,7 @@ def _adaptive_config_row(
     training_window: int,
     hmm_min_train_size: int,
 ) -> dict[str, object]:
-    defensive_source, annual_rate, ticker = _sleeve_settings(
-        str(scenario["defensive_sleeve"])
-    )
+    defensive_source, annual_rate, ticker = _sleeve_settings(str(scenario["defensive_sleeve"]))
     return {
         "strategy": adaptive_strategy_name(source, preset),
         "strategy_type": "regime_adaptive",
@@ -1006,10 +966,14 @@ def _summarize_backtest(
     strategy_name: str,
     strategy_type: str,
 ) -> dict[str, object]:
-    returns = pd.to_numeric(
-        backtest["portfolio_returns"],
-        errors="coerce",
-    ).loc[evaluation_start:evaluation_end].dropna()
+    returns = (
+        pd.to_numeric(
+            backtest["portfolio_returns"],
+            errors="coerce",
+        )
+        .loc[evaluation_start:evaluation_end]
+        .dropna()
+    )
     if returns.empty:
         raise ValueError("backtest produced no returns in the evaluation window")
     values = _normalized_values(returns)
@@ -1024,12 +988,8 @@ def _summarize_backtest(
                 diagnostics["date"].between(evaluation_start, evaluation_end)
             ]
         turnover = float(diagnostics.get("turnover", pd.Series(dtype=float)).sum())
-        transaction_cost = float(
-            diagnostics.get("transaction_cost", pd.Series(dtype=float)).sum()
-        )
-        rebalances = int(
-            diagnostics.get("rebalanced", pd.Series(dtype=bool)).sum()
-        )
+        transaction_cost = float(diagnostics.get("transaction_cost", pd.Series(dtype=float)).sum())
+        rebalances = int(diagnostics.get("rebalanced", pd.Series(dtype=bool)).sum())
         average_risky = float(diagnostics["risky_exposure"].mean())
         average_defensive = float(diagnostics["defensive_weight"].mean())
         applied = backtest.get("applied_regimes", pd.Series(dtype=object))
@@ -1037,18 +997,14 @@ def _summarize_backtest(
     else:
         rebalance_log = backtest.get("rebalance_log", pd.DataFrame()).copy()
         if not rebalance_log.empty:
-            rebalance_log["rebalance_date"] = pd.to_datetime(
-                rebalance_log["rebalance_date"]
-            )
+            rebalance_log["rebalance_date"] = pd.to_datetime(rebalance_log["rebalance_date"])
             rebalance_log = rebalance_log.loc[
                 rebalance_log["rebalance_date"].between(
                     evaluation_start,
                     evaluation_end,
                 )
             ]
-        turnover = float(
-            rebalance_log.get("turnover", pd.Series(dtype=float)).sum()
-        )
+        turnover = float(rebalance_log.get("turnover", pd.Series(dtype=float)).sum())
         transaction_cost = float(
             rebalance_log.get("transaction_cost", pd.Series(dtype=float)).sum()
         )
@@ -1095,9 +1051,7 @@ def _failed_row(
     *,
     status: str = "failed",
 ) -> dict[str, object]:
-    source, annual_rate, ticker = _sleeve_settings(
-        str(scenario["defensive_sleeve"])
-    )
+    source, annual_rate, ticker = _sleeve_settings(str(scenario["defensive_sleeve"]))
     return {
         **dict(scenario),
         "strategy": strategy,
@@ -1165,8 +1119,7 @@ def _hmm_training_window(n_observations: int, training_window: int) -> int:
 
 def _window_label(start: pd.Timestamp, end: pd.Timestamp | None) -> str:
     return (
-        f"{start.date().isoformat()} to "
-        f"{end.date().isoformat() if end is not None else 'latest'}"
+        f"{start.date().isoformat()} to {end.date().isoformat() if end is not None else 'latest'}"
     )
 
 
@@ -1200,15 +1153,9 @@ def _stress_period_return(
     if not isinstance(regimes, pd.Series):
         return _fixed_stress_period_return(returns)
     aligned = regimes.reindex(returns.index).fillna("Unknown").astype(str)
-    mask = aligned.str.lower().isin(
-        {"stress", "crisis", "risk-off", "risk_off", "risk off"}
-    )
+    mask = aligned.str.lower().isin({"stress", "crisis", "risk-off", "risk_off", "risk off"})
     stress_returns = returns.loc[mask]
-    return (
-        float((1.0 + stress_returns).prod() - 1.0)
-        if not stress_returns.empty
-        else np.nan
-    )
+    return float((1.0 + stress_returns).prod() - 1.0) if not stress_returns.empty else np.nan
 
 
 def _fixed_stress_period_return(returns: pd.Series) -> float:
@@ -1226,9 +1173,8 @@ def _cost_sensitivity_slope(group: pd.DataFrame) -> float:
         ["universe", "date_window", "defensive_sleeve"],
         dropna=False,
     ):
-        x = (
-            pd.to_numeric(matched["base_bps"], errors="coerce")
-            + pd.to_numeric(matched["slippage_bps"], errors="coerce")
+        x = pd.to_numeric(matched["base_bps"], errors="coerce") + pd.to_numeric(
+            matched["slippage_bps"], errors="coerce"
         )
         y = pd.to_numeric(matched["calmar"], errors="coerce")
         valid = x.notna() & y.notna()
@@ -1278,9 +1224,7 @@ def _flag_policy_tuning_findings(results: pd.DataFrame) -> pd.DataFrame:
     comparisons = []
     for source, group in successful.groupby("regime_source"):
         base = group.loc[group["policy_variant"].eq("Conservative base")]
-        faster = group.loc[
-            group["policy_variant"].eq("Conservative faster re-risking")
-        ]
+        faster = group.loc[group["policy_variant"].eq("Conservative faster re-risking")]
         if base.empty or faster.empty:
             continue
         base_row = base.iloc[0]
@@ -1289,20 +1233,13 @@ def _flag_policy_tuning_findings(results: pd.DataFrame) -> pd.DataFrame:
             {
                 "index": faster.index[0],
                 "calmar_gain": faster_row["calmar"] - base_row["calmar"],
-                "recovery_gain": (
-                    base_row["recovery_duration"] - faster_row["recovery_duration"]
-                ),
+                "recovery_gain": (base_row["recovery_duration"] - faster_row["recovery_duration"]),
                 "final_value_gain": faster_row["final_value"] - base_row["final_value"],
                 "drawdown_change": (
-                    abs(faster_row["max_drawdown"])
-                    - abs(base_row["max_drawdown"])
+                    abs(faster_row["max_drawdown"]) - abs(base_row["max_drawdown"])
                 ),
                 "drawdown_relative_change": (
-                    (
-                        abs(faster_row["max_drawdown"])
-                        / abs(base_row["max_drawdown"])
-                    )
-                    - 1.0
+                    (abs(faster_row["max_drawdown"]) / abs(base_row["max_drawdown"])) - 1.0
                     if abs(base_row["max_drawdown"]) > 0.0
                     else np.nan
                 ),
@@ -1312,8 +1249,7 @@ def _flag_policy_tuning_findings(results: pd.DataFrame) -> pd.DataFrame:
         return frame
     comparison = pd.DataFrame(comparisons).set_index("index")
     drawdown_safe = comparison.loc[
-        (comparison["drawdown_change"] <= 0.02)
-        & (comparison["final_value_gain"] > 0.0)
+        (comparison["drawdown_change"] <= 0.02) & (comparison["final_value_gain"] > 0.0)
     ]
     if not drawdown_safe.empty:
         frame.loc[
@@ -1340,8 +1276,7 @@ def _flag_policy_tuning_findings(results: pd.DataFrame) -> pd.DataFrame:
         ] = True
     frame.loc[
         comparison.index[
-            (comparison["drawdown_change"] > 0.02)
-            | (comparison["drawdown_relative_change"] > 0.10)
+            (comparison["drawdown_change"] > 0.02) | (comparison["drawdown_relative_change"] > 0.10)
         ],
         "overfit_or_drawdown_cost",
     ] = True

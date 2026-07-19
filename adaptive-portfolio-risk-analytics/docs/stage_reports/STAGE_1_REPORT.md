@@ -6,7 +6,7 @@ Build and verify the runtime data acquisition layer using Yahoo Finance without 
 
 ## What Was Implemented
 
-- Added a provider-style runtime data interface in [src/data_pipeline/ingest.py](/d:/PGDBA/MyNotes/SEM-3/Part-1/FRM/Project/adaptive-portfolio-risk-analytics/src/data_pipeline/ingest.py).
+- Added a provider-style runtime data interface in [src/data_pipeline/ingest.py](../../src/data_pipeline/ingest.py).
 - Introduced `DataProvider` and `YahooFinanceProvider` for on-demand downloads.
 - Preserved backward compatibility through `YFinanceIngester.fetch()` so existing callers still receive price-only output.
 - Added `MarketDataBundle` to carry:
@@ -19,21 +19,21 @@ Build and verify the runtime data acquisition layer using Yahoo Finance without 
   - adjusted close coverage
   - volume coverage
   - missing values
-- Updated [.gitignore](/d:/PGDBA/MyNotes/SEM-3/Part-1/FRM/Project/adaptive-portfolio-risk-analytics/.gitignore) so notebooks under `notebooks/` can be tracked while checkpoint files remain ignored.
+- Updated [.gitignore](../../.gitignore) so notebooks under `notebooks/` can be tracked while checkpoint files remain ignored.
 - Defined the Stage 1 sample universe:
   - `HDFCBANK.NS`
   - `TCS.NS`
   - `GOLDBEES.NS`
-- Created the exploratory notebook at [notebooks/01_data_exploration/stage_01_data_exploration.ipynb](/d:/PGDBA/MyNotes/SEM-3/Part-1/FRM/Project/adaptive-portfolio-risk-analytics/notebooks/01_data_exploration/stage_01_data_exploration.ipynb).
+- Created the exploratory notebook at [notebooks/01_data_exploration/stage_01_data_exploration.ipynb](../../notebooks/01_data_exploration/stage_01_data_exploration.ipynb).
 
 ## Files Modified
 
-- [src/data_pipeline/ingest.py](/d:/PGDBA/MyNotes/SEM-3/Part-1/FRM/Project/adaptive-portfolio-risk-analytics/src/data_pipeline/ingest.py)
-- [src/data_pipeline/__init__.py](/d:/PGDBA/MyNotes/SEM-3/Part-1/FRM/Project/adaptive-portfolio-risk-analytics/src/data_pipeline/__init__.py)
-- [tests/test_data_pipeline.py](/d:/PGDBA/MyNotes/SEM-3/Part-1/FRM/Project/adaptive-portfolio-risk-analytics/tests/test_data_pipeline.py)
-- [notebooks/01_data_exploration/stage_01_data_exploration.ipynb](/d:/PGDBA/MyNotes/SEM-3/Part-1/FRM/Project/adaptive-portfolio-risk-analytics/notebooks/01_data_exploration/stage_01_data_exploration.ipynb)
-- [.gitignore](/d:/PGDBA/MyNotes/SEM-3/Part-1/FRM/Project/adaptive-portfolio-risk-analytics/.gitignore)
-- [STAGE_1_REPORT.md](/d:/PGDBA/MyNotes/SEM-3/Part-1/FRM/Project/adaptive-portfolio-risk-analytics/STAGE_1_REPORT.md)
+- [src/data_pipeline/ingest.py](../../src/data_pipeline/ingest.py)
+- [src/data_pipeline/__init__.py](../../src/data_pipeline/__init__.py)
+- [tests/test_data_pipeline.py](../../tests/test_data_pipeline.py)
+- [notebooks/01_data_exploration/stage_01_data_exploration.ipynb](../../notebooks/01_data_exploration/stage_01_data_exploration.ipynb)
+- [.gitignore](../../.gitignore)
+- [STAGE_1_REPORT.md](STAGE_1_REPORT.md)
 
 ## Tests Added
 

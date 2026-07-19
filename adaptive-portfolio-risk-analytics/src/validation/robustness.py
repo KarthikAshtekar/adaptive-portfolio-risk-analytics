@@ -520,11 +520,7 @@ def run_cpcv_validation(
                     {
                         **base_row,
                         **metrics,
-                        **(
-                            block_defensive_metadata[0]
-                            if block_defensive_metadata
-                            else {}
-                        ),
+                        **(block_defensive_metadata[0] if block_defensive_metadata else {}),
                         "n_test_observed": len(fold_returns),
                         "status": "success",
                         "error": None,

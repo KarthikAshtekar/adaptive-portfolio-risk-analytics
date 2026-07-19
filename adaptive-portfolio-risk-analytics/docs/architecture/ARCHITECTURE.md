@@ -1,143 +1,86 @@
-"""Architecture overview and design patterns."""
+# Architecture
 
-# Platform Architecture
+This document describes the current, tested repository. Historical scaffolding is archived under
+`docs/archive/`; implementation code and tests take precedence over older stage reports.
 
-## High-Level Components
+## Runtime entrypoints
 
-### 1. Data Pipeline (`src/data_pipeline/`)
-- **ingest.py**: Multi-source data fetching
-  - YFinance integration
-  - Alpha Vantage integration
-  - Custom data sources
-- **preprocess.py**: Data cleaning and validation
-  - Missing value handling
-  - Outlier detection
-  - Normalization
-- **feature_engineering.py**: Feature generation
-  - Technical indicators
-  - Volatility measures
-  - Macro features
+- `src/dashboard/app.py`: primary Streamlit application.
+- `main.py`: Phase 1 Yahoo Finance pipeline and fixed-strategy backtest runner.
+- `scripts/final_smoke_test.py`: lightweight release/import/artifact guard.
+- `scripts/*.py`: governed NLP corpus ingestion, validation, monitoring, and shadow experiments.
+- `notebooks/`: stage-oriented research companions; several are intentionally unexecuted.
 
-### 2. Covariance Estimation (`src/covariance/`)
-- **Ledoit-Wolf Shrinkage**: Regularized covariance with optimal shrinkage
-- **Gerber Covariance**: Robust rank-sign correlation estimation
-- **Rolling Covariance**: Time-series covariance updates
-- **Custom Estimators**: Extensible framework for custom methods
+## End-to-end flow
 
-### 3. Hierarchical Clustering (`src/clustering/`)
-- **Distance Metrics**: Correlation, Euclidean, KL divergence
-- **HRP Algorithm**: Hierarchical Risk Parity construction
-- **HERC Algorithm**: Hierarchical Equal Risk Contribution
-- **Dendrogram Analysis**: Visualization and optimization
-
-### 4. Regime Detection (`src/regime_detection/`)
-- **Markov-Switching Models**: MSAR for bull/bear and volatility regimes
-- **Volatility Targeting**: Dynamic risk adjustment
-- **Defensive Risk Scaling**: Crisis mode reduction
-
-### 5. NLP/Sentiment (`src/nlp/`)
-- **RBI Sentiment**: Monetary policy sentiment extraction
-- **Earnings Calls**: Management sentiment and guidance
-- **Uncertainty Scoring**: Macro uncertainty quantification
-- **Sentiment Pipeline**: Aggregated macro intelligence
-
-### 6. Portfolio Optimization (`src/optimization/`)
-- **Equal Weight**: Naive 1/N baseline
-- **Mean-Variance**: Markowitz efficient frontier
-- **Inverse Volatility**: Risk parity
-- **Dynamic Allocation**: Regime-aware optimization
-
-### 7. Backtesting (`src/backtesting/`)
-- **Rolling Backtest**: Walk-forward validation
-- **CPCV**: Combinatorial purged cross-validation
-- **Transaction Costs**: Impact and slippage modeling
-- **Portfolio Simulation**: Full trading simulation
-
-### 8. Analytics (`src/analytics/`)
-- **Risk Metrics**: VaR, CVaR, Maximum Drawdown
-- **Performance Metrics**: Sharpe, Sortino, Calmar
-- **Stress Testing**: Historical scenarios, reverse stress tests
-- **Attribution**: Risk and performance attribution
-
-### 9. Dashboard (`src/dashboard/`)
-- **Streamlit Application**: Interactive web interface
-- **Visualizations**: Plotly charts and interactive plots
-- **Real-time Monitoring**: Live portfolio metrics
-
-## Design Patterns
-
-### 1. Strategy Pattern
-- Multiple optimization methods (Equal Weight, Mean-Variance, HRP, HERC)
-- Multiple regime detection strategies
-- Pluggable covariance estimators
-
-### 2. Factory Pattern
-- Optimizer factory for creating allocation methods
-- Data ingestion factory for multiple sources
-
-### 3. Pipeline Pattern
-- Data ingestion → Preprocessing → Feature Engineering → Analysis
-- Sequential processing with clear interfaces
-
-### 4. Singleton Pattern
-- Global configuration manager
-- Global logger instance
-
-### 5. Template Method Pattern
-- Base classes for optimizers, regime detectors, sentiment analyzers
-- Concrete implementations follow template
-
-## Key Abstractions
-
-### PortfolioOptimizer
-```python
-class PortfolioOptimizer(ABC):
-    @abstractmethod
-    def optimize(returns, cov_matrix) -> np.ndarray:
-        pass
+```text
+Yahoo Finance / governed local text inputs
+                |
+                v
+Data inspection and centralized preprocessing
+                |
+                v
+Returns -> covariance/correlation -> clustering -> portfolio weights
+                |
+                v
+Rolling net/gross backtests -> risk, stress, liquidity, and active-risk analytics
+                |
+                +--> sensitivity and CPCV-style robustness
+                |
+                +--> lagged regimes -> adaptive policy and defensive sleeve
+                |
+                +--> timestamped sentiment/NLP monitoring and shadow overlays
+                |
+                v
+Strategy-selection evidence gates -> Manager / Research / Developer dashboard views
 ```
 
-### RegimeDetector
-```python
-class RegimeDetector(ABC):
-    @abstractmethod
-    def detect(returns) -> np.ndarray:
-        pass
-```
+## Package map
 
-### CovarianceEstimator
-```python
-class CovarianceEstimator(ABC):
-    @abstractmethod
-    def estimate(returns) -> np.ndarray:
-        pass
-```
+| Package | Responsibility | Current boundary |
+| --- | --- | --- |
+| `src/data_pipeline` | Yahoo Finance ingestion, inspection, missingness, returns, outliers, defensive returns | Alpha Vantage market-price ingestion remains an extension point |
+| `src/covariance` | Sample, Ledoit-Wolf, EWMA, EWMA plus Ledoit-Wolf, correlation and distance | Gerber covariance is not implemented |
+| `src/clustering` | Linkage, cluster membership, dendrograms, HERC engine, legacy HRP helpers | Canonical HERC is `herc_allocator.py` |
+| `src/optimization` | Equal Weight, Inverse Volatility, HRP, HERC export, Mean-Variance | Dynamic allocator class is a non-functional future extension point |
+| `src/benchmarks` | Four-strategy fixed benchmark factory and comparison tables | Mean-Variance is not a first-class benchmark/dashboard strategy |
+| `src/backtesting` | Rolling backtest, drift-aware rebalance rules, turnover, costs, volatility targeting | `CPCVBacktester` is compatibility-only; use `src.validation` |
+| `src/analytics` | Performance, drawdown, Pain Ratio, VaR/ES, risk contribution, stress, liquidity, active risk | Market-impact modeling is diagnostic, not an execution simulator |
+| `src/regime` | Rule-based and HMM full-sample/walk-forward regime research | Full-sample HMM is historical-only |
+| `src/adaptive` | Lag-safe regime policies, defensive returns, adaptive backtest | Research backtest, not live allocation |
+| `src/experiments` | Fixed/adaptive grids, sensitivity, replication, reporting | Some report/export branches have lighter coverage |
+| `src/validation` | Purged/embargoed CPCV-style splits and robustness ranking | Pragmatic split combinations, not complete independent-path CPCV |
+| `src/selection` | Investor profiles, evidence gates, role scoring, recommendations | Consumes saved research evidence; it is not personalized advice |
+| `src/sentiment` | Corpus governance, providers, lexicon/optional FinBERT scoring, monitoring, shadow overlay | NLP does not drive production-active weights or gates |
+| `src/dashboard` | Streamlit orchestration, plots, components, three audience modes | Large monolithic app; browser-level automation is limited |
 
-## Configuration Management
+## Data contracts
 
-- YAML-based configuration (`config/portfolio_config.yaml`)
-- Environment variable support
-- Runtime configuration overrides
-- Hierarchical dot-notation access
+- Portfolio inputs are wide `pandas.DataFrame` objects of simple daily returns with a
+  `DatetimeIndex` and one column per asset.
+- Backtests expose net and gross return/value series separately. Costs are reflected in net
+  returns and net final value.
+- Weights selected at decision date `t` apply to returns at `t+1`.
+- Target weights update on their configured schedule; threshold rebalancing compares naturally
+  drifted weights with the latest stored target.
+- Experiment and CPCV result tables use one row per configuration or configuration/fold.
+- Sentiment records must carry publication/availability timing and are lagged before comparison.
 
-## Logging Strategy
+## Paths and portability
 
-- Centralized logging configuration
-- Structured logging with loguru
-- File rotation and retention policies
-- Multiple output targets (console, file)
+`src/paths.py` owns the repository root and common data/config/output paths. Runtime modules use
+these paths instead of machine-specific absolute paths. Scripts retain a small file-relative
+bootstrap so they can be launched directly from any working directory.
 
-## Testing Strategy
+## Compatibility and historical material
 
-- Unit tests for each module
-- Pytest fixtures for common test data
-- Coverage reporting
-- Continuous integration ready
+- `src.optimization.HERCAllocator` remains a public re-export of the clustering implementation.
+- `src.backtesting.CPCVBacktester` remains a compatibility stub; canonical validation functions
+  are exported by `src.validation`.
+- Historical stage/audit/bootstrap reports are retained under `docs/stage_reports`,
+  `docs/audits`, and `docs/archive` rather than presented as current architecture.
 
-## Future Extensibility
+## Operational boundary
 
-- Plugin system for custom optimizers
-- Multi-asset class support
-- Real-time data streaming
-- Distributed backtesting
-- Machine learning model integration
+The repository is a research and decision-support system. It has no broker integration, order
+management, live-trading controls, production model governance, or complete market-impact engine.

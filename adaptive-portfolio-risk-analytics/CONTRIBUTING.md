@@ -550,7 +550,7 @@ flake8 src/ --max-line-length=100
 
 ## 📞 Getting Help
 
-1. **Setup Issues**: See `GETTING_STARTED.md`
+1. **Setup Issues**: See `README.md`
 2. **Architecture Questions**: See `docs/architecture/ARCHITECTURE.md`
 3. **Algorithm Details**: See `docs/methodology/METHODOLOGY.md`
 4. **Code Examples**: See `notebooks/` and existing test files

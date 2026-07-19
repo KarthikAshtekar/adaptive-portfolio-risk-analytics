@@ -29,9 +29,7 @@ COMPONENT_SOURCE_NAMES = {
 
 def _market_dates(market_index) -> pd.DatetimeIndex:
     if not isinstance(market_index, pd.DatetimeIndex):
-        raise TypeError(
-            "market_index must be a DatetimeIndex; market returns are not inputs"
-        )
+        raise TypeError("market_index must be a DatetimeIndex; market returns are not inputs")
     if market_index.empty:
         raise ValueError("market_index must not be empty")
     index = pd.DatetimeIndex(market_index).sort_values().drop_duplicates()
@@ -152,9 +150,7 @@ def _align_rbi(
     ):
         return pd.Series(np.nan, index=index, dtype=float)
     column = (
-        "macro_risk_score"
-        if "macro_risk_score" in rbi_macro_index
-        else "decision_macro_risk_score"
+        "macro_risk_score" if "macro_risk_score" in rbi_macro_index else "decision_macro_risk_score"
     )
     if column not in rbi_macro_index:
         return pd.Series(np.nan, index=index, dtype=float)
@@ -249,9 +245,7 @@ def build_daily_nlp_signal(
         aligned_all = _align_records_to_market(frame, index)
         if not aligned_all.empty:
             raw_counts = aligned_all.groupby("_market_date").size()
-            result["raw_record_count"] = (
-                result["date"].map(raw_counts).fillna(0).astype(int)
-            )
+            result["raw_record_count"] = result["date"].map(raw_counts).fillna(0).astype(int)
 
         valid_frame = _eligible_text_frame(frame)
         if not valid_frame.empty:
@@ -259,8 +253,7 @@ def build_daily_nlp_signal(
             valid_frame["_sentiment_score"] = _sentiment_scores(valid_frame)
             valid_frame["_risk_score"] = _risk_scores(valid_frame)
             valid_frame = valid_frame.loc[
-                valid_frame["_sentiment_score"].notna()
-                | valid_frame["_risk_score"].notna()
+                valid_frame["_sentiment_score"].notna() | valid_frame["_risk_score"].notna()
             ].copy()
             aligned_valid = _align_records_to_market(valid_frame, index)
             if not aligned_valid.empty:
@@ -279,9 +272,7 @@ def build_daily_nlp_signal(
                     .str.lower()
                 )
                 english_counts = (
-                    aligned_valid.loc[
-                        language.isin({"en", "eng", "english"})
-                    ]
+                    aligned_valid.loc[language.isin({"en", "eng", "english"})]
                     .groupby("_market_date")
                     .size()
                 )
@@ -297,19 +288,13 @@ def build_daily_nlp_signal(
                     .astype(str)
                     .str.lower()
                 )
-                high_counts = (
-                    aligned_valid.loc[quality.eq("high")]
-                    .groupby("_market_date")
-                    .size()
-                )
+                high_counts = aligned_valid.loc[quality.eq("high")].groupby("_market_date").size()
                 result["high_quality_record_count"] = (
                     result["date"].map(high_counts).fillna(0).astype(int)
                 )
                 daily_sentiment = grouped["_sentiment_score"].mean()
                 daily_risk = grouped["_risk_score"].mean()
-                result["mean_sentiment_score"] = result["date"].map(
-                    daily_sentiment
-                )
+                result["mean_sentiment_score"] = result["date"].map(daily_sentiment)
                 result["mean_risk_score"] = result["date"].map(daily_risk)
                 result["news_geopolitical_risk_score"] = (
                     result.set_index("date")["mean_risk_score"]
@@ -321,9 +306,7 @@ def build_daily_nlp_signal(
 
     valid_days = result["valid_record_count"].gt(0).astype(float)
     rolling_observations = (
-        pd.Series(1.0, index=index)
-        .rolling(int(rolling_window), min_periods=1)
-        .sum()
+        pd.Series(1.0, index=index).rolling(int(rolling_window), min_periods=1).sum()
     )
     rolling_valid_days = (
         pd.Series(valid_days.to_numpy(), index=index)
@@ -331,12 +314,10 @@ def build_daily_nlp_signal(
         .sum()
     )
     result["rolling_article_day_coverage"] = (
-        rolling_valid_days / rolling_observations.replace(0, np.nan)
-    ).fillna(0.0).to_numpy()
+        (rolling_valid_days / rolling_observations.replace(0, np.nan)).fillna(0.0).to_numpy()
+    )
     raw_source_mix = np.where(
-        pd.to_numeric(
-            result["news_geopolitical_risk_score"], errors="coerce"
-        ).notna(),
+        pd.to_numeric(result["news_geopolitical_risk_score"], errors="coerce").notna(),
         "news_only",
         "none",
     )
@@ -345,9 +326,7 @@ def build_daily_nlp_signal(
     result["raw_nlp_label"] = [
         _label(score, source_mix)
         for score, source_mix in zip(
-            pd.to_numeric(
-                result["news_geopolitical_risk_score"], errors="coerce"
-            ),
+            pd.to_numeric(result["news_geopolitical_risk_score"], errors="coerce"),
             result["raw_source_mix"],
         )
     ]
@@ -356,24 +335,18 @@ def build_daily_nlp_signal(
         for label, source_mix, score in zip(
             result["raw_nlp_label"],
             result["raw_source_mix"],
-            pd.to_numeric(
-                result["news_geopolitical_risk_score"], errors="coerce"
-            ),
+            pd.to_numeric(result["news_geopolitical_risk_score"], errors="coerce"),
         )
     ]
     lag = int(decision_lag)
     result["decision_nlp_label"] = (
-        result["raw_nlp_label"]
-        .shift(lag)
-        .fillna("insufficient_nlp_data")
+        result["raw_nlp_label"].shift(lag).fillna("insufficient_nlp_data")
     )
-    result["decision_news_geopolitical_risk_score"] = result[
-        "news_geopolitical_risk_score"
-    ].shift(lag)
-    result["source_mix"] = result["raw_source_mix"].shift(lag).fillna("none")
-    result["decision_source_date"] = pd.Series(index, index=result.index).shift(
+    result["decision_news_geopolitical_risk_score"] = result["news_geopolitical_risk_score"].shift(
         lag
     )
+    result["source_mix"] = result["raw_source_mix"].shift(lag).fillna("none")
+    result["decision_source_date"] = pd.Series(index, index=result.index).shift(lag)
     shifted_reasons = pd.Series(raw_reasons, index=result.index).shift(lag)
     result["insufficient_reason"] = np.where(
         result["decision_nlp_label"].isin(VALID_COMPOSITE_NLP_LABELS),
@@ -416,25 +389,16 @@ def build_composite_nlp_risk_index(
     result = pd.DataFrame(index=index)
     result.index.name = "date"
     result["rbi_macro_risk_score"] = _align_rbi(rbi_macro_index, index)
-    result["earnings_sector_risk_score"] = _align_text_scores(
-        earnings_sentiment, index
-    )
-    result["news_geopolitical_risk_score"] = _align_text_scores(
-        news_sentiment, index
-    )
-    result["news_sentiment_score"] = _align_text_sentiment(
-        news_sentiment, index
-    )
+    result["earnings_sector_risk_score"] = _align_text_scores(earnings_sentiment, index)
+    result["news_geopolitical_risk_score"] = _align_text_scores(news_sentiment, index)
+    result["news_sentiment_score"] = _align_text_sentiment(news_sentiment, index)
     result["news_risk_label"] = [
-        _component_label(score)
-        for score in result["news_geopolitical_risk_score"]
+        _component_label(score) for score in result["news_geopolitical_risk_score"]
     ]
     component_columns = COMPONENT_COLUMNS
     available = result[component_columns].notna()
     result["coverage_score"] = available.sum(axis=1) / len(component_columns)
-    result["composite_nlp_risk_score"] = result[component_columns].mean(
-        axis=1, skipna=True
-    )
+    result["composite_nlp_risk_score"] = result[component_columns].mean(axis=1, skipna=True)
     result["source_mix"] = [
         _source_mix(
             [
@@ -483,15 +447,15 @@ def build_composite_nlp_risk_index(
         "insufficient_reason",
     ]:
         result[f"decision_{column}"] = result[column].shift(int(decision_lag))
-    result["decision_composite_nlp_label"] = result[
-        "decision_composite_nlp_label"
-    ].fillna("insufficient_nlp_data")
-    result["decision_insufficient_reason"] = result[
-        "decision_insufficient_reason"
-    ].fillna("decision_lag_no_prior_signal")
-    result["decision_source_date"] = pd.Series(
-        result.index, index=result.index
-    ).shift(int(decision_lag))
+    result["decision_composite_nlp_label"] = result["decision_composite_nlp_label"].fillna(
+        "insufficient_nlp_data"
+    )
+    result["decision_insufficient_reason"] = result["decision_insufficient_reason"].fillna(
+        "decision_lag_no_prior_signal"
+    )
+    result["decision_source_date"] = pd.Series(result.index, index=result.index).shift(
+        int(decision_lag)
+    )
     result["decision_lag"] = int(decision_lag)
     result["commentary_only"] = True
     return result

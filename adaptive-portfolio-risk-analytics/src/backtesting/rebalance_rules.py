@@ -41,7 +41,9 @@ def should_rebalance_calendar(
         return current_timestamp > previous_timestamp
 
     period_frequency = _period_frequency(normalized_frequency)
-    return current_timestamp.to_period(period_frequency) != previous_timestamp.to_period(period_frequency)
+    return current_timestamp.to_period(period_frequency) != previous_timestamp.to_period(
+        period_frequency
+    )
 
 
 def _align_weight_vectors(

@@ -98,9 +98,7 @@ class GDELTProvider(SentimentProvider):
         http_status: int = 200,
     ) -> tuple[dict[str, object], int]:
         if isinstance(value, dict):
-            encoded = json.dumps(value, ensure_ascii=False, default=str).encode(
-                "utf-8"
-            )
+            encoded = json.dumps(value, ensure_ascii=False, default=str).encode("utf-8")
             return value, len(encoded)
         if isinstance(value, bytes):
             raw = value
@@ -130,18 +128,12 @@ class GDELTProvider(SentimentProvider):
             )
         return payload, len(raw)
 
-    def _response(
-        self, params: dict[str, object]
-    ) -> tuple[dict[str, object], dict[str, object]]:
+    def _response(self, params: dict[str, object]) -> tuple[dict[str, object], dict[str, object]]:
         request_url = self._request_url(params)
         if self.response_loader is not None:
             loaded = self.response_loader(params)
             metadata: dict[str, object] = {}
-            if (
-                isinstance(loaded, tuple)
-                and len(loaded) == 2
-                and isinstance(loaded[1], dict)
-            ):
+            if isinstance(loaded, tuple) and len(loaded) == 2 and isinstance(loaded[1], dict):
                 loaded, metadata = loaded
             status = int(metadata.get("http_status", 200))
             payload, response_bytes = self._decode_payload(
@@ -154,16 +146,12 @@ class GDELTProvider(SentimentProvider):
                     f"HTTP Error {status}",
                     request_url=str(metadata.get("request_url", request_url)),
                     http_status=status,
-                    response_bytes=int(
-                        metadata.get("response_bytes", response_bytes)
-                    ),
+                    response_bytes=int(metadata.get("response_bytes", response_bytes)),
                 )
             return payload, {
                 "request_url": str(metadata.get("request_url", request_url)),
                 "http_status": status,
-                "response_bytes": int(
-                    metadata.get("response_bytes", response_bytes)
-                ),
+                "response_bytes": int(metadata.get("response_bytes", response_bytes)),
             }
         if self.fixture_path is not None:
             raw = self.fixture_path.read_bytes()
@@ -254,9 +242,7 @@ class GDELTProvider(SentimentProvider):
             }
             return []
         queries = (
-            list(query)
-            if isinstance(query, (list, tuple))
-            else [query or DEFAULT_GDELT_QUERIES[0]]
+            list(query) if isinstance(query, (list, tuple)) else [query or DEFAULT_GDELT_QUERIES[0]]
         )
         queries = [str(item).strip() for item in queries if str(item).strip()]
         if not queries:
@@ -268,23 +254,15 @@ class GDELTProvider(SentimentProvider):
         failed_queries = 0
 
         for query_index, query_text in enumerate(queries):
-            if (
-                query_index > 0
-                and self.fixture_path is None
-                and self.request_delay_seconds > 0
-            ):
+            if query_index > 0 and self.fixture_path is None and self.request_delay_seconds > 0:
                 self.sleep_func(self.request_delay_seconds)
             params = {
                 "query": query_text,
                 "mode": "artlist",
                 "format": "json",
                 "maxrecords": int(limit or 50),
-                "startdatetime": pd.Timestamp(start_date).strftime(
-                    "%Y%m%d000000"
-                ),
-                "enddatetime": pd.Timestamp(end_date).strftime(
-                    "%Y%m%d235959"
-                ),
+                "startdatetime": pd.Timestamp(start_date).strftime("%Y%m%d000000"),
+                "enddatetime": pd.Timestamp(end_date).strftime("%Y%m%d235959"),
             }
             request_url = self._request_url(params)
             diagnostic = {
@@ -320,13 +298,9 @@ class GDELTProvider(SentimentProvider):
                     diagnostic["error"] = ""
                     successful_queries += 1
                     if diagnostic["rate_limited"]:
-                        diagnostic["warning"] = (
-                            "request succeeded after rate-limit retry"
-                        )
+                        diagnostic["warning"] = "request succeeded after rate-limit retry"
                     elif not articles:
-                        diagnostic["warning"] = (
-                            "successful GDELT response contained no articles"
-                        )
+                        diagnostic["warning"] = "successful GDELT response contained no articles"
                     records.extend(
                         {**article, "query": query_text}
                         for article in articles
@@ -341,23 +315,17 @@ class GDELTProvider(SentimentProvider):
                     if exc.http_status == 429:
                         diagnostic["rate_limited"] = True
                         if attempt < self.max_retries:
-                            diagnostic["retry_count"] = int(
-                                diagnostic["retry_count"]
-                            ) + 1
+                            diagnostic["retry_count"] = int(diagnostic["retry_count"]) + 1
                             self.sleep_func(self.retry_delay_seconds)
                             continue
                     break
                 except HTTPError as exc:
                     diagnostic["http_status"] = int(exc.code)
-                    diagnostic["error"] = (
-                        f"HTTP Error {exc.code}: {exc.reason}"
-                    )
+                    diagnostic["error"] = f"HTTP Error {exc.code}: {exc.reason}"
                     if exc.code == 429:
                         diagnostic["rate_limited"] = True
                         if attempt < self.max_retries:
-                            diagnostic["retry_count"] = int(
-                                diagnostic["retry_count"]
-                            ) + 1
+                            diagnostic["retry_count"] = int(diagnostic["retry_count"]) + 1
                             self.sleep_func(self.retry_delay_seconds)
                             continue
                     break
@@ -376,9 +344,7 @@ class GDELTProvider(SentimentProvider):
             status = "empty"
         else:
             status = "error"
-        cache_safe = (
-            successful_queries == len(queries) and failed_queries == 0
-        )
+        cache_safe = successful_queries == len(queries) and failed_queries == 0
         self.last_diagnostics = {
             "provider": self.provider_name,
             "status": status,
@@ -387,18 +353,10 @@ class GDELTProvider(SentimentProvider):
             "successful_query_count": int(successful_queries),
             "failure_count": int(failed_queries),
             "failures": " | ".join(failures),
-            "source_kind": (
-                "fixture" if self.fixture_path is not None else "api"
-            ),
-            "rate_limited": any(
-                bool(row["rate_limited"]) for row in query_diagnostics
-            ),
-            "retry_count": int(
-                sum(int(row["retry_count"]) for row in query_diagnostics)
-            ),
-            "all_queries_failed": bool(
-                failed_queries == len(queries)
-            ),
+            "source_kind": ("fixture" if self.fixture_path is not None else "api"),
+            "rate_limited": any(bool(row["rate_limited"]) for row in query_diagnostics),
+            "retry_count": int(sum(int(row["retry_count"]) for row in query_diagnostics)),
+            "all_queries_failed": bool(failed_queries == len(queries)),
             "cache_safe": cache_safe,
             "query_diagnostics": query_diagnostics,
         }
@@ -409,41 +367,28 @@ class GDELTProvider(SentimentProvider):
         rows: list[dict[str, object]] = []
         for raw in raw_records or []:
             publication = pd.to_datetime(
-                raw.get("seendate")
-                or raw.get("publication_time")
-                or raw.get("date"),
+                raw.get("seendate") or raw.get("publication_time") or raw.get("date"),
                 errors="coerce",
                 utc=True,
             )
             url = str(raw.get("url") or "").strip()
-            body = str(
-                raw.get("text")
-                or raw.get("summary")
-                or raw.get("snippet")
-                or ""
-            ).strip()
+            body = str(raw.get("text") or raw.get("summary") or raw.get("snippet") or "").strip()
             title = str(raw.get("title") or "").strip()
             if not title:
                 title = body[:240].strip() or url or "Untitled GDELT article"
             rows.append(
                 {
-                    "record_id": stable_record_id(
-                        self.provider_name, url, title, publication
-                    ),
+                    "record_id": stable_record_id(self.provider_name, url, title, publication),
                     "timestamp": publication,
                     "publication_time": publication,
                     "retrieval_time": retrieval,
-                    "source": raw.get("domain")
-                    or raw.get("source")
-                    or "GDELT",
+                    "source": raw.get("domain") or raw.get("source") or "GDELT",
                     "provider": self.provider_name,
                     "document_type": "news",
                     "entity": raw.get("entity", ""),
                     "ticker": raw.get("ticker", ""),
                     "sector": raw.get("sector", ""),
-                    "country": raw.get("sourcecountry")
-                    or raw.get("country")
-                    or "",
+                    "country": raw.get("sourcecountry") or raw.get("country") or "",
                     "title": title,
                     "text": body or title,
                     "url": url,
@@ -453,15 +398,8 @@ class GDELTProvider(SentimentProvider):
                 }
             )
         frame = normalized_frame(rows)
-        counts = (
-            frame.get("query", pd.Series(dtype="string"))
-            .fillna("")
-            .astype(str)
-            .value_counts()
-        )
-        for diagnostic in self.last_diagnostics.get(
-            "query_diagnostics", []
-        ):
+        counts = frame.get("query", pd.Series(dtype="string")).fillna("").astype(str).value_counts()
+        for diagnostic in self.last_diagnostics.get("query_diagnostics", []):
             diagnostic["normalized_record_count"] = int(
                 counts.get(str(diagnostic.get("query", "")), 0)
             )

@@ -6,11 +6,11 @@ Stage 2 now includes a modular data-quality layer that repairs Yahoo Finance pri
 
 ## Files Modified
 
-- [src/data_pipeline/preprocess.py](/d:/PGDBA/MyNotes/SEM-3/Part-1/FRM/Project/adaptive-portfolio-risk-analytics/src/data_pipeline/preprocess.py)
-- [src/data_pipeline/__init__.py](/d:/PGDBA/MyNotes/SEM-3/Part-1/FRM/Project/adaptive-portfolio-risk-analytics/src/data_pipeline/__init__.py)
-- [tests/test_data_pipeline.py](/d:/PGDBA/MyNotes/SEM-3/Part-1/FRM/Project/adaptive-portfolio-risk-analytics/tests/test_data_pipeline.py)
-- [notebooks/02_returns_and_risk/stage_02_returns_and_risk.ipynb](/d:/PGDBA/MyNotes/SEM-3/Part-1/FRM/Project/adaptive-portfolio-risk-analytics/notebooks/02_returns_and_risk/stage_02_returns_and_risk.ipynb)
-- [STAGE_2_REPORT.md](/d:/PGDBA/MyNotes/SEM-3/Part-1/FRM/Project/adaptive-portfolio-risk-analytics/STAGE_2_REPORT.md)
+- [src/data_pipeline/preprocess.py](../../src/data_pipeline/preprocess.py)
+- [src/data_pipeline/__init__.py](../../src/data_pipeline/__init__.py)
+- [tests/test_data_pipeline.py](../../tests/test_data_pipeline.py)
+- [notebooks/02_returns_and_risk/stage_02_returns_and_risk.ipynb](../../notebooks/02_returns_and_risk/stage_02_returns_and_risk.ipynb)
+- [STAGE_2_REPORT.md](STAGE_2_REPORT.md)
 
 ## New Classes And Functions
 

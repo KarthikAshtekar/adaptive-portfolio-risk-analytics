@@ -57,7 +57,9 @@ def test_assign_clusters_every_asset_assigned_once():
     labels = assign_clusters(linkage_matrix, n_clusters=3)
 
     assert len(labels) == len(distance)
-    assert sorted(labels.tolist()).count(1) + sorted(labels.tolist()).count(2) + sorted(labels.tolist()).count(3) == len(distance)
+    assert sorted(labels.tolist()).count(1) + sorted(labels.tolist()).count(2) + sorted(
+        labels.tolist()
+    ).count(3) == len(distance)
 
 
 def test_get_cluster_members_returns_expected_structure():

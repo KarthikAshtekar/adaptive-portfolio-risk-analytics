@@ -26,9 +26,7 @@ def _sentences() -> pd.DataFrame:
                 "document_id": "doc",
                 "publication_date": pd.Timestamp("2024-01-05"),
                 "sentence_order": 0,
-                "sentence_text": (
-                    "Persistent inflation and upside risk will require tightening."
-                ),
+                "sentence_text": ("Persistent inflation and upside risk will require tightening."),
             },
             {
                 "sentence_id": "doc_s0001",
@@ -51,9 +49,7 @@ def test_lexicon_scores_stance_certainty_and_time() -> None:
     assert scored.iloc[1]["stance_label"] == "dovish"
     assert scored.iloc[1]["certainty_label"] == "uncertain"
     assert scored.iloc[1]["time_label"] == "forward_looking"
-    assert {"stance_score", "certainty_score", "time_score"}.issubset(
-        scored.columns
-    )
+    assert {"stance_score", "certainty_score", "time_score"}.issubset(scored.columns)
 
 
 def test_transformer_failure_falls_back_per_sentence() -> None:
@@ -70,13 +66,7 @@ def test_transformer_failure_falls_back_per_sentence() -> None:
 
 def test_transformer_adapter_maps_documented_label_ids() -> None:
     def factory(task: str, *, model: str, **kwargs):
-        label = (
-            "LABEL_1"
-            if "stance" in model
-            else "LABEL_0"
-            if "certain" in model
-            else "LABEL_0"
-        )
+        label = "LABEL_1" if "stance" in model else "LABEL_0" if "certain" in model else "LABEL_0"
 
         return lambda text, **call_kwargs: [{"label": label, "score": 0.9}]
 

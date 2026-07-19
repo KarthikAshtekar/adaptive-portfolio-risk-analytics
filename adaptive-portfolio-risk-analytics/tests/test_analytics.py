@@ -155,7 +155,7 @@ def test_downside_deviation() -> None:
 def test_empty_series_handling() -> None:
     """Test handling of empty series."""
     empty = pd.Series(dtype=float)
-    
+
     assert RiskAnalytics.volatility(empty) == 0.0
     assert PerformanceAnalytics.cumulative_return(empty) == 0.0
     assert PerformanceAnalytics.annualized_return(empty) == 0.0
@@ -166,9 +166,8 @@ def test_metrics_reproducibility() -> None:
     """Test that metrics are reproducible."""
     returns1 = _positive_series()
     returns2 = _positive_series()
-    
+
     sharpe1 = PerformanceAnalytics.sharpe_ratio(returns1)
     sharpe2 = PerformanceAnalytics.sharpe_ratio(returns2)
-    
-    assert np.isclose(sharpe1, sharpe2)
 
+    assert np.isclose(sharpe1, sharpe2)

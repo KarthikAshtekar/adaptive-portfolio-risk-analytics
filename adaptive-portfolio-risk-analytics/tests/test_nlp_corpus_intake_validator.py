@@ -18,16 +18,12 @@ def test_missing_manifests_require_manual_action(tmp_path: Path) -> None:
 
     assert result["manual_action_required"] is True
     assert result["intake_status"]["manifest_exists"].eq(False).all()
-    assert result["intake_status"]["corpus_status"].eq(
-        "manual_action_required"
-    ).all()
+    assert result["intake_status"]["corpus_status"].eq("manual_action_required").all()
 
 
 def test_valid_small_corpora_pass_intake_validation(tmp_path: Path) -> None:
     (tmp_path / "rbi.txt").write_text("Policy remains vigilant.", encoding="utf-8")
-    (tmp_path / "earnings.txt").write_text(
-        "Demand remains resilient.", encoding="utf-8"
-    )
+    (tmp_path / "earnings.txt").write_text("Demand remains resilient.", encoding="utf-8")
     pd.DataFrame(
         [
             {
@@ -158,6 +154,8 @@ def test_duplicates_missing_files_bad_dates_and_news_time_are_flagged(
     )
     news.to_csv(tmp_path / "news.csv", index=False)
     news_result = validate_corpus_manifest("news", tmp_path / "news.csv")
-    assert news_result["rows"]["validation_errors"].str.contains(
-        "publication_time after retrieval_time"
-    ).any()
+    assert (
+        news_result["rows"]["validation_errors"]
+        .str.contains("publication_time after retrieval_time")
+        .any()
+    )

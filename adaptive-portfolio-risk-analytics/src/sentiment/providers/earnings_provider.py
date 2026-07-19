@@ -56,9 +56,7 @@ class EarningsCallProvider(SentimentProvider):
             }
             return []
         manifest = pd.read_csv(self.manifest_path, dtype="string").fillna("")
-        missing = [
-            column for column in EARNINGS_MANIFEST_COLUMNS if column not in manifest
-        ]
+        missing = [column for column in EARNINGS_MANIFEST_COLUMNS if column not in manifest]
         if missing:
             self.last_diagnostics = {
                 "provider": self.provider_name,
@@ -70,9 +68,7 @@ class EarningsCallProvider(SentimentProvider):
         records: list[dict[str, object]] = []
         for row in manifest.to_dict("records"):
             if is_explicit_placeholder(row):
-                failures.append(
-                    f"{row.get('document_id', 'unknown')}: placeholder excluded"
-                )
+                failures.append(f"{row.get('document_id', 'unknown')}: placeholder excluded")
                 continue
             local_path = (self.manifest_path.parent / row["local_path"]).resolve()
             try:
@@ -111,12 +107,8 @@ class EarningsCallProvider(SentimentProvider):
         now = pd.Timestamp(datetime.now(timezone.utc))
         rows: list[dict[str, object]] = []
         for raw in raw_records or []:
-            publication = pd.to_datetime(
-                raw.get("publication_date"), errors="coerce", utc=True
-            )
-            retrieval = pd.to_datetime(
-                raw.get("retrieval_date"), errors="coerce", utc=True
-            )
+            publication = pd.to_datetime(raw.get("publication_date"), errors="coerce", utc=True)
+            retrieval = pd.to_datetime(raw.get("retrieval_date"), errors="coerce", utc=True)
             if pd.isna(retrieval):
                 retrieval = now
             rows.append(

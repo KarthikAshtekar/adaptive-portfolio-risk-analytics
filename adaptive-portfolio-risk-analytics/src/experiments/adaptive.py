@@ -68,9 +68,7 @@ def generate_adaptive_parameter_grid(
     ) in enumerate(combinations):
         source = normalize_adaptive_regime_source(regime_source)
         preset = normalize_adaptive_policy_preset(policy_preset)
-        defensive_source, defensive_ticker = defensive_source_from_label(
-            str(defensive_asset)
-        )
+        defensive_source, defensive_ticker = defensive_source_from_label(str(defensive_asset))
         rows.append(
             {
                 "config_id": f"adaptive_{config_id}",
@@ -131,7 +129,7 @@ def build_adaptive_regime_input(
 
     if not HMM_AVAILABLE:
         raise AdaptiveExperimentSkipped(
-            "HMM walk-forward adaptive experiment skipped because `hmmlearn` " "is unavailable."
+            "HMM walk-forward adaptive experiment skipped because `hmmlearn` is unavailable."
         )
     fitted = fit_hmm_walk_forward(
         features,
@@ -226,9 +224,7 @@ def execute_adaptive_experiment(
     configured_defensive_source, configured_ticker = defensive_source_from_label(
         str(row.get("defensive_asset", "Synthetic Risk-Free"))
     )
-    defensive_source = str(
-        row.get("defensive_source") or configured_defensive_source
-    )
+    defensive_source = str(row.get("defensive_source") or configured_defensive_source)
     defensive_ticker = row.get("defensive_ticker") or configured_ticker
     backtest = run_regime_adaptive_backtest(
         returns=returns_df,
@@ -244,9 +240,7 @@ def execute_adaptive_experiment(
         use_lagged_regimes=bool(resolved_regime_input["use_lagged_regimes"]),
         defensive_source=defensive_source,
         defensive_annual_rate=float(row.get("defensive_annual_rate", 0.04)),
-        defensive_ticker=(
-            str(defensive_ticker) if defensive_ticker is not None else None
-        ),
+        defensive_ticker=(str(defensive_ticker) if defensive_ticker is not None else None),
         defensive_fallback=str(row.get("defensive_fallback", "synthetic")),
     )
     metrics = PerformanceAnalytics.summary_table(backtest["portfolio_returns"])

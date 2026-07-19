@@ -15,9 +15,7 @@ if str(REPO_ROOT) not in sys.path:
 from src.sentiment import validate_nlp_corpus_intake  # noqa: E402
 
 
-DEFAULT_OUTPUT_DIR = (
-    REPO_ROOT / "outputs" / "reports" / "nlp_corpus_intake_validation"
-)
+DEFAULT_OUTPUT_DIR = REPO_ROOT / "outputs" / "reports" / "nlp_corpus_intake_validation"
 
 
 def run_intake_validation(
@@ -37,9 +35,7 @@ def run_intake_validation(
     )
     result["intake_status"].to_csv(output / "intake_status.csv", index=False)
     for corpus in ("rbi", "earnings", "news"):
-        result["row_diagnostics"][corpus].to_csv(
-            output / f"{corpus}_status.csv", index=False
-        )
+        result["row_diagnostics"][corpus].to_csv(output / f"{corpus}_status.csv", index=False)
     status_lines = "\n".join(
         f"- {row.corpus}: {row.status_message}"
         for row in result["intake_status"].itertuples(index=False)
@@ -51,15 +47,15 @@ Generated: {date.today().isoformat()}
 
 ## Status
 
-**Manual action required: {'Yes' if result['manual_action_required'] else 'No'}**
+**Manual action required: {"Yes" if result["manual_action_required"] else "No"}**
 
 {status_lines}
 
 ## Valid real records
 
-- RBI: {valid_counts['rbi']}
-- Earnings calls: {valid_counts['earnings']}
-- News/geopolitical: {valid_counts['news']}
+- RBI: {valid_counts["rbi"]}
+- Earnings calls: {valid_counts["earnings"]}
+- News/geopolitical: {valid_counts["news"]}
 
 Placeholder and synthetic fixture rows are excluded. Missing corpora do not
 cause the validator to fail; they remain explicit manual-action items. Intake
@@ -97,10 +93,7 @@ def main(argv: list[str] | None = None) -> int:
         f"RBI={counts['rbi']}, earnings={counts['earnings']}, "
         f"news={counts['news']} valid real record(s)."
     )
-    print(
-        "Manual action required: "
-        f"{'yes' if result['manual_action_required'] else 'no'}"
-    )
+    print(f"Manual action required: {'yes' if result['manual_action_required'] else 'no'}")
     print(f"Outputs: {Path(result['output_dir']).resolve()}")
     return 0
 

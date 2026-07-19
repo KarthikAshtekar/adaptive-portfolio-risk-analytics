@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 
@@ -36,9 +35,7 @@ def build_current_sentiment_summary(
         article_count=article_coverage,
     )
     article_dates = sentiment_signal.index[
-        pd.to_numeric(sentiment_signal["article_count"], errors="coerce")
-        .fillna(0)
-        .gt(0)
+        pd.to_numeric(sentiment_signal["article_count"], errors="coerce").fillna(0).gt(0)
     ]
     last_date = article_dates.max() if len(article_dates) else None
     warning = None
@@ -50,10 +47,7 @@ def build_current_sentiment_summary(
             warning = f"Sentiment data is stale by {age_days} calendar days."
 
     coverage_ratio = float(
-        pd.to_numeric(sentiment_signal["article_count"], errors="coerce")
-        .fillna(0)
-        .gt(0)
-        .mean()
+        pd.to_numeric(sentiment_signal["article_count"], errors="coerce").fillna(0).gt(0).mean()
     )
     return {
         "quantitative_regime": str(quantitative_regime or "Unknown"),
@@ -163,4 +157,3 @@ def plot_sentiment_regime_timeline(
         legend={"orientation": "h"},
     )
     return fig
-

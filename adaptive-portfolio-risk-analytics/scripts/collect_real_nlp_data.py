@@ -33,9 +33,7 @@ from src.sentiment import (  # noqa: E402
 )
 
 
-DEFAULT_OUTPUT_DIR = (
-    REPO_ROOT / "outputs" / "reports" / "phase_4a6_real_nlp_validation"
-)
+DEFAULT_OUTPUT_DIR = REPO_ROOT / "outputs" / "reports" / "phase_4a6_real_nlp_validation"
 DEFAULT_CACHE_DIR = REPO_ROOT / "data" / "sentiment" / "cache"
 RUNTIME_PROVIDER_NAMES = {
     "rbi": "rbi",
@@ -69,34 +67,23 @@ def initialize_providers(
             RBIProvider(
                 feeds_enabled=(
                     not no_live
-                    and str(settings.get("mode", "")).lower()
-                    in {"api", "feed", "feeds"}
+                    and str(settings.get("mode", "")).lower() in {"api", "feed", "feeds"}
                     and bool(feed_urls)
                 ),
                 feed_urls=feed_urls,
-                local_manifest_path=_repo_path(
-                    settings.get("local_manifest_path")
-                ),
+                local_manifest_path=_repo_path(settings.get("local_manifest_path")),
             )
         )
     if "earnings" in valid_enabled:
         settings = dict(config.get("earnings", {}))
-        providers.append(
-            EarningsCallProvider(
-                _repo_path(settings.get("local_manifest_path"))
-            )
-        )
+        providers.append(EarningsCallProvider(_repo_path(settings.get("local_manifest_path"))))
     if "gdelt" in valid_enabled:
         settings = dict(config.get("gdelt", {}))
         providers.append(
             GDELTProvider(
                 enabled=not no_live,
-                request_delay_seconds=float(
-                    settings.get("request_delay_seconds", 6)
-                ),
-                retry_delay_seconds=float(
-                    settings.get("retry_delay_seconds", 10)
-                ),
+                request_delay_seconds=float(settings.get("request_delay_seconds", 6)),
+                retry_delay_seconds=float(settings.get("retry_delay_seconds", 10)),
                 max_retries=int(settings.get("max_retries", 3)),
                 timeout_seconds=float(settings.get("timeout_seconds", 30)),
             )
@@ -121,9 +108,7 @@ def initialize_providers(
             "limit": int(settings.get("max_records", 100)),
         }
     if isinstance(news_records, pd.DataFrame) and not news_records.empty:
-        providers.append(
-            LocalProvider(news_records, provider_name="news_manifest")
-        )
+        providers.append(LocalProvider(news_records, provider_name="news_manifest"))
     return providers, query_config
 
 
@@ -140,12 +125,8 @@ def _merge_provider_diagnostics(
             "warnings": "config_warnings",
         }
     )
-    config_rows["runtime_provider"] = config_rows["provider"].map(
-        RUNTIME_PROVIDER_NAMES
-    )
-    news_status = intake_status.loc[
-        intake_status["corpus"].eq("news")
-    ]
+    config_rows["runtime_provider"] = config_rows["provider"].map(RUNTIME_PROVIDER_NAMES)
+    news_status = intake_status.loc[intake_status["corpus"].eq("news")]
     if not news_status.empty:
         news_row = news_status.iloc[0]
         config_rows = pd.concat(
@@ -155,9 +136,7 @@ def _merge_provider_diagnostics(
                     [
                         {
                             "provider": "news",
-                            "configured_enabled": bool(
-                                news_row["manifest_exists"]
-                            ),
+                            "configured_enabled": bool(news_row["manifest_exists"]),
                             "mode": "local_manifest",
                             "config_status": news_row["corpus_status"],
                             "manifest_path": news_row["manifest_path"],
@@ -189,9 +168,7 @@ def _merge_provider_diagnostics(
     ):
         if column not in merged:
             merged[column] = 0
-        merged[column] = pd.to_numeric(
-            merged[column], errors="coerce"
-        ).fillna(0).astype(int)
+        merged[column] = pd.to_numeric(merged[column], errors="coerce").fillna(0).astype(int)
     for column in (
         "cache_hit",
         "cache_written",
@@ -241,21 +218,15 @@ def collect_real_nlp_data(
     if sanity_query:
         config.setdefault("gdelt", {})["queries"] = [sanity_query]
     rbi_path = str(config.get("rbi", {}).get("local_manifest_path", "")).strip()
-    earnings_path = str(
-        config.get("earnings", {}).get("local_manifest_path", "")
-    ).strip()
+    earnings_path = str(config.get("earnings", {}).get("local_manifest_path", "")).strip()
     intake = validate_nlp_corpus_intake(
         rbi_manifest=_repo_path(rbi_path) if rbi_path else None,
         earnings_manifest=_repo_path(earnings_path) if earnings_path else None,
     )
-    intake["intake_status"].to_csv(
-        output / "corpus_intake_status.csv", index=False
-    )
+    intake["intake_status"].to_csv(output / "corpus_intake_status.csv", index=False)
     news_records = intake["valid_records"]["news"].copy()
     if not news_records.empty:
-        publication = pd.to_datetime(
-            news_records["publication_time"], errors="coerce", utc=True
-        )
+        publication = pd.to_datetime(news_records["publication_time"], errors="coerce", utc=True)
         news_records = news_records.loc[
             publication.dt.date.ge(pd.Timestamp(start_date).date())
             & publication.dt.date.le(pd.Timestamp(end_date).date())
@@ -280,15 +251,13 @@ def collect_real_nlp_data(
         query_diagnostics.get(
             "provider",
             pd.Series("", index=query_diagnostics.index),
-        ).astype(str).eq("gdelt")
+        )
+        .astype(str)
+        .eq("gdelt")
     ].copy()
-    gdelt_query_diagnostics.to_csv(
-        output / "gdelt_query_diagnostics.csv", index=False
-    )
+    gdelt_query_diagnostics.to_csv(output / "gdelt_query_diagnostics.csv", index=False)
 
-    normalized = score_source_quality(
-        ingestion["normalized_sentiment_records"]
-    )
+    normalized = score_source_quality(ingestion["normalized_sentiment_records"])
     deduped = score_source_quality(ingestion["deduped_sentiment_records"])
     normalized.to_csv(output / "normalized_sentiment_records.csv", index=False)
     deduped.to_csv(output / "deduped_sentiment_records.csv", index=False)
@@ -305,16 +274,12 @@ def collect_real_nlp_data(
             pd.Series(False, index=ex_ante.index),
         ).fillna(False)
     ].copy()
-    reaction_warnings.to_csv(
-        output / "reaction_data_warnings.csv", index=False
-    )
+    reaction_warnings.to_csv(output / "reaction_data_warnings.csv", index=False)
 
     provider_diagnostics = _merge_provider_diagnostics(
         config, ingestion["provider_diagnostics"], intake["intake_status"]
     )
-    provider_diagnostics.to_csv(
-        output / "provider_diagnostics.csv", index=False
-    )
+    provider_diagnostics.to_csv(output / "provider_diagnostics.csv", index=False)
     real_records = ex_ante.loc[
         ex_ante.get(
             "is_real_provider_data",
@@ -345,8 +310,7 @@ def collect_real_nlp_data(
         "end_date": pd.Timestamp(end_date).date().isoformat(),
         "providers_enabled": config["_validation"]["enabled_providers"],
         "providers_initialized": [
-            getattr(provider, "provider_name", "unknown")
-            for provider in providers
+            getattr(provider, "provider_name", "unknown") for provider in providers
         ],
         "collected_record_count": int(len(deduped)),
         "real_record_count": int(len(real_records)),
@@ -354,26 +318,24 @@ def collect_real_nlp_data(
             deduped.get(
                 "data_provenance",
                 pd.Series("", index=deduped.index),
-            ).eq("fixture_or_placeholder").sum()
+            )
+            .eq("fixture_or_placeholder")
+            .sum()
         ),
         "ex_ante_valid_count": int(
             ex_ante.get(
                 "is_ex_ante_valid",
                 pd.Series(False, index=ex_ante.index),
-            ).fillna(False).sum()
+            )
+            .fillna(False)
+            .sum()
         ),
         "reaction_warning_count": int(len(reaction_warnings)),
         "gdelt_query_count": int(len(gdelt_query_diagnostics)),
-        "intake_manual_action_required": bool(
-            intake["manual_action_required"]
-        ),
-        "valid_real_records_by_corpus": (
-            intake["valid_real_records_by_corpus"]
-        ),
+        "intake_manual_action_required": bool(intake["manual_action_required"]),
+        "valid_real_records_by_corpus": (intake["valid_real_records_by_corpus"]),
         "corpus_sufficiency_status": (
-            "ready"
-            if intake["all_corpora_ready"]
-            else "manual_action_required"
+            "ready" if intake["all_corpora_ready"] else "manual_action_required"
         ),
         "output_dir": str(output.resolve()),
     }
@@ -395,9 +357,7 @@ def collect_real_nlp_data(
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        description="Collect real or cached NLP provider records."
-    )
+    parser = argparse.ArgumentParser(description="Collect real or cached NLP provider records.")
     parser.add_argument("--config", default=None)
     parser.add_argument("--start-date", default="2020-01-01")
     parser.add_argument("--end-date", default=pd.Timestamp.today().date().isoformat())
@@ -448,10 +408,7 @@ def main(argv: list[str] | None = None) -> int:
     if summary["warning"]:
         print(f"WARNING: {summary['warning']}")
     if summary["config_errors"]:
-        print(
-            "CONFIG DIAGNOSTICS: "
-            + " | ".join(summary["config_errors"])
-        )
+        print("CONFIG DIAGNOSTICS: " + " | ".join(summary["config_errors"]))
     print(f"Outputs: {summary['output_dir']}")
     return 0
 

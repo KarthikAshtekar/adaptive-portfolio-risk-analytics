@@ -19,9 +19,7 @@ from src.sentiment import (  # noqa: E402
 )
 
 
-OUTPUT_DIR = (
-    REPO_ROOT / "outputs" / "reports" / "phase_4a3_real_rbi_macro_validation"
-)
+OUTPUT_DIR = REPO_ROOT / "outputs" / "reports" / "phase_4a3_real_rbi_macro_validation"
 
 
 def main() -> int:
@@ -40,8 +38,7 @@ def main() -> int:
     index = pd.bdate_range("2020-01-01", pd.Timestamp.today().normalize())
     rng = np.random.default_rng(47)
     returns = pd.DataFrame(
-        {"SYNTH_A": rng.normal(0, 0.01, len(index)),
-         "SYNTH_B": rng.normal(0, 0.01, len(index))},
+        {"SYNTH_A": rng.normal(0, 0.01, len(index)), "SYNTH_B": rng.normal(0, 0.01, len(index))},
         index=index,
     )
     regimes = pd.Series("Normal", index=index)

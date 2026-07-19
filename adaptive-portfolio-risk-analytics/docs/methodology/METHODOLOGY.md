@@ -1,174 +1,109 @@
-# Methodology Overview
+# Methodology
 
-## Portfolio Optimization Approaches
+## Research scope
 
-### 1. Equal Weight (1/N)
-- Allocates equal weight to all assets
-- Baseline comparison
-- No optimization required
-- Surprisingly robust in many cases
+The project compares fixed and regime-adaptive portfolio policies on aligned daily return data.
+Outputs are historical research evidence, not forecasts, investment advice, or live execution.
 
-### 2. Mean-Variance Optimization (Markowitz)
-- Maximizes risk-adjusted returns (Sharpe ratio)
-- Requires mean and covariance estimates
-- Sensitive to estimation errors
-- Prone to corner solutions and turnover
+## Data and preprocessing
 
-### 3. Hierarchical Risk Parity (HRP)
-- Constructs portfolios through hierarchical clustering
-- Addresses mean-variance limitations
-- Reduces sensitivity to estimation errors
-- More stable and lower turnover
+`YahooFinanceProvider` requests adjusted close when available, falls back to close, and retains
+volume for inspection. `DataQualityProcessor` centralizes missingness, anomaly, interpolation,
+return, and winsorization rules. Downstream optimizers and dashboards consume cleaned data rather
+than silently applying their own missing-data policy.
 
-### 4. Hierarchical Equal Risk Contribution (HERC)
-- Extends HRP with equal risk contribution
-- Balances risk within and across clusters
-- Intuitive risk budgeting approach
+Simple and log returns are both available in preprocessing. Portfolio backtests use simple daily
+returns because they compound directly through `1 + r`.
 
-## Covariance Estimation Methods
+## Covariance and clustering
 
-### Ledoit-Wolf Shrinkage
-- Shrinks sample covariance toward target matrix
-- Reduces condition number
-- Optimal shrinkage intensity
-- Prevents estimation error amplification
+`CovarianceFactory.compute` supports:
 
-### Gerber Covariance (Rank-Sign)
-- Uses rank and sign correlation
-- Robust to outliers
-- Less sensitive to non-normality
-- Captures tail dependence
+- `sample`: direct historical covariance;
+- `ledoit_wolf`: shrinkage toward a structured target;
+- `ewma`: exponentially weighted observations;
+- `ewma_ledoit_wolf`: recency weighting plus shrinkage.
 
-### Rolling Window
-- Updates covariance dynamically
-- Adapts to regime changes
-- Requires minimal history
-- Incorporates recent information
+All outputs are labeled, finite, symmetric covariance DataFrames with positive diagonals. The
+hierarchical path is correlation -> distance -> linkage -> cluster tree. Gerber covariance is a
+documented future extension, not a current capability.
 
-## Regime Detection
+## Portfolio construction
 
-### Markov-Switching Models
-- Identifies bull/bear market regimes
-- Tracks volatility regimes
-- Provides transition probabilities
-- Enables dynamic allocation
+- Equal Weight assigns `1/N` and is the transparent baseline.
+- Inverse Volatility scales each asset inversely to standalone volatility.
+- Mean-Variance maximizes an estimated long-only Sharpe objective, with equal weight as a solver
+  fallback. It is implemented but not routed through the benchmark factory or dashboard.
+- HRP orders assets through the linkage tree and recursively allocates according to cluster
+  variance.
+- HERC recursively gives equal risk budgets to the left and right branches of the actual cluster
+  tree, then propagates those budgets to leaves. This differs from HRP's quasi-diagonal
+  bisection and can therefore produce different weights on the same covariance estimate.
 
-### Volatility Targeting
-- Adjusts leverage based on volatility
-- Reduces portfolio volatility
-- Increases risk-adjusted returns
-- Responds to market conditions
+## Backtesting, rebalancing, and costs
 
-### Defensive Risk Scaling
-- Reduces positions in high-volatility regimes
-- Increases cash allocation
-- Limits downside risk
-- Smooth transitions
+`RollingBacktester` uses a rolling training window and applies selected weights one observation
+later. Calendar, threshold, and calendar-or-threshold modes are supported. Target weights update
+at `target_update_frequency` (monthly by default); current weights drift with realized asset
+returns. Threshold triggers compare that drift with the latest stored target.
 
-## Sentiment and Macro Intelligence
+Turnover is half the absolute weight change. Base transaction cost and slippage are applied at
+rebalance events. The engine exposes net and gross returns/values, rebalance reason, turnover,
+transaction cost, and maximum weight drift.
 
-### RBI Monetary Policy Sentiment
-- Extracts from policy announcements
-- Measures tightening/easing bias
-- Incorporates in regime assessment
-- Complements market-based signals
+Volatility targeting estimates lagged realized volatility, applies fixed or regime-adaptive
+targets, clips exposure to configured bounds, and places residual exposure in a documented
+defensive sleeve.
 
-### Earnings Call Sentiment
-- Management tone and guidance
-- Forward-looking information
-- Predicts earnings surprises
-- Asset-specific signals
+## Risk and performance analytics
 
-### Uncertainty Scoring
-- Macro uncertainty quantification
-- Risk premium indicator
-- Portfolio risk adjustment
-- Signal for defensive positioning
+The analytics layer includes CAGR, volatility, Sharpe, Sortino, Calmar, maximum drawdown, Pain
+Index/Pain Ratio, risk contribution, concentration, tracking error, information ratio, beta,
+Jensen's alpha, liquidity diagnostics, and historical/hypothetical stress tests.
 
-## Backtesting Framework
+Two VaR/ES conventions exist and must not be mixed:
 
-### Rolling Window Approach
-- Walk-forward analysis
-- Expanding/rolling training windows
-- Out-of-sample testing
-- Realistic simulation
+- experiment `var_95`/`cvar_95` are signed return-tail statistics;
+- dashboard historical VaR/ES are displayed as positive losses.
 
-### Combinatorial Purged Cross-Validation (CPCV)
-- Addresses time-series bias
-- Implements embargo periods
-- Prevents look-ahead bias
-- Multiple test partitions
+## Regimes and adaptive allocation
 
-### Transaction Costs
-- Bid-ask spread impact
-- Market impact from large trades
-- Turnover-based costs
-- Affects returns net of costs
+Rule-based labels use rolling volatility, drawdown, trend, momentum, correlation, and return-shock
+features. Observed labels are lagged before decision use. HMM walk-forward inference trains only
+on prior expanding history and emits lagged decision states. Full-sample HMM output is restricted
+to historical visualization.
 
-## Risk Metrics
+Adaptive policies map decision regimes to allocator, covariance method, target volatility,
+rebalance settings, defensive floor, and risky-exposure cap. Conservative, Balanced, and
+Aggressive presets are explicit policy transformations rather than learned labels.
 
-### Value-at-Risk (VaR)
-- Probability of loss exceeding threshold
-- Common risk measure
-- Multiple calculation methods
-- Depends on distribution assumptions
+## Experiments and robustness
 
-### Conditional Value-at-Risk (CVaR)
-- Expected loss beyond VaR
-- Coherent risk measure
-- Captures tail risk
-- More stable than VaR
+Sensitivity grids vary implemented strategy, covariance, rebalance, threshold, and cost controls.
+Ranking uses exactly one selected objective; turnover and costs affect ranking only through their
+effect on that objective.
 
-### Maximum Drawdown
-- Peak-to-trough decline
-- Psychological importance
-- Regime indicator
-- Stress test baseline
+The CPCV-style validator creates ordered blocks, selects test-block combinations, and applies
+purge and embargo around test intervals. It reports fold medians, worst folds, dispersion,
+stability, failed folds, and a robustness score. It is a pragmatic robustness diagnostic and does
+not guarantee future performance.
 
-### Sharpe Ratio
-- Risk-adjusted return
-- Return per unit of volatility
-- Standard performance metric
-- Assumes normal distribution
+## Sentiment and NLP
 
-### Sortino Ratio
-- Penalizes only downside volatility
-- More relevant for downside risk
-- Higher Sharpe alternatives
-- Focuses on negative volatility
+The sentiment package validates provenance and timestamps, deduplicates records, applies
+publication lags, scores text with deterministic lexicons or optional local FinBERT, and combines
+RBI/news evidence into monitoring signals. Fixtures and placeholders are excluded from real-data
+claims.
 
-### Calmar Ratio
-- Return to maximum drawdown
-- Emphasizes recovery
-- Long-term metric
-- Less sensitive to volatility spikes
+The latest saved monitoring artifact reports real RBI and news coverage, but older Phase 4A.3
+artifacts record an earlier synthetic-fallback run. Each report must be interpreted using its own
+generation date and corpus metadata. NLP remains monitoring/shadow evidence and does not enter
+production-active portfolio weights or strategy gates.
 
-## Performance Attribution
+## Reproducibility and interpretation
 
-### Return Attribution
-- Allocation vs. selection effects
-- Geographic vs. sector allocation
-- Asset class contribution
-
-### Risk Attribution
-- Risk contribution by position
-- Marginal risk metrics
-- Portfolio risk decomposition
-
-## Stress Testing
-
-### Historical Scenarios
-- 2008 Financial Crisis
-- 2020 COVID Crash
-- 1987 Black Monday
-- 1998 LTCM Crisis
-
-### Reverse Stress Testing
-- Identify market moves causing losses
-- Implied scenarios from constraints
-- Risk appetite calibration
-
-### Correlation Stress
-- Estimate impact of correlation increase
-- Portfolio resilience to shock
-- Diversification benefit erosion
+- Keep the asset universe, dates, costs, defensive source, objective, and estimator fixed when
+  comparing methods.
+- Prefer net metrics for decisions and use gross metrics to explain cost drag.
+- Report failed CPCV folds and warm-up exclusions, not only successful-fold ranks.
+- Do not present the best in-sample configuration as a universal strategy winner.

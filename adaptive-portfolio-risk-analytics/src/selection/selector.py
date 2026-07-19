@@ -8,6 +8,8 @@ from typing import Mapping
 
 import pandas as pd
 
+from src.paths import PROJECT_ROOT
+
 from src.selection.config import (
     EQUAL_WEIGHT,
     HERC,
@@ -74,7 +76,7 @@ def _read_csv(path: Path) -> pd.DataFrame:
 def load_selection_artifacts(repo_root: str | Path | None = None) -> dict[str, object]:
     """Load Phase 3E evidence, falling back to post-P0 artifacts without crashing."""
 
-    root = Path(repo_root) if repo_root else Path(__file__).resolve().parents[2]
+    root = Path(repo_root).expanduser().resolve() if repo_root else PROJECT_ROOT
     phase3e = root / "outputs" / "reports" / "phase_3e_replication"
     post_p0 = root / "outputs" / "reports" / "post_p0_adaptive_validation"
     replication_results = _read_csv(phase3e / "replication_results.csv")
@@ -85,7 +87,9 @@ def load_selection_artifacts(repo_root: str | Path | None = None) -> dict[str, o
     stress = _read_csv(post_p0 / "stress_period_comparison.csv")
     warnings: list[str] = []
     if fallback_used:
-        warnings.append("Phase 3E replication artifacts were unavailable; post-P0 evidence was used.")
+        warnings.append(
+            "Phase 3E replication artifacts were unavailable; post-P0 evidence was used."
+        )
     if metrics.empty and replication_results.empty:
         warnings.append("No persisted candidate metrics were available.")
     return {
@@ -123,11 +127,20 @@ def _baseline_candidates(artifacts: Mapping[str, object]) -> pd.DataFrame:
             preferred["return_basis"] = "net"
             preferred["total_turnover"] = preferred.get("turnover")
             preferred["total_transaction_cost"] = preferred.get("transaction_cost")
-            preferred["total_cost_bps"] = preferred.get("base_bps", 0) + preferred.get("slippage_bps", 0)
+            preferred["total_cost_bps"] = preferred.get("base_bps", 0) + preferred.get(
+                "slippage_bps", 0
+            )
             summary = artifacts.get("replication_summary", pd.DataFrame())
             if isinstance(summary, pd.DataFrame) and not summary.empty:
                 preferred = preferred.merge(
-                    summary[["strategy", "classification", "stress_protection_win_rate", "cost_sensitivity_slope"]],
+                    summary[
+                        [
+                            "strategy",
+                            "classification",
+                            "stress_protection_win_rate",
+                            "cost_sensitivity_slope",
+                        ]
+                    ],
                     on="strategy",
                     how="left",
                 )
@@ -179,9 +192,8 @@ def _records_by_strategy(frame: pd.DataFrame) -> dict[str, dict[str, object]]:
 def _stress_by_strategy(frame: pd.DataFrame) -> dict[str, dict[str, object]]:
     if not isinstance(frame, pd.DataFrame) or frame.empty or "strategy" not in frame:
         return {}
-    grouped = (
-        frame.groupby("strategy", as_index=False)
-        .agg(period_return=("period_return", "mean"), max_drawdown=("max_drawdown", "min"))
+    grouped = frame.groupby("strategy", as_index=False).agg(
+        period_return=("period_return", "mean"), max_drawdown=("max_drawdown", "min")
     )
     return _records_by_strategy(grouped)
 
@@ -275,7 +287,9 @@ def select_strategy_for_profile(
     """Select a fixed core and optional adaptive overlay for an investor profile."""
 
     if investor_profile not in INVESTOR_PROFILES:
-        raise ValueError(f"Unknown investor profile: {investor_profile}. Expected one of {PROFILE_NAMES}.")
+        raise ValueError(
+            f"Unknown investor profile: {investor_profile}. Expected one of {PROFILE_NAMES}."
+        )
     artifacts = dict(artifacts or load_selection_artifacts(repo_root))
     cpcv_frame = artifacts.get("cpcv_summary", pd.DataFrame())
     stress_frame = artifacts.get("stress_comparison", pd.DataFrame())
@@ -328,13 +342,19 @@ def select_strategy_for_profile(
         and roles.get(strategy) != REJECTED_ROLE
         and strategy != EQUAL_WEIGHT
     ]
-    main_strategy = HERC if HERC in eligible_fixed else (eligible_fixed[0] if eligible_fixed else EQUAL_WEIGHT)
+    main_strategy = (
+        HERC if HERC in eligible_fixed else (eligible_fixed[0] if eligible_fixed else EQUAL_WEIGHT)
+    )
 
     overlay_strategy: str | None = None
     overlay_role: str | None = None
     insufficient = "Insufficient Data" in scenarios
-    hmm_eligible = HMM_CONSERVATIVE in candidates.index and roles.get(HMM_CONSERVATIVE) != REJECTED_ROLE
-    rule_eligible = RULE_CONSERVATIVE in candidates.index and roles.get(RULE_CONSERVATIVE) != REJECTED_ROLE
+    hmm_eligible = (
+        HMM_CONSERVATIVE in candidates.index and roles.get(HMM_CONSERVATIVE) != REJECTED_ROLE
+    )
+    rule_eligible = (
+        RULE_CONSERVATIVE in candidates.index and roles.get(RULE_CONSERVATIVE) != REJECTED_ROLE
+    )
     if not insufficient:
         if investor_profile == "Robustness First" and rule_eligible:
             overlay_strategy, overlay_role = RULE_CONSERVATIVE, ROBUSTNESS_ROLE
@@ -347,15 +367,24 @@ def select_strategy_for_profile(
     confidence, confidence_score = _confidence(
         selected,
         gates_by_strategy,
-        artifacts_available=bool(artifacts.get("phase3e_available") or not artifacts.get("metrics_comparison", pd.DataFrame()).empty),
+        artifacts_available=bool(
+            artifacts.get("phase3e_available")
+            or not artifacts.get("metrics_comparison", pd.DataFrame()).empty
+        ),
     )
     warnings = list(artifacts.get("warnings", []))
     if "Low CPCV Confidence" in scenarios:
-        warnings.append("CPCV successful-fold coverage is limited; robustness claims are confidence-adjusted.")
+        warnings.append(
+            "CPCV successful-fold coverage is limited; robustness claims are confidence-adjusted."
+        )
     if "High Cost" in scenarios:
-        warnings.append("High cost assumptions can materially reduce the benefit of an active overlay.")
+        warnings.append(
+            "High cost assumptions can materially reduce the benefit of an active overlay."
+        )
     if "HMM Unstable" in scenarios:
-        warnings.append("HMM walk-forward evidence is unavailable or unstable; full-sample HMM is not used for selection.")
+        warnings.append(
+            "HMM walk-forward evidence is unavailable or unstable; full-sample HMM is not used for selection."
+        )
     if overlay_strategy is None:
         warnings.append("No adaptive overlay cleared the current evidence and safety gates.")
     if sentiment_warning:
@@ -389,7 +418,11 @@ def select_strategy_for_profile(
     ]
     evidence = {
         "comparison_table": candidates.loc[
-            [name for name in [HERC, HMM_CONSERVATIVE, RULE_CONSERVATIVE, EQUAL_WEIGHT] if name in candidates.index],
+            [
+                name
+                for name in [HERC, HMM_CONSERVATIVE, RULE_CONSERVATIVE, EQUAL_WEIGHT]
+                if name in candidates.index
+            ],
             comparison_columns,
         ].reset_index(),
         "cpcv_summary": cpcv_frame,

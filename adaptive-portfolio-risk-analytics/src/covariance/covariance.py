@@ -92,8 +92,8 @@ def validate_correlation_matrix(correlation_matrix: pd.DataFrame) -> bool:
     atol = 1e-12
     diagonal_is_one = np.allclose(np.diag(values), 1.0, atol=atol)
 
-    within_lower = (values >= (-1 - atol))
-    within_upper = (values <= (1 + atol))
+    within_lower = values >= (-1 - atol)
+    within_upper = values <= (1 + atol)
     within_bounds = (within_lower & within_upper).all()
 
     return bool(is_symmetric and diagonal_is_one and within_bounds)
@@ -128,11 +128,7 @@ def rank_correlations(correlation_matrix: pd.DataFrame) -> pd.DataFrame:
                 }
             )
 
-    return (
-        pd.DataFrame(pairs)
-        .sort_values(by="Correlation", ascending=False)
-        .reset_index(drop=True)
-    )
+    return pd.DataFrame(pairs).sort_values(by="Correlation", ascending=False).reset_index(drop=True)
 
 
 def compute_average_correlation(correlation_matrix: pd.DataFrame) -> float:

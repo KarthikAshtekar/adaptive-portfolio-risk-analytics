@@ -156,9 +156,7 @@ def build_nlp_signal_alignment(
         .astype(str)
     )
     aligned["source_mix"] = (
-        aligned.get("source_mix", pd.Series("none", index=index))
-        .fillna("none")
-        .astype(str)
+        aligned.get("source_mix", pd.Series("none", index=index)).fillna("none").astype(str)
     )
     aligned["coverage_score"] = pd.to_numeric(
         aligned.get("coverage_score", pd.Series(0.0, index=index)),
@@ -239,9 +237,7 @@ def build_overlay_decisions(
         alignment["coverage_score"],
         errors="coerce",
     ).fillna(0.0)
-    alignment["lookahead_check_passed"] = alignment[
-        "lookahead_check_passed"
-    ].fillna(False)
+    alignment["lookahead_check_passed"] = alignment["lookahead_check_passed"].fillna(False)
 
     risk_off = alignment.apply(
         lambda row: (
@@ -317,9 +313,7 @@ def build_overlay_decisions(
                 "nlp_risk_off_eligible": eligible_risk_off,
                 "nlp_risk_off_persistent": bool(persistent_risk_off.loc[date_value]),
                 "market_confirmation": market_confirmed,
-                "lookahead_check_passed": bool(
-                    alignment.loc[date_value, "lookahead_check_passed"]
-                ),
+                "lookahead_check_passed": bool(alignment.loc[date_value, "lookahead_check_passed"]),
             }
         )
 
@@ -353,8 +347,7 @@ def build_shadow_policy_map(
             defensive_weight_floor=partial,
             risky_exposure_cap=1.0 - partial,
             notes=(
-                policies["Unknown"].notes
-                + " NLP shadow early-warning partial defensive policy."
+                policies["Unknown"].notes + " NLP shadow early-warning partial defensive policy."
             ),
         )
     return policies

@@ -943,7 +943,6 @@ def format_metric_cards(
     formatted = {}
 
     for key, value in metrics.items():
-
         key_lower = key.lower()
 
         if any(

@@ -19,9 +19,7 @@ from src.data_pipeline.preprocess import DataPreprocessor, DataQualityProcessor
 def _fake_download_multi(*args, **kwargs):
     _ = (args, kwargs)
     dates = pd.date_range("2020-01-01", periods=5, freq="B")
-    columns = pd.MultiIndex.from_product(
-        [["Adj Close", "Close", "Volume"], ["SPY", "QQQ"]]
-    )
+    columns = pd.MultiIndex.from_product([["Adj Close", "Close", "Volume"], ["SPY", "QQQ"]])
     data = np.array(
         [
             [100.0, 200.0, 99.0, 199.0, 1000, 2000],
@@ -137,6 +135,13 @@ def test_preprocessor_forward_fill_applies_to_internal_gaps() -> None:
         index=dates,
     )
 
+    cleaned, summary = DataPreprocessor.handle_missing_values(df)
+
+    assert cleaned.loc[dates[10], "A"] == cleaned.loc[dates[9], "A"]
+    assert summary.assets_dropped == 0
+    assert summary.missing_after == 0
+    assert not cleaned.isna().any().any()
+
 
 def _anomalous_price_fixture() -> pd.DataFrame:
     dates = pd.date_range("2019-12-16", periods=7, freq="B")
@@ -151,8 +156,28 @@ def _anomalous_price_fixture() -> pd.DataFrame:
 
 def _outlier_returns_fixture() -> pd.DataFrame:
     dates = pd.date_range("2024-01-01", periods=20, freq="B")
-    asset_a = [0.01, 0.012, 0.015, 0.013, 0.011, 0.014, 0.012, 0.013, 0.011, 0.014,
-               0.012, 0.013, 0.011, 0.014, 0.012, 0.013, 0.011, 0.014, 0.012, 50.0]
+    asset_a = [
+        0.01,
+        0.012,
+        0.015,
+        0.013,
+        0.011,
+        0.014,
+        0.012,
+        0.013,
+        0.011,
+        0.014,
+        0.012,
+        0.013,
+        0.011,
+        0.014,
+        0.012,
+        0.013,
+        0.011,
+        0.014,
+        0.012,
+        50.0,
+    ]
     return pd.DataFrame(
         {
             "AssetA": asset_a,
@@ -181,13 +206,6 @@ def _outlier_returns_fixture() -> pd.DataFrame:
         },
         index=dates,
     )
-
-    cleaned, summary = DataPreprocessor.handle_missing_values(df)
-
-    assert cleaned.loc[dates[10], "A"] == cleaned.loc[dates[9], "A"]
-    assert summary.assets_dropped == 0
-    assert summary.missing_after == 0
-    assert not cleaned.isna().any().any()
 
 
 def test_preprocessor_back_fill_applies_to_leading_gaps() -> None:
@@ -373,7 +391,9 @@ def test_pipeline_integration_generates_quality_reports_and_stabilized_returns()
         rolling_windows=(2, 3),
     )
 
-    assert outputs.simple_returns_df.shape == outputs.log_returns_df.shape == outputs.returns_df.shape
+    assert (
+        outputs.simple_returns_df.shape == outputs.log_returns_df.shape == outputs.returns_df.shape
+    )
     assert outputs.anomaly_report_df.shape[1] == 4
     assert outputs.repair_report_df.shape[1] == 6
     assert outputs.outlier_report_df.shape[1] == 5
@@ -382,7 +402,9 @@ def test_pipeline_integration_generates_quality_reports_and_stabilized_returns()
     assert outputs.quality_report_df.loc[0, "price_anomalies_detected"] == len(
         outputs.anomaly_report_df
     )
-    assert outputs.quality_report_df.loc[0, "price_repairs_applied"] == len(outputs.repair_report_df)
+    assert outputs.quality_report_df.loc[0, "price_repairs_applied"] == len(
+        outputs.repair_report_df
+    )
     assert outputs.quality_report_df.loc[0, "return_outliers_detected"] == len(
         outputs.outlier_report_df
     )

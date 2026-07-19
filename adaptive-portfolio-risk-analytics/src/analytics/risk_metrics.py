@@ -46,7 +46,11 @@ def compute_drawdown_series(portfolio_values_or_returns) -> pd.Series:
 
     if _looks_like_return_series(values):
         wealth = (1.0 + values).cumprod()
-        anchor_index = values.index[0] - pd.Timedelta(nanoseconds=1) if isinstance(values.index, pd.DatetimeIndex) else -1
+        anchor_index = (
+            values.index[0] - pd.Timedelta(nanoseconds=1)
+            if isinstance(values.index, pd.DatetimeIndex)
+            else -1
+        )
         anchored = pd.concat([pd.Series([1.0], index=[anchor_index]), wealth])
         running_peak = anchored.cummax().iloc[1:]
     else:
@@ -125,7 +129,9 @@ class RiskAnalytics:
         return compute_pain_index(returns, initial_value=initial_value)
 
     @staticmethod
-    def rolling_volatility(returns: pd.Series, window: int = 30, periods_per_year: int = 252) -> pd.Series:
+    def rolling_volatility(
+        returns: pd.Series, window: int = 30, periods_per_year: int = 252
+    ) -> pd.Series:
         """Calculate rolling volatility."""
         if returns.empty or len(returns) < window:
             return pd.Series(dtype=float)
@@ -147,7 +153,9 @@ class RiskAnalytics:
         return (mean_excess / std_excess) * np.sqrt(periods_per_year)
 
     @staticmethod
-    def downside_deviation(returns: pd.Series, target_return: float = 0.0, periods_per_year: int = 252) -> float:
+    def downside_deviation(
+        returns: pd.Series, target_return: float = 0.0, periods_per_year: int = 252
+    ) -> float:
         """Calculate annualized downside deviation (for Sortino ratio calculation)."""
         if returns.empty:
             return 0.0

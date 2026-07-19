@@ -28,4 +28,3 @@ def test_lexicon_scorer_labels_risk_on_headline_positive() -> None:
     assert scored.iloc[0]["sentiment_score"] > 0
     assert scored.iloc[0]["sentiment_label"] == "risk_on"
     assert scored.iloc[0]["model_name"] == "phase4a_lexicon"
-

@@ -6,6 +6,7 @@ from typing import Iterable
 
 import pandas as pd
 
+
 def get_defensive_asset_returns(
     start_date,
     end_date,
@@ -23,17 +24,13 @@ def get_defensive_asset_returns(
         raise ValueError("start_date must be earlier than end_date")
 
     fallback_candidates = (
-        list(fallback_tickers)
-        if fallback_tickers is not None
-        else ["LIQUIDETF.NS"]
+        list(fallback_tickers) if fallback_tickers is not None else ["LIQUIDETF.NS"]
     )
     candidates = []
     if preferred_ticker and str(preferred_ticker).strip().lower() != "synthetic risk-free":
         candidates.append(str(preferred_ticker).strip().upper())
     candidates.extend(
-        ticker.strip().upper()
-        for ticker in fallback_candidates
-        if ticker and ticker.strip()
+        ticker.strip().upper() for ticker in fallback_candidates if ticker and ticker.strip()
     )
 
     target_index = pd.date_range(start=start_ts, end=end_ts, freq="B")

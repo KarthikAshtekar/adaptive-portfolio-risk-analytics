@@ -9,9 +9,9 @@ import pandas as pd
 from src.dashboard.app import build_rbi_macro_sentiment_results
 
 
-APP_SOURCE = (
-    Path(__file__).resolve().parents[1] / "src" / "dashboard" / "app.py"
-).read_text(encoding="utf-8")
+APP_SOURCE = (Path(__file__).resolve().parents[1] / "src" / "dashboard" / "app.py").read_text(
+    encoding="utf-8"
+)
 
 
 def test_dashboard_falls_back_when_real_manifest_is_missing(

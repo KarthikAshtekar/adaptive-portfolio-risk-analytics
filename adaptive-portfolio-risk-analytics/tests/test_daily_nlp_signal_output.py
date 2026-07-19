@@ -140,12 +140,8 @@ def test_validation_writes_daily_nlp_signal_and_monitoring_verdict_b(
         "insufficient_reason",
     }
     assert required_columns.issubset(set(daily.columns))
-    assert daily["decision_nlp_label"].isin(
-        {"nlp_risk_on", "nlp_neutral", "nlp_risk_off"}
-    ).any()
-    assert "decision_lag_no_prior_signal" in set(
-        daily["insufficient_reason"].dropna()
-    )
+    assert daily["decision_nlp_label"].isin({"nlp_risk_on", "nlp_neutral", "nlp_risk_off"}).any()
+    assert "decision_lag_no_prior_signal" in set(daily["insufficient_reason"].dropna())
 
     scored = pd.read_csv(scored_path)
     assert {

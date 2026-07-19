@@ -38,4 +38,3 @@ def test_missing_optional_columns_are_added_safely() -> None:
 
     assert {"ticker", "url", "market"}.issubset(records.columns)
     assert pd.isna(records.iloc[0]["ticker"])
-

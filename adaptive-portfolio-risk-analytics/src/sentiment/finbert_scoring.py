@@ -64,10 +64,10 @@ def score_with_finbert(
             model_kwargs={"local_files_only": local_files_only},
         )
         texts = (
-            scored["title"].fillna("").astype(str)
-            + ". "
-            + scored["text"].fillna("").astype(str)
-        ).str.strip().tolist()
+            (scored["title"].fillna("").astype(str) + ". " + scored["text"].fillna("").astype(str))
+            .str.strip()
+            .tolist()
+        )
         outputs = classifier(
             texts,
             truncation=True,
@@ -92,11 +92,7 @@ def score_with_finbert(
                 label = "neutral"
             confidence = float(item.get("score", 0.0))
             signed_score = (
-                confidence
-                if label == "positive"
-                else -confidence
-                if label == "negative"
-                else 0.0
+                confidence if label == "positive" else -confidence if label == "negative" else 0.0
             )
             labels.append(label)
             confidences.append(confidence)

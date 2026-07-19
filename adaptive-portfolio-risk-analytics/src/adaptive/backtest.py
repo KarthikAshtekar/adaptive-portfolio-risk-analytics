@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from src.analytics import PerformanceAnalytics, RiskAnalytics
+from src.analytics import PerformanceAnalytics
 from src.backtesting.rebalance_rules import (
     should_rebalance_calendar,
     should_rebalance_threshold,
@@ -114,7 +114,7 @@ def run_regime_adaptive_backtest(
     method_name = str(regime_method_name).strip().lower()
     if "hmm" in method_name and ("full" in method_name or "historical" in method_name):
         raise ValueError(
-            "Full-sample HMM regimes are historical-only and cannot drive " "the adaptive backtest."
+            "Full-sample HMM regimes are historical-only and cannot drive the adaptive backtest."
         )
     if not isinstance(returns, pd.DataFrame):
         raise TypeError("returns must be a pandas DataFrame")
@@ -146,9 +146,7 @@ def run_regime_adaptive_backtest(
     regime_series = regimes.sort_index()
     if isinstance(defensive_returns, DefensiveReturnResult):
         if not defensive_returns.returns.index.equals(clean.index):
-            raise ValueError(
-                "pre-resolved defensive returns must align exactly with returns"
-            )
+            raise ValueError("pre-resolved defensive returns must align exactly with returns")
         defensive_result = defensive_returns
     else:
         resolved_source = (

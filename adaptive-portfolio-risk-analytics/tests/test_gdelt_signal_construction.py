@@ -63,9 +63,7 @@ def test_news_only_gdelt_records_produce_monitoring_composite_labels() -> None:
         decision_lag=1,
     )
 
-    valid = composite["decision_composite_nlp_label"].isin(
-        VALID_COMPOSITE_NLP_LABELS
-    )
+    valid = composite["decision_composite_nlp_label"].isin(VALID_COMPOSITE_NLP_LABELS)
     assert valid.any()
     first_valid = composite.loc[valid].iloc[0]
     assert first_valid["decision_source_mix"] == "news_only"

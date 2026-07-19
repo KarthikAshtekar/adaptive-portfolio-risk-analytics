@@ -14,7 +14,12 @@ from src.analytics import (
     risk_contribution_table,
     total_risk_contribution,
 )
-from src.optimization import EqualWeightAllocator, HERCAllocator, HRPAllocator, InverseVolatilityAllocator
+from src.optimization import (
+    EqualWeightAllocator,
+    HERCAllocator,
+    HRPAllocator,
+    InverseVolatilityAllocator,
+)
 
 
 @pytest.fixture

@@ -27,9 +27,7 @@ def test_rbi_provider_normalizes_mocked_rss() -> None:
         feed_loader=lambda _: xml,
     )
 
-    records = provider.normalize(
-        provider.fetch("2024-01-01", "2024-12-31")
-    )
+    records = provider.normalize(provider.fetch("2024-01-01", "2024-12-31"))
 
     assert set(NORMALIZED_SENTIMENT_COLUMNS).issubset(records.columns)
     assert records.loc[0, "document_type"] == "monetary_policy_statement"
@@ -47,9 +45,7 @@ def test_earnings_provider_loads_local_transcript_fixture() -> None:
     )
     provider = EarningsCallProvider(manifest)
 
-    records = provider.normalize(
-        provider.fetch("2024-01-01", "2026-12-31")
-    )
+    records = provider.normalize(provider.fetch("2024-01-01", "2026-12-31"))
 
     assert len(records) == 2
     assert set(records["document_type"]) == {"earnings_call"}

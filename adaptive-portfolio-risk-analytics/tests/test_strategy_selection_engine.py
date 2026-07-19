@@ -56,9 +56,7 @@ def test_high_cost_scenario_is_explicit() -> None:
 
 
 def test_post_p0_fallback_warns_without_crashing(tmp_path) -> None:
-    report_dir = (
-        tmp_path / "outputs" / "reports" / "post_p0_adaptive_validation"
-    )
+    report_dir = tmp_path / "outputs" / "reports" / "post_p0_adaptive_validation"
     report_dir.mkdir(parents=True)
     pd.DataFrame(
         [

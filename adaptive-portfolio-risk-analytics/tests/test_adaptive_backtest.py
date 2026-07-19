@@ -65,9 +65,9 @@ def test_adaptive_backtest_runs_and_returns_standard_outputs() -> None:
     assert initial_value * (1.0 + result["portfolio_returns"]).prod() == pytest.approx(
         result["portfolio_values"].iloc[-1]
     )
-    assert initial_value * (
-        1.0 + result["gross_portfolio_returns"]
-    ).prod() == pytest.approx(result["gross_portfolio_values"].iloc[-1])
+    assert initial_value * (1.0 + result["gross_portfolio_returns"]).prod() == pytest.approx(
+        result["gross_portfolio_values"].iloc[-1]
+    )
 
 
 def test_adaptive_backtest_uses_lagged_regimes() -> None:

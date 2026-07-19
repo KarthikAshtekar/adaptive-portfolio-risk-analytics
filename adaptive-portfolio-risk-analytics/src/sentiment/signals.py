@@ -66,22 +66,15 @@ def build_daily_sentiment_signal(
     signal["article_count"] = counts.reindex(index, fill_value=0).astype(int)
     signal["latest_article_timestamp"] = latest_timestamps.reindex(index)
     signal["rolling_sentiment_score"] = (
-        signal["daily_sentiment_score"]
-        .rolling(int(lookback_window), min_periods=1)
-        .mean()
+        signal["daily_sentiment_score"].rolling(int(lookback_window), min_periods=1).mean()
     )
     signal["rolling_article_count"] = (
-        signal["article_count"]
-        .rolling(int(lookback_window), min_periods=1)
-        .sum()
-        .astype(int)
+        signal["article_count"].rolling(int(lookback_window), min_periods=1).sum().astype(int)
     )
     signal["observed_sentiment_label"] = signal["rolling_sentiment_score"].map(
         lambda score: _classify_score(score, neutral_threshold)
     )
-    signal["decision_sentiment_score"] = signal["rolling_sentiment_score"].shift(
-        int(decision_lag)
-    )
+    signal["decision_sentiment_score"] = signal["rolling_sentiment_score"].shift(int(decision_lag))
     signal["decision_sentiment_label"] = (
         signal["observed_sentiment_label"]
         .shift(int(decision_lag))
@@ -96,4 +89,3 @@ def build_daily_sentiment_signal(
     )
     signal["decision_lag"] = int(decision_lag)
     return signal
-

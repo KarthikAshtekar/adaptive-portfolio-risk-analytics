@@ -20,4 +20,3 @@ def test_playbook_contains_operational_fallbacks() -> None:
     assert playbook.loc["HMM Unstable", "overlay_or_reference"] == RULE_CONSERVATIVE
     assert playbook.loc["Stress / Crisis", "overlay_or_reference"] == HMM_CONSERVATIVE
     assert playbook.loc["Insufficient Data", "overlay_usage"] == "none"
-

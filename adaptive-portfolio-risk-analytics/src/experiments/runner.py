@@ -169,9 +169,7 @@ def generate_parameter_grid(
                     "vol_targeting_enabled": bool(vol_target),
                     "target_vol": target_vol,
                     "defensive_asset": defensive_asset,
-                    "defensive_source": (
-                        defensive_source if defensive_asset is not None else None
-                    ),
+                    "defensive_source": (defensive_source if defensive_asset is not None else None),
                     "defensive_annual_rate": float(config.defensive_annual_rate),
                     "defensive_ticker": defensive_ticker,
                     "defensive_fallback": config.defensive_fallback,

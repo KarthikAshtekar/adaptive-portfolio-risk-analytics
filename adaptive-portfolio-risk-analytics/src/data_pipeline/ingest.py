@@ -9,7 +9,36 @@ from typing import Iterable
 
 import pandas as pd
 
-SAMPLE_UNIVERSE: tuple[str, ...] = ("HDFCBANK.NS","ICICIBANK.NS","SBIN.NS","KOTAKBANK.NS","AXISBANK.NS","TCS.NS","INFY.NS","WIPRO.NS","HCLTECH.NS","TECHM.NS","RELIANCE.NS","ONGC.NS","NTPC.NS","POWERGRID.NS","HINDUNILVR.NS","ITC.NS","NESTLEIND.NS","TATACONSUM.NS","SUNPHARMA.NS","DRREDDY.NS","CIPLA.NS","MARUTI.NS","M&M.NS","LT.NS","ULTRACEMCO.NS","ASIANPAINT.NS","BHARTIARTL.NS","GOLDBEES.NS")
+SAMPLE_UNIVERSE: tuple[str, ...] = (
+    "HDFCBANK.NS",
+    "ICICIBANK.NS",
+    "SBIN.NS",
+    "KOTAKBANK.NS",
+    "AXISBANK.NS",
+    "TCS.NS",
+    "INFY.NS",
+    "WIPRO.NS",
+    "HCLTECH.NS",
+    "TECHM.NS",
+    "RELIANCE.NS",
+    "ONGC.NS",
+    "NTPC.NS",
+    "POWERGRID.NS",
+    "HINDUNILVR.NS",
+    "ITC.NS",
+    "NESTLEIND.NS",
+    "TATACONSUM.NS",
+    "SUNPHARMA.NS",
+    "DRREDDY.NS",
+    "CIPLA.NS",
+    "MARUTI.NS",
+    "M&M.NS",
+    "LT.NS",
+    "ULTRACEMCO.NS",
+    "ASIANPAINT.NS",
+    "BHARTIARTL.NS",
+    "GOLDBEES.NS",
+)
 
 
 @dataclass(frozen=True)
@@ -124,9 +153,7 @@ def build_data_inspection_table(data: MarketDataBundle) -> pd.DataFrame:
     report = pd.DataFrame(index=assets)
     report.index.name = "symbol"
     report["price_field"] = data.price_field
-    report["start_date"] = [
-        _first_valid_date(data.prices_df[symbol]) for symbol in assets
-    ]
+    report["start_date"] = [_first_valid_date(data.prices_df[symbol]) for symbol in assets]
     report["end_date"] = [_last_valid_date(data.prices_df[symbol]) for symbol in assets]
     report["price_observations"] = data.prices_df.notna().sum().astype(int)
     report["volume_observations"] = data.volume_df.notna().sum().astype(int)

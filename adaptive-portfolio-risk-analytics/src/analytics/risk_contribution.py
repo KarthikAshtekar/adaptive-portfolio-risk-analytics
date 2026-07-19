@@ -49,7 +49,9 @@ def _normalize_weights(
             raise ValueError("weights must not contain NaN values")
         if not np.isfinite(weights).all():
             raise ValueError("weights must be finite")
-        weight_series = pd.Series(weights.astype(float), index=covariance_matrix.columns, name="weight")
+        weight_series = pd.Series(
+            weights.astype(float), index=covariance_matrix.columns, name="weight"
+        )
     else:
         raise TypeError("weights must be a pandas Series or numpy ndarray")
 

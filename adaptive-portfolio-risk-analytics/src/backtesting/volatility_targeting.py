@@ -121,7 +121,11 @@ def compute_exposure_series(
         realized_value = lagged_realized_vol.loc[current_date]
         target_value = target_vol_s.loc[current_date]
 
-        if not np.isfinite(realized_value) or realized_value <= 0.0 or not np.isfinite(target_value):
+        if (
+            not np.isfinite(realized_value)
+            or realized_value <= 0.0
+            or not np.isfinite(target_value)
+        ):
             new_exposure = 1.0
         else:
             raw_exposure = float(target_value) / float(realized_value)
@@ -169,7 +173,9 @@ def apply_volatility_targeting(
     target_volatility = compute_adaptive_target_volatility(regime_series, config)
     exposure_series = compute_exposure_series(realized_vol, target_volatility, config)
 
-    targeted_returns = exposure_series * risky_returns_s + (1.0 - exposure_series) * defensive_aligned
+    targeted_returns = (
+        exposure_series * risky_returns_s + (1.0 - exposure_series) * defensive_aligned
+    )
     targeted_returns.name = "targeted_return"
 
     base_growth = (1.0 + risky_returns_s).cumprod()

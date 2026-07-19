@@ -75,4 +75,3 @@ def build_strategy_playbook() -> pd.DataFrame:
         ]
     )
     return pd.DataFrame(rows)
-

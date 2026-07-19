@@ -126,9 +126,7 @@ def test_cpcv_adaptive_folds_record_same_defensive_convention() -> None:
         objective="calmar",
         max_adaptive_configs=1,
     )
-    successful = result["fold_results"].loc[
-        result["fold_results"]["status"].eq("success")
-    ]
+    successful = result["fold_results"].loc[result["fold_results"]["status"].eq("success")]
 
     assert not successful.empty
     assert successful["defensive_source_used"].eq("synthetic").all()

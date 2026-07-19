@@ -9,9 +9,9 @@ import pandas as pd
 from src.sentiment import calculate_nlp_coverage
 
 
-APP_SOURCE = (
-    Path(__file__).resolve().parents[1] / "src" / "dashboard" / "app.py"
-).read_text(encoding="utf-8")
+APP_SOURCE = (Path(__file__).resolve().parents[1] / "src" / "dashboard" / "app.py").read_text(
+    encoding="utf-8"
+)
 
 
 def test_sparse_real_data_is_marked_insufficient() -> None:
@@ -56,10 +56,7 @@ def test_dashboard_keeps_manager_compact_and_diagnostics_available() -> None:
     assert "Coverage Quality" in manager
     assert "Latest Text Date" in manager
     assert "Provider Mix" in manager
-    assert (
-        "NLP signal is monitoring-only due to insufficient "
-        "real-data coverage."
-    ) in APP_SOURCE
+    assert ("NLP signal is monitoring-only due to insufficient real-data coverage.") in APP_SOURCE
     assert "source_quality_score" not in manager
     assert "Provider Configuration and API Diagnostics" in APP_SOURCE
     assert "Source-quality components and data provenance" in APP_SOURCE

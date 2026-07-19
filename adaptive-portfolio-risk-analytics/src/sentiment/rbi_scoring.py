@@ -108,10 +108,7 @@ def _normalize(value: object) -> str:
 
 
 def _count_terms(text: str, terms: tuple[str, ...]) -> int:
-    return sum(
-        len(re.findall(rf"(?<!\w){re.escape(term)}(?!\w)", text))
-        for term in terms
-    )
+    return sum(len(re.findall(rf"(?<!\w){re.escape(term)}(?!\w)", text)) for term in terms)
 
 
 def _lexicon_row(text: object) -> dict[str, object]:
@@ -126,11 +123,7 @@ def _lexicon_row(text: object) -> dict[str, object]:
 
     stance = "hawkish" if hawkish > dovish else "dovish" if dovish > hawkish else "neutral"
     certainty = (
-        "uncertain"
-        if uncertain > certain
-        else "certain"
-        if certain > uncertain
-        else "neutral"
+        "uncertain" if uncertain > certain else "certain" if certain > uncertain else "neutral"
     )
     time_label = (
         "forward_looking"
@@ -302,14 +295,10 @@ def score_rbi_sentences(
         config = dict(model_config or {})
         configured_adapter = config.pop("adapter", None)
         model_names = config.pop("model_names", RBI_HF_MODELS)
-        local_files_only = bool(
-            config.pop("local_files_only", not allow_model_download)
-        )
+        local_files_only = bool(config.pop("local_files_only", not allow_model_download))
         pipeline_factory = config.pop("pipeline_factory", None)
         if config:
-            raise ValueError(
-                f"unsupported model_config keys: {sorted(config)}"
-            )
+            raise ValueError(f"unsupported model_config keys: {sorted(config)}")
         adapter = (
             transformer_adapter
             or configured_adapter
@@ -325,9 +314,7 @@ def score_rbi_sentences(
                 for column, value in labels.items():
                     scored.at[index, column] = value
                 scored.at[index, "scoring_method"] = "transformer"
-                scored.at[index, "model_name"] = ";".join(
-                    adapter.model_names.values()
-                )
+                scored.at[index, "model_name"] = ";".join(adapter.model_names.values())
                 scored.at[index, "model_version"] = "huggingface"
             except Exception as exc:
                 scored.at[index, "fallback_used"] = True

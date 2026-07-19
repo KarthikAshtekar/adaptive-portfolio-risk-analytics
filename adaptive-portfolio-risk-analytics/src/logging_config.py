@@ -66,7 +66,7 @@ class LoggerSetup:
         # Default format
         if format_str is None:
             format_str = (
-                "%(asctime)s - %(name)s - %(levelname)s - " "%(filename)s:%(lineno)d - %(message)s"
+                "%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s"
             )
 
         # Configure standard logging
@@ -85,7 +85,9 @@ class LoggerSetup:
         # File handler (rotating)
         log_file = log_dir_path / f"{name}.log"
         file_handler = logging.handlers.RotatingFileHandler(
-            log_file, maxBytes=10485760, backupCount=5  # 10MB, keep 5 files
+            log_file,
+            maxBytes=10485760,
+            backupCount=5,  # 10MB, keep 5 files
         )
         file_handler.setLevel(resolved_level)
         file_formatter = logging.Formatter(format_str)
@@ -95,7 +97,7 @@ class LoggerSetup:
         # Configure loguru when available.
         if loguru_logger is not None:
             loguru_format = (
-                "{time:YYYY-MM-DD HH:mm:ss} - {name} - {level} - " "{file}:{line} - {message}"
+                "{time:YYYY-MM-DD HH:mm:ss} - {name} - {level} - {file}:{line} - {message}"
             )
             loguru_logger.add(
                 sys.stderr,

@@ -43,10 +43,14 @@ def test_replication_runs_complete_bounded_scenario() -> None:
     assert {"Equal Weight", "HRP", "HERC"}.issubset(set(result["strategy"]))
     assert result["strategy_type"].eq("regime_adaptive").sum() == 1
     assert result["status"].eq("success").all()
-    assert result.loc[
-        result["strategy_type"].eq("regime_adaptive"),
-        "defensive_source_used",
-    ].eq("synthetic").all()
+    assert (
+        result.loc[
+            result["strategy_type"].eq("regime_adaptive"),
+            "defensive_source_used",
+        ]
+        .eq("synthetic")
+        .all()
+    )
 
 
 def test_replication_summary_classifies_adaptive_without_forcing_win() -> None:
@@ -63,13 +67,17 @@ def test_replication_summary_classifies_adaptive_without_forcing_win() -> None:
     summary = summarize_replication_results(results)
 
     assert not summary.empty
-    assert summary["classification"].isin(
-        {
-            "First-class main strategy",
-            "Risk-control overlay",
-            "Experimental only",
-        }
-    ).all()
+    assert (
+        summary["classification"]
+        .isin(
+            {
+                "First-class main strategy",
+                "Risk-control overlay",
+                "Experimental only",
+            }
+        )
+        .all()
+    )
     assert summary["number_of_successful_runs"].gt(0).all()
 
 

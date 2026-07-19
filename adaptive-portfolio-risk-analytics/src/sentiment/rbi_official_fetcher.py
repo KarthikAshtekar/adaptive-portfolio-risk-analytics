@@ -121,10 +121,7 @@ FETCH_DIAGNOSTIC_COLUMNS = (
     "warning",
     "error",
 )
-USER_AGENT = (
-    "adaptive-portfolio-risk-analytics/1.2.8 "
-    "(research corpus cache; contact: local-user)"
-)
+USER_AGENT = "adaptive-portfolio-risk-analytics/1.2.8 (research corpus cache; contact: local-user)"
 BLOCKED_MARKERS = (
     "captcha",
     "access denied",
@@ -351,8 +348,7 @@ def _date_from_text(value: object) -> pd.Timestamp | None:
     match = DATE_PATTERN.search(text)
     if match:
         return _coerce_date(
-            f"{match.group('year')}-{int(match.group('month')):02d}-"
-            f"{int(match.group('day')):02d}"
+            f"{match.group('year')}-{int(match.group('month')):02d}-{int(match.group('day')):02d}"
         )
     parsed = pd.to_datetime(text, errors="coerce", dayfirst=True, utc=True)
     if pd.isna(parsed):
@@ -528,8 +524,7 @@ def _entry_matches_keywords(
     if not normalized_keywords:
         return True
     haystack = " ".join(
-        str(entry.get(column, ""))
-        for column in ("title", "summary", "source_url")
+        str(entry.get(column, "")) for column in ("title", "summary", "source_url")
     ).lower()
     return any(keyword in haystack for keyword in normalized_keywords)
 
@@ -594,8 +589,7 @@ def filter_rbi_entries_by_policy_relevance(
     threshold = str(min_policy_relevance or "none").strip().lower()
     if threshold not in _POLICY_RELEVANCE_ORDER:
         raise ValueError(
-            "min_policy_relevance must be one of: "
-            + ", ".join(_POLICY_RELEVANCE_ORDER)
+            "min_policy_relevance must be one of: " + ", ".join(_POLICY_RELEVANCE_ORDER)
         )
     required = _POLICY_RELEVANCE_ORDER[threshold]
     if required <= 0:
@@ -699,11 +693,7 @@ def sort_rbi_entries_for_policy_targets(
     for index, entry in enumerate(entries):
         metadata = rbi_entry_policy_target_metadata(entry)
         publication = _coerce_date(entry.get("publication_date"))
-        date_sort = (
-            -int(publication.timestamp())
-            if publication is not None
-            else 0
-        )
+        date_sort = -int(publication.timestamp()) if publication is not None else 0
         sort_key = (
             0 if metadata["is_policy_target"] else 1,
             date_sort,
@@ -721,9 +711,7 @@ def parse_rbi_target_document_types(
     values = set(_keyword_list(target_document_types))
     invalid = sorted(values - set(REAL_RBI_DOCUMENT_TYPES))
     if invalid:
-        raise ValueError(
-            "invalid RBI target document type(s): " + ", ".join(invalid)
-        )
+        raise ValueError("invalid RBI target document type(s): " + ", ".join(invalid))
     return values
 
 
@@ -895,8 +883,7 @@ def _is_navigation_fragment(fragment: str) -> bool:
         return True
     words = re.findall(r"[a-z]+", text)
     if len(words) <= 2 and any(
-        marker == text or marker in text
-        for marker in ("top", "selected", "archives", "archive")
+        marker == text or marker in text for marker in ("top", "selected", "archives", "archive")
     ):
         return True
     return any(marker in text for marker in NAVIGATION_FRAGMENT_MARKERS)
@@ -951,8 +938,7 @@ def is_rbi_index_or_navigation_page(title, text, url=None) -> tuple[bool, str]:
     annual_report_primary = "annual report" in title_url
     annual_report_context = "annual report" in lowered
     chapter_click_context = (
-        "read the chapter of your choice" in lowered
-        or "click on the links below" in lowered
+        "read the chapter of your choice" in lowered or "click on the links below" in lowered
     )
     archive_context = (
         "archive" in lowered
@@ -968,17 +954,15 @@ def is_rbi_index_or_navigation_page(title, text, url=None) -> tuple[bool, str]:
         or (navigation_hits >= 3 and substantive_count <= 3)
     ):
         return True, "annual_report_index_page"
-    if annual_report_context and chapter_click_context and (
-        substantive_count <= 3 and boilerplate_ratio >= 0.55
+    if (
+        annual_report_context
+        and chapter_click_context
+        and (substantive_count <= 3 and boilerplate_ratio >= 0.55)
     ):
         return True, "annual_report_index_page"
     if archive_context and (
         substantive_count <= 3
-        and (
-            len(years) >= 4
-            or navigation_hits >= 3
-            or boilerplate_ratio >= 0.60
-        )
+        and (len(years) >= 4 or navigation_hits >= 3 or boilerplate_ratio >= 0.60)
     ):
         return True, "archive_navigation_page"
     if len(years) >= 6 and substantive_count <= 2:
@@ -999,8 +983,7 @@ def _extract_html_text(payload: bytes) -> str:
         text = _normalize_text(re.sub(r"<[^>]+>", " ", raw))
     if _looks_blocked(raw) or _looks_blocked(text):
         raise RuntimeError(
-            "RBI page appears blocked by CAPTCHA/JavaScript protection; "
-            "manual fallback required"
+            "RBI page appears blocked by CAPTCHA/JavaScript protection; manual fallback required"
         )
     return text
 
@@ -1010,8 +993,7 @@ def _extract_pdf_text(payload: bytes) -> str:
         from pypdf import PdfReader
     except ImportError as exc:
         raise RuntimeError(
-            "PDF extraction requires optional dependency 'pypdf'; "
-            "manual fallback required"
+            "PDF extraction requires optional dependency 'pypdf'; manual fallback required"
         ) from exc
     reader = PdfReader(BytesIO(payload))
     text = "\n".join(page.extract_text() or "" for page in reader.pages)
@@ -1046,9 +1028,9 @@ def extract_rbi_text_with_diagnostics(
         content_type=content_type,
     )
     content_type_lower = detected_content_type.lower()
-    method = "pdf" if (
-        "pdf" in content_type_lower or payload.lstrip().startswith(b"%PDF")
-    ) else "html"
+    method = (
+        "pdf" if ("pdf" in content_type_lower or payload.lstrip().startswith(b"%PDF")) else "html"
+    )
     try:
         text = extract_rbi_text(
             {"content": payload, "content_type": detected_content_type},
@@ -1076,10 +1058,7 @@ def classify_rbi_document_type(title, url, text=None) -> str:
     if (
         "minutes of the monetary policy committee" in haystack
         or "mpc minutes" in haystack
-        or (
-            "under section 45zl" in haystack
-            and "monetary policy committee" in haystack
-        )
+        or ("under section 45zl" in haystack and "monetary policy committee" in haystack)
     ):
         return "mpc_minutes"
     if (
@@ -1118,14 +1097,14 @@ def _slug(value: object, max_chars: int = 64) -> str:
 def build_rbi_document_id(publication_date, document_type, title) -> str:
     """Build a deterministic manifest-safe document ID."""
     publication = _coerce_date(publication_date)
-    date_part = publication.date().isoformat().replace("-", "") if publication is not None else "undated"
+    date_part = (
+        publication.date().isoformat().replace("-", "") if publication is not None else "undated"
+    )
     doc_type = str(document_type or "unknown").strip().lower()
     if doc_type not in REAL_RBI_DOCUMENT_TYPES:
         doc_type = "unknown"
     title_slug = _slug(title)
-    digest = hashlib.sha1(
-        f"{date_part}|{doc_type}|{title_slug}".encode("utf-8")
-    ).hexdigest()[:8]
+    digest = hashlib.sha1(f"{date_part}|{doc_type}|{title_slug}".encode("utf-8")).hexdigest()[:8]
     return f"rbi_{date_part}_{doc_type}_{title_slug}_{digest}"
 
 
@@ -1164,13 +1143,9 @@ def update_rbi_manifest(records, manifest_path) -> dict[str, object]:
     updated = 0
     added = 0
     for row in rows:
-        duplicate_mask = (
-            frame["document_id"].astype(str).str.strip().eq(row["document_id"])
-        )
+        duplicate_mask = frame["document_id"].astype(str).str.strip().eq(row["document_id"])
         if row["source_url"]:
-            duplicate_mask |= frame["source_url"].astype(str).str.strip().eq(
-                row["source_url"]
-            )
+            duplicate_mask |= frame["source_url"].astype(str).str.strip().eq(row["source_url"])
         if bool(duplicate_mask.any()):
             frame = frame.loc[~duplicate_mask].copy()
             updated += 1

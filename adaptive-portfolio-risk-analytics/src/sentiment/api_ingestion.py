@@ -10,7 +10,7 @@ from typing import Iterable
 
 import pandas as pd
 
-from .providers import NORMALIZED_SENTIMENT_COLUMNS, SentimentProvider, normalized_frame
+from .providers import SentimentProvider, normalized_frame
 
 
 INGESTION_OUTPUT_FILES = (
@@ -45,10 +45,7 @@ def _json_safe(records: object) -> list[dict[str, object]]:
         values = []
     else:
         values = [records]
-    return [
-        json.loads(json.dumps(record, default=str, ensure_ascii=False))
-        for record in values
-    ]
+    return [json.loads(json.dumps(record, default=str, ensure_ascii=False)) for record in values]
 
 
 def _provider_options(
@@ -131,20 +128,14 @@ def _deduplicate(records: pd.DataFrame) -> tuple[pd.DataFrame, int]:
     if records.empty:
         return records.copy(), 0
     frame = records.copy()
-    publication = pd.to_datetime(
-        frame["publication_time"], errors="coerce", utc=True
-    ).dt.floor("min")
+    publication = pd.to_datetime(frame["publication_time"], errors="coerce", utc=True).dt.floor(
+        "min"
+    )
     url_key = frame["url"].fillna("").astype(str).str.strip().str.lower()
     title_key = frame["title"].fillna("").astype(str).str.strip().str.lower()
-    frame["_dedupe_key"] = (
-        url_key.where(url_key.ne(""), title_key)
-        + "|"
-        + publication.astype(str)
-    )
+    frame["_dedupe_key"] = url_key.where(url_key.ne(""), title_key) + "|" + publication.astype(str)
     before = len(frame)
-    frame = frame.drop_duplicates("_dedupe_key", keep="first").drop(
-        columns="_dedupe_key"
-    )
+    frame = frame.drop_duplicates("_dedupe_key", keep="first").drop(columns="_dedupe_key")
     return frame.reset_index(drop=True), int(before - len(frame))
 
 
@@ -216,11 +207,7 @@ def run_sentiment_provider_ingestion(
                     in {"success", "partial_success", "empty"}
                     and not provider_diagnostics.get("failures")
                 )
-            if (
-                use_cache
-                and not cache_hit
-                and bool(cache_safe)
-            ):
+            if use_cache and not cache_hit and bool(cache_safe):
                 _write_cache(
                     cache_path,
                     provider_name=provider.provider_name,
@@ -233,24 +220,18 @@ def run_sentiment_provider_ingestion(
             invalid_count = 0
             valid_count = 0
         raw_rows.extend(
-            {"provider": provider.provider_name, "raw_record": row}
-            for row in raw_records
+            {"provider": provider.provider_name, "raw_record": row} for row in raw_records
         )
         provider_diagnostics = dict(provider.last_diagnostics)
         for row in provider_diagnostics.get("query_diagnostics", []) or []:
             if isinstance(row, dict):
                 query_diagnostics.append(
-                    {
-                        column: row.get(column, "")
-                        for column in QUERY_DIAGNOSTIC_COLUMNS
-                    }
+                    {column: row.get(column, "") for column in QUERY_DIAGNOSTIC_COLUMNS}
                 )
         diagnostics.append(
             {
                 "provider": provider.provider_name,
-                "status": provider_diagnostics.get(
-                    "status", "error" if fetch_error else "success"
-                ),
+                "status": provider_diagnostics.get("status", "error" if fetch_error else "success"),
                 "cache_hit": cache_hit,
                 "cache_written": cache_written,
                 "cache_ignored": cache_ignored,
@@ -259,14 +240,10 @@ def run_sentiment_provider_ingestion(
                 "invalid_record_count": invalid_count,
                 "fetch_error": fetch_error,
                 "provider_failures": provider_diagnostics.get("failures", ""),
-                "fallback_used": provider_diagnostics.get(
-                    "fallback_used", False
-                ),
+                "fallback_used": provider_diagnostics.get("fallback_used", False),
                 "source_kind": provider_diagnostics.get("source_kind", ""),
                 "cache_path": str(cache_path),
-                "rate_limited": provider_diagnostics.get(
-                    "rate_limited", False
-                ),
+                "rate_limited": provider_diagnostics.get("rate_limited", False),
                 "retry_count": provider_diagnostics.get("retry_count", 0),
             }
         )
@@ -277,9 +254,7 @@ def run_sentiment_provider_ingestion(
         else normalized_frame()
     )
     valid_normalized = (
-        pd.concat(valid_parts, ignore_index=True, sort=False)
-        if valid_parts
-        else normalized_frame()
+        pd.concat(valid_parts, ignore_index=True, sort=False) if valid_parts else normalized_frame()
     )
     deduped, duplicate_count = _deduplicate(valid_normalized)
     diagnostics_frame = pd.DataFrame(diagnostics)
@@ -309,9 +284,9 @@ def run_sentiment_provider_ingestion(
     )
     diagnostics_frame["deduplicated_record_count"] = 0
     if not diagnostics_frame.empty:
-        diagnostics_frame.loc[
-            diagnostics_frame.index[0], "deduplicated_record_count"
-        ] = duplicate_count
+        diagnostics_frame.loc[diagnostics_frame.index[0], "deduplicated_record_count"] = (
+            duplicate_count
+        )
     unique_counts = (
         deduped["provider"].astype(str).value_counts()
         if not deduped.empty
@@ -321,23 +296,19 @@ def run_sentiment_provider_ingestion(
         diagnostics_frame["provider"].astype(str).map(unique_counts).fillna(0).astype(int)
     )
     diagnostics_frame["provider_duplicates_removed"] = (
-        pd.to_numeric(
-            diagnostics_frame["valid_record_count"], errors="coerce"
-        ).fillna(0).astype(int)
+        pd.to_numeric(diagnostics_frame["valid_record_count"], errors="coerce")
+        .fillna(0)
+        .astype(int)
         - diagnostics_frame["deduped_valid_record_count"]
     )
 
-    with (output / "raw_provider_records.jsonl").open(
-        "w", encoding="utf-8"
-    ) as handle:
+    with (output / "raw_provider_records.jsonl").open("w", encoding="utf-8") as handle:
         for row in raw_rows:
             handle.write(json.dumps(row, ensure_ascii=False, default=str) + "\n")
     normalized.to_csv(output / "normalized_sentiment_records.csv", index=False)
     diagnostics_frame.to_csv(output / "provider_diagnostics.csv", index=False)
     deduped.to_csv(output / "deduped_sentiment_records.csv", index=False)
-    query_diagnostics_frame.to_csv(
-        output / "provider_query_diagnostics.csv", index=False
-    )
+    query_diagnostics_frame.to_csv(output / "provider_query_diagnostics.csv", index=False)
 
     return {
         "raw_provider_records": raw_rows,

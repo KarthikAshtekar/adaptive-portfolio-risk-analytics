@@ -62,4 +62,3 @@ def test_confirmation_status_handles_agreement_disagreement_and_insufficient_dat
         )
         == "Insufficient Sentiment Data"
     )
-

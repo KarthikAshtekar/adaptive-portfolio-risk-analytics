@@ -1,5 +1,4 @@
-from setuptools import setup, find_packages
-import os
+from setuptools import find_packages, setup
 
 # Read README for long description
 with open("README.md", "r", encoding="utf-8") as fh:
@@ -12,12 +11,11 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 setup(
     name="adaptive-portfolio-risk-analytics",
     version="1.3.0",
-    author="Quantitative Finance Team",
-    author_email="team@example.com",
+    author="Karthik Ashtekar",
     description="Evidence-gated portfolio research and risk analytics platform",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/adaptive-portfolio-risk-analytics",
+    url="https://github.com/KarthikAshtekar/adaptive-portfolio-risk-analytics",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     classifiers=[

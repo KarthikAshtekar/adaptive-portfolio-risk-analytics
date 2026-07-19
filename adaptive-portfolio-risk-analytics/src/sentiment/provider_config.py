@@ -9,8 +9,10 @@ from typing import Any
 
 import yaml
 
+from src.paths import PROJECT_ROOT
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+
+REPO_ROOT = PROJECT_ROOT
 DEFAULT_PROVIDER_CONFIG = REPO_ROOT / "config" / "nlp_providers.example.yaml"
 PROVIDER_NAMES = ("rbi", "earnings", "gdelt", "alpha_vantage")
 LOCAL_MODES = {"local", "local_manifest", "manifest"}
@@ -99,36 +101,22 @@ def validate_provider_config(
                 except (TypeError, ValueError):
                     row_errors.append(f"{key} must be numeric")
                     continue
-                if value < minimum or (
-                    maximum is not None and value > maximum
-                ):
+                if value < minimum or (maximum is not None and value > maximum):
                     row_errors.append(
                         f"{key} must be between {minimum} and "
                         f"{maximum if maximum is not None else 'infinity'}"
                     )
 
         errors.extend(f"{provider_name}: {message}" for message in row_errors)
-        warnings.extend(
-            f"{provider_name}: {message}" for message in row_warnings
-        )
+        warnings.extend(f"{provider_name}: {message}" for message in row_warnings)
         provider_rows.append(
             {
                 "provider": provider_name,
                 "enabled": enabled,
                 "mode": mode or "unspecified",
-                "status": (
-                    "invalid"
-                    if row_errors
-                    else "enabled"
-                    if enabled
-                    else "disabled"
-                ),
+                "status": ("invalid" if row_errors else "enabled" if enabled else "disabled"),
                 "manifest_path": str(manifest_path or ""),
-                "manifest_exists": (
-                    manifest_path.is_file()
-                    if manifest_path is not None
-                    else None
-                ),
+                "manifest_exists": (manifest_path.is_file() if manifest_path is not None else None),
                 "api_key_env": key_env,
                 "api_key_env_present": key_env_present,
                 "errors": " | ".join(row_errors),
